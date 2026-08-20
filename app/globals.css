@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ds-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --ds-font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --ds-bg: #F5F0E8;
+  --ds-surface: #FFFFFF;
+  --ds-text: #2B2B2B;
+  --ds-ink: #0A0A0A;
+  --ds-border: #2B2B2B;
+  --ds-accent: #C8933F;
+  --ds-danger: #C44536;
+  --ds-muted: #D8D2C4;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--ds-font-sans);
+    color: var(--ds-text);
+    background: var(--ds-bg);
+    /* iPhone (notch e barra inferior): respeita áreas seguras quando instalado como app */
+    padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  header {
+    padding-top: calc(1rem + env(safe-area-inset-top));
+  }
+
+  /* Toque mais confortável em telas pequenas + evita zoom automático no iOS */
+  button {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+@layer components {
+  .ds-card {
+    @apply bg-white border-2 border-charcoal shadow-[4px_4px_0_#2B2B2B] p-5 sm:p-6 space-y-4;
+  }
+
+  .ds-card-danger {
+    @apply bg-white border-2 border-brick shadow-[4px_4px_0_#C44536] p-5 sm:p-6 space-y-4;
+  }
+
+  .ds-label {
+    @apply block font-mono text-xs font-semibold uppercase tracking-wider text-charcoal mb-2;
+  }
+
+  .ds-input {
+    @apply w-full p-3 bg-white border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition;
+  }
+
+  .ds-input-muted {
+    @apply w-full p-3 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition;
+  }
+
+  .ds-input-danger {
+    @apply w-full p-3 bg-[#F9ECE9] border-2 border-brick focus:ring-2 focus:ring-brick outline-none transition;
+  }
+
+  .ds-icon-btn {
+    @apply p-2 border-2 border-charcoal hover:bg-bone text-pmrv transition-all;
+  }
+
+  .ds-btn {
+    @apply font-mono font-semibold uppercase tracking-wider border-2 transition flex items-center justify-center gap-2;
+  }
+
+  .ds-btn-primary {
+    @apply ds-btn bg-pmrv text-white border-pmrv shadow-[4px_4px_0_#C8933F] hover:bg-charcoal py-4;
+  }
+
+  .ds-btn-ghost {
+    @apply ds-btn bg-white text-charcoal border-charcoal hover:bg-bone py-4;
+  }
+
+  .ds-btn-whatsapp {
+    @apply ds-btn bg-whatsapp hover:bg-green-700 text-white border-pmrv shadow-[4px_4px_0_#0A0A0A] py-5 text-lg transform active:scale-95;
+  }
+
+  .ds-btn-gold {
+    @apply ds-btn bg-gold hover:bg-[#B8842F] text-pmrv border-pmrv shadow-[4px_4px_0_#0A0A0A] py-4 transform active:scale-95;
+  }
+
+  .ds-btn-danger {
+    @apply ds-btn bg-white text-brick border-brick hover:bg-[#F9ECE9] py-3;
+  }
+
+  .ds-section-title {
+    @apply flex justify-between items-center border-b-2 border-charcoal pb-3 mb-4 text-lg font-mono font-semibold uppercase tracking-tight text-pmrv;
+  }
+}
+
+/* Cor do número conforme o estado do passo (classes aplicadas via JS) */
+.step-dot {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-dot.bg-step-idle {
+  color: var(--ds-text);
+}
+
+.step-dot.bg-pmrv {
+  color: #FFFFFF;
+  border-color: var(--ds-ink);
+}
+
+.step-dot.bg-step-done {
+  color: var(--ds-ink);
+  border-color: var(--ds-ink);
+}
+
+.step-content {
+  animation: slideIn 0.4s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-red {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.recording-active {
+  animation: pulse-red 1s infinite;
+  color: var(--ds-danger) !important;
+  border-color: var(--ds-danger) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .step-content,
+  .recording-active,
+  .animate-pulse {
+    animation: none !important;
+  }
+
+  .step-dot,
+  #stepper-progress {
+    transition: none !important;
+  }
+}
