@@ -43,7 +43,16 @@ export async function GET(req) {
       });
     }
 
-    return new Response(JSON.stringify(data), {
+    const marca = [data.MARCA, data.MODELO].filter(Boolean).join(' ');
+    const cor = data.cor && data.cor.trim() ? data.cor.trim() : '';
+
+    const normalized = {
+      ...data,
+      modelo: marca || data.MODELO || '',
+      cor: cor || data.cor || '',
+    };
+
+    return new Response(JSON.stringify(normalized), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });

@@ -135,7 +135,7 @@ export default function Envolvidos() {
         throw new Error(data.error || 'Erro ao consultar placa');
       }
 
-      const marca = [data.MARCA, data.MODELO, data.SUBMODELO, data.VERSAO].filter(Boolean).join(' ');
+      const marca = [data.MARCA, data.MODELO].filter(Boolean).join(' ');
       const cor = data.cor && data.cor.trim() ? data.cor.trim() : '';
       if (marca) {
         update(id, { modelo: marca, cor });
