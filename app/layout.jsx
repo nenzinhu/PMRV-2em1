@@ -7,7 +7,7 @@ import SWRegister from '@/components/SWRegister';
 import './globals.css';
 
 export default function RootLayout() {
-  const [aba, setAba] = useState('envolvidos'); // Envolvidos primeiro
+  const [aba, setAba] = useState('envolvidos');
 
   return (
     <html lang="pt-BR">
@@ -27,12 +27,13 @@ export default function RootLayout() {
         />
         <title>Relato Policial — PMSC</title>
         <meta name="description" content="Sistema de Relatórios da Polícia Militar de Santa Catarina" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
-      <body className="bg-bone text-charcoal antialiased font-sans pb-10">
+      <body className="bg-bone text-charcoal antialiased font-sans">
         <SWRegister />
 
         <header className="bg-pmrv text-white sticky top-0 z-50 border-b-[3px] border-brick">
-          <div className="max-w-xl mx-auto flex justify-between items-center px-4">
+          <div className="max-w-5xl mx-auto flex justify-between items-center px-4">
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -59,7 +60,7 @@ export default function RootLayout() {
         </header>
 
         <nav className="bg-pmrv text-white sticky top-[57px] sm:top-[65px] z-40">
-          <div className="max-w-xl mx-auto flex">
+          <div className="max-w-5xl mx-auto flex">
             <button
               onClick={() => setAba('envolvidos')}
               className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-sm border-b-4 transition ${
@@ -83,7 +84,9 @@ export default function RootLayout() {
           </div>
         </nav>
 
-        {aba === 'envolvidos' ? <Envolvidos /> : <RelatoPolicial />}
+        <main className="w-full">
+          {aba === 'envolvidos' ? <Envolvidos /> : <RelatoPolicial />}
+        </main>
       </body>
     </html>
   );

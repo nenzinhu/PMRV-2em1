@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   PMRV_UFS,
-  PMRV_FOTO_SLOTS,
-  PMRV_ANGULOS,
   formatCPF,
   formatTelefone,
   formatNome,
@@ -17,6 +15,7 @@ import {
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
 import { WhatsAppIcon } from './icons';
+import MentionInput from './MentionInput';
 
 const EMPTY_ENV = () => ({
   id: 0,
@@ -30,11 +29,11 @@ const EMPTY_ENV = () => ({
   placa_tipo: 'br',
   modelo: '',
   relato: '',
-  fotos: {},
-  fotoAngulos: {},
+  fotos: [],
 });
 
 const STORAGE_KEY = 'PMRV_ENVOLVIDOS';
+const PLACA_TOKEN_KEY = 'PMRV_PLACA_TOKEN';
 
 function loadEnvolvidos() {
   try {
@@ -56,11 +55,15 @@ function novoEnvolvido(seq) {
 export default function Envolvidos() {
   const [envolvidos, setEnvolvidos] = useState([]);
   const [seq, setSeq] = useState(0);
+  const [loadingPlaca, setLoadingPlaca] = useState({});
+  const [placaError, setPlacaError] = useState({});
+  const [placaToken, setPlacaToken] = useState('');
 
   useEffect(() => {
     const { lista, seq: s } = loadEnvolvidos();
     setEnvolvidos(lista);
     setSeq(s);
+    setPlacaToken(localStorage.getItem(PLACA_TOKEN_KEY) || '');
   }, []);
 
   function persist(lista, s) {
@@ -88,7 +91,6 @@ export default function Envolvidos() {
   }
 
   function update(id, patch) {
-    // Aplica máscaras conhecidas antes de gravar.
     if (patch.cpf !== undefined) patch.cpf = formatCPF(patch.cpf);
     if (patch.telefone !== undefined) patch.telefone = formatTelefone(patch.telefone);
     if (patch.nome !== undefined) patch.nome = formatNome(patch.nome);
@@ -105,15 +107,58 @@ export default function Envolvidos() {
     update(id, { placa_tipo: tipo, placa });
   }
 
-  function anexarFoto(id, slot, file, angulo) {
+  async function consultarPlaca(id, placa, tipo) {
+    if (!placa || placa.length < 7) {
+      alert('Informe uma placa válida (mínimo 7 caracteres) para consultar.');
+      return;
+    }
+    if (tipo === 'estrangeira') {
+      alert('Consulta de placa não disponível para placas estrangeiras.');
+      return;
+    }
+
+    setLoadingPlaca((prev) => ({ ...prev, [id]: true }));
+    setPlacaError((prev) => ({ ...prev, [id]: null }));
+
+    try {
+      const params = new URLSearchParams();
+      params.set('placa', placa.toUpperCase());
+      if (placaToken) params.set('token', placaToken);
+
+      const resp = await fetch(`/api/placa?${params.toString()}`);
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        throw new Error(data.error || 'Erro ao consultar placa');
+      }
+
+      const marca = [data.MARCA, data.MODELO, data.SUBMODELO, data.VERSAO].filter(Boolean).join(' ');
+      if (marca) {
+        update(id, { modelo: marca });
+      }
+    } catch (err) {
+      setPlacaError((prev) => ({ ...prev, [id]: err.message }));
+    } finally {
+      setLoadingPlaca((prev) => ({ ...prev, [id]: false }));
+    }
+  }
+
+  function salvarToken() {
+    const novo = window.prompt('Token da Placa:', placaToken || '');
+    if (novo !== null) {
+      const token = novo.trim();
+      setPlacaToken(token);
+      localStorage.setItem(PLACA_TOKEN_KEY, token);
+    }
+  }
+
+  function anexarFoto(id, file) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       const lista = envolvidos.map((e) => {
         if (e.id !== id) return e;
-        const fotos = { ...e.fotos, [slot]: reader.result };
-        const fotoAngulos = angulo ? { ...e.fotoAngulos, [slot]: angulo } : e.fotoAngulos;
-        return { ...e, fotos, fotoAngulos };
+        return { ...e, fotos: [...(e.fotos || []), { src: reader.result }] };
       });
       setEnvolvidos(lista);
       salvar(lista);
@@ -121,30 +166,17 @@ export default function Envolvidos() {
     reader.readAsDataURL(file);
   }
 
-  function setAngulo(id, slot, angulo) {
-    const lista = envolvidos.map((e) =>
-      e.id === id ? { ...e, fotoAngulos: { ...e.fotoAngulos, [slot]: angulo } } : e
-    );
-    setEnvolvidos(lista);
-    salvar(lista);
-  }
-
-  function removerFoto(id, slot) {
+  function removerFoto(id, index) {
     const lista = envolvidos.map((e) => {
       if (e.id !== id) return e;
-      const fotos = { ...e.fotos };
-      delete fotos[slot];
-      const fotoAngulos = { ...e.fotoAngulos };
-      delete fotoAngulos[slot];
-      return { ...e, fotos, fotoAngulos };
+      const fotos = (e.fotos || []).filter((_, i) => i !== index);
+      return { ...e, fotos };
     });
     setEnvolvidos(lista);
     salvar(lista);
   }
 
-  // Adiciona fotos da galeria (sem por-ângulo): preenche os lugares vazios
-  // na ordem dos slots e, se ainda houver imagens, sobrescreve do início.
-  function adicionarDaGaleria(id, slots, fileList) {
+  function adicionarDaGaleria(id, fileList) {
     const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith('image/'));
     if (!files.length) return;
     Promise.all(
@@ -157,57 +189,36 @@ export default function Envolvidos() {
           })
       )
     ).then((dataUrls) => {
-      let i = 0;
       const nova = envolvidos.map((e) => {
         if (e.id !== id) return e;
-        const fotos = { ...e.fotos };
-        const fotoAngulos = { ...e.fotoAngulos };
-        // primeiro, preenche os slots ainda vazios
-        for (const s of slots) {
-          if (i >= dataUrls.length) break;
-          if (!fotos[s.key]) {
-            fotos[s.key] = dataUrls[i];
-            if (s.angulo) fotoAngulos[s.key] = s.angulo;
-            i++;
-          }
-        }
-        // depois, se ainda sobrou imagem, sobrescreve do início
-        for (const s of slots) {
-          if (i >= dataUrls.length) break;
-          fotos[s.key] = dataUrls[i];
-          if (s.angulo) fotoAngulos[s.key] = s.angulo;
-          i++;
-        }
-        return { ...e, fotos, fotoAngulos };
+        return { ...e, fotos: [...(e.fotos || []), ...dataUrls.map((src) => ({ src }))] };
       });
       setEnvolvidos(nova);
       salvar(nova);
     });
   }
 
-  // Lightbox de pré-visualização (clicar na foto abre ampliada).
-  const [preview, setPreview] = useState(null); // { src, label }
-
-  // Captura sequencial das 4 fotos do veículo (guiada por ângulo).
-  // Usa refs de input (câmera) para forçar o disparo do seletor a cada passo.
+  const [preview, setPreview] = useState(null);
   const cameraRefs = useRef({});
 
-  function dispararCamera(id, slot) {
+  function dispararCamera(id) {
     return new Promise((resolve) => {
-      const input = cameraRefs.current[`${id}_${slot}`];
+      const input = cameraRefs.current[`${id}_cam`];
       if (!input) {
         resolve(false);
         return;
       }
       let done = false;
-      const handler = () => {
+      const handler = (e) => {
         if (done) return;
         done = true;
+        const file = e.target.files && e.target.files[0];
+        if (file) anexarFoto(id, file);
+        input.value = '';
         resolve(true);
       };
       input.addEventListener('change', handler, { once: true });
       input.click();
-      // Timeout de segurança caso o usuário cancele a câmera.
       setTimeout(() => {
         if (!done) {
           done = true;
@@ -217,20 +228,14 @@ export default function Envolvidos() {
     });
   }
 
-  // Captura sequencial das fotos de um conjunto de slots (câmera, sem janela).
-  async function tirarSequencia(id, slots) {
-    for (const s of slots) {
-      const ok = await Promise.race([dispararCamera(id, s.key), new Promise((r) => setTimeout(() => r(false), 60000))]);
-      if (!ok) break; // cancelou/erro — interrompe a sequência
+  async function tirarFotos(id) {
+    while (true) {
+      const ok = await Promise.race([
+        dispararCamera(id),
+        new Promise((r) => setTimeout(() => r(false), 60000)),
+      ]);
+      if (!ok) break;
     }
-  }
-
-  function tirarQuatroFotos(id) {
-    return tirarSequencia(id, PMRV_FOTO_SLOTS.filter((s) => s.veiculo));
-  }
-
-  function tirarFotosLocal(id) {
-    return tirarSequencia(id, PMRV_FOTO_SLOTS.filter((s) => !s.veiculo));
   }
 
   async function corrigirRelato(id) {
@@ -243,8 +248,6 @@ export default function Envolvidos() {
       alert('Sem conexão com a internet.\n\nA correção com IA precisa de internet.');
       return;
     }
-    // A chave padrão fica no servidor; obterChaveIA() retorna apenas um override
-    // opcional informado pelo usuário (botão 🔑). Pode ser '' (usa a do servidor).
     const apiKey = obterChaveIA();
 
     const btn = document.getElementById(`env_ia_${id}`);
@@ -295,20 +298,28 @@ export default function Envolvidos() {
     <div className="max-w-xl mx-auto p-4 relative overflow-hidden">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvidos</h2>
-        <button onClick={adicionar} className="btn-ios text-xs">
-          + Adicionar
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={salvarToken}
+            className="btn-outline text-xs"
+            title="Configurar token da API de placa"
+          >
+            🔧 Placa
+          </button>
+          <button onClick={adicionar} className="btn-ios text-xs">
+            + Adicionar
+          </button>
+        </div>
       </div>
 
       <p className="estilo-glass text-xs text-charcoal/70 font-mono mb-4 p-3">
-        Cada envolvido tem dados, relato individual (com correção por IA) e fotos (4 ângulos do veículo +
-        2 do local). Use <b>📷 Tirar 4 fotos</b> para a câmera em sequência (sem sair da tela) ou <b>🖼️ Galeria</b> para
-        acrescentar da galeria. Tudo é salvo automaticamente neste navegador.
+        Cada envolvido tem dados, relato individual (com correção por IA) e fotos. Use <b>📷 Tirar fotos</b> ou <b>🖼️ Galeria</b>. Tudo é salvo automaticamente neste navegador.
       </p>
 
       <div className="space-y-6">
         {envolvidos.map((ev) => (
-          <div key={ev.id} className="ds-card">
+          <div key={ev.id} className="ds-card animate-[slideIn_0.3s_ease-out]">
             <div className="flex justify-between items-center border-b-2 border-charcoal pb-2">
               <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvido #{ev.id}</h3>
               <button
@@ -397,12 +408,26 @@ export default function Envolvidos() {
                   <option value="mercosul">Mercosul (ABC1D23)</option>
                   <option value="estrangeira">Estrangeira (livre)</option>
                 </select>
-                <input
-                  value={ev.placa}
-                  placeholder="ABC1234"
-                  onChange={(e) => updatePlaca(ev.id, ev.placa_tipo, e.target.value)}
-                  className="ds-input text-sm uppercase"
-                />
+                <div className="flex gap-2">
+                  <input
+                    value={ev.placa}
+                    placeholder="ABC1234"
+                    onChange={(e) => updatePlaca(ev.id, ev.placa_tipo, e.target.value)}
+                    className="ds-input text-sm uppercase flex-1"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => consultarPlaca(ev.id, ev.placa, ev.placa_tipo)}
+                    disabled={loadingPlaca[ev.id] || !ev.placa || ev.placa.length < 7}
+                    className="btn-outline text-xs px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Consultar placa e preencher modelo automaticamente"
+                  >
+                    {loadingPlaca[ev.id] ? '...' : '🔍'}
+                  </button>
+                </div>
+                {placaError[ev.id] && (
+                  <p className="text-[10px] font-mono text-brick mt-1">{placaError[ev.id]}</p>
+                )}
               </div>
             </div>
 
@@ -412,6 +437,7 @@ export default function Envolvidos() {
                 value={ev.modelo}
                 onChange={(e) => update(ev.id, { modelo: e.target.value })}
                 className="ds-input text-sm"
+                placeholder={loadingPlaca[ev.id] ? 'Buscando...' : 'Ex: VW CROSSFOX'}
               />
             </div>
 
@@ -426,190 +452,86 @@ export default function Envolvidos() {
                   ✨ Corrigir com IA
                 </button>
               </div>
-              <textarea
-                rows={4}
+              <MentionInput
                 value={ev.relato}
-                onChange={(e) => update(ev.id, { relato: e.target.value })}
+                onChange={(value) => update(ev.id, { relato: value })}
+                envolvidos={envolvidos}
+                rows={4}
+                placeholder="Descreva o que aconteceu... Use @ para mencionar pessoas ou veículos"
                 className="w-full p-2 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none text-sm leading-relaxed"
               />
             </div>
 
             <div>
               <div className="layout-header-glass rounded-t-xl px-3 py-2 mb-3 flex flex-wrap justify-between items-center gap-2">
-                <label className="ds-label mb-0">Fotos do Veículo (4 ângulos)</label>
+                <label className="ds-label mb-0">Fotos</label>
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => tirarQuatroFotos(ev.id)}
+                    onClick={() => tirarFotos(ev.id)}
                     className="btn-ios text-[10px]"
-                    title="Abre a câmera 4x em sequência: Frontal, Traseira, Vista Esquerda, Vista Direita"
+                    title="Abre a câmera: tire quantas fotos quiser (cancele para parar)"
                   >
-                    📷 Tirar 4 fotos
+                    📷 Tirar fotos
                   </button>
                   <button
                     type="button"
                     onClick={() => document.getElementById(`gal_${ev.id}`).click()}
                     className="btn-outline text-[10px]"
-                    title="Adicionar fotos da galeria"
+                    title="Adicionar fotos da galeria (quantas quiser)"
                   >
                     🖼️ Galeria
                   </button>
                 </div>
               </div>
-              {/* input único de galeria (adiciona nas posições vazias, na ordem) */}
               <input
                 id={`gal_${ev.id}`}
                 type="file"
                 accept="image/*"
                 multiple
                 className="hidden"
-                onChange={(e) => { adicionarDaGaleria(ev.id, PMRV_FOTO_SLOTS.filter((s) => s.veiculo), e.target.files); e.target.value = ''; }}
+                onChange={(e) => { adicionarDaGaleria(ev.id, e.target.files); e.target.value = ''; }}
               />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {PMRV_FOTO_SLOTS.filter((s) => s.veiculo).map((s) => {
-                  const src = ev.fotos[s.key];
-                  const anguloAtual = (ev.fotoAngulos && ev.fotoAngulos[s.key]) || s.angulo;
-                  return (
-                    <div key={s.key} className="border-2 border-charcoal p-2 bg-bone">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-charcoal">
-                          {s.label}
-                        </span>
-                        <div className="flex gap-1">
-                          <input
-                            id={`cam_${ev.id}_${s.key}`}
-                            ref={(el) => (cameraRefs.current[`${ev.id}_${s.key}`] = el)}
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files && e.target.files[0];
-                              if (file) anexarFoto(ev.id, s.key, file, anguloAtual);
-                              e.target.value = '';
-                            }}
-                          />
-                          {src && (
-                            <button
-                              type="button"
-                              onClick={() => removerFoto(ev.id, s.key)}
-                              className="btn-outline text-[10px] !text-brick !border-brick"
-                              title="Remover esta foto"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      {src ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={src}
-                          alt={s.label}
-                          onClick={() => setPreview({ src, label: s.label })}
-                          className="w-full h-28 object-cover border-2 border-charcoal cursor-pointer hover:opacity-90 transition"
-                        />
-                      ) : (
-                        <div className="w-full h-28 border-2 border-dashed border-charcoal flex items-center justify-center text-[10px] font-mono text-charcoal/50 text-center">
-                          {s.label}
-                        </div>
-                      )}
-                      <select
-                        value={anguloAtual}
-                        onChange={(e) => setAngulo(ev.id, s.key, e.target.value)}
-                        className="ds-input text-xs mt-2 py-1"
-                      >
-                        {PMRV_ANGULOS.map((a) => (
-                          <option key={a} value={a}>{a}</option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div>
-              <div className="layout-header-glass rounded-t-xl px-3 py-2 mb-3 flex flex-wrap justify-between items-center gap-2">
-                <label className="ds-label mb-0">Fotos do Local</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => tirarFotosLocal(ev.id)}
-                    className="btn-ios text-[10px]"
-                    title="Abre a câmera em sequência para as fotos do local"
-                  >
-                    📷 Tirar fotos
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => document.getElementById(`galL_${ev.id}`).click()}
-                    className="btn-outline text-[10px]"
-                    title="Adicionar fotos da galeria"
-                  >
-                    🖼️ Galeria
-                  </button>
-                </div>
-              </div>
               <input
-                id={`galL_${ev.id}`}
+                id={`cam_${ev.id}`}
+                ref={(el) => (cameraRefs.current[`${ev.id}_cam`] = el)}
                 type="file"
                 accept="image/*"
-                multiple
+                capture="environment"
                 className="hidden"
-                onChange={(e) => { adicionarDaGaleria(ev.id, PMRV_FOTO_SLOTS.filter((s) => !s.veiculo), e.target.files); e.target.value = ''; }}
+                onChange={(e) => {
+                  const file = e.target.files && e.target.files[0];
+                  if (file) anexarFoto(ev.id, file);
+                  e.target.value = '';
+                }}
               />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {PMRV_FOTO_SLOTS.filter((s) => !s.veiculo).map((s) => {
-                  const src = ev.fotos[s.key];
-                  return (
-                    <div key={s.key} className="border-2 border-charcoal p-2 bg-bone">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-charcoal">
-                          {s.label}
-                        </span>
-                        <div className="flex gap-1">
-                          <input
-                            id={`camL_${ev.id}_${s.key}`}
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files && e.target.files[0];
-                              if (file) anexarFoto(ev.id, s.key, file);
-                              e.target.value = '';
-                            }}
-                          />
-                          {src && (
-                            <button
-                              type="button"
-                              onClick={() => removerFoto(ev.id, s.key)}
-                              className="btn-outline text-[10px] !text-brick !border-brick"
-                              title="Remover esta foto"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      {src ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={src}
-                          alt={s.label}
-                          onClick={() => setPreview({ src, label: s.label })}
-                          className="w-full h-28 object-cover border-2 border-charcoal cursor-pointer hover:opacity-90 transition"
-                        />
-                      ) : (
-                        <div className="w-full h-28 border-2 border-dashed border-charcoal flex items-center justify-center text-[10px] font-mono text-charcoal/50 text-center">
-                          {s.label}
-                        </div>
-                      )}
+              {(ev.fotos || []).length === 0 ? (
+                <div className="w-full h-32 border-2 border-dashed border-charcoal flex items-center justify-center text-[10px] font-mono text-charcoal/50 text-center">
+                  Nenhuma foto ainda — use Tirar fotos ou Galeria
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {(ev.fotos || []).map((f, idx) => (
+                    <div key={idx} className="relative border-2 border-charcoal p-1 bg-bone">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={f.src}
+                        alt={`Foto ${idx + 1}`}
+                        onClick={() => setPreview({ src: f.src, label: `Foto ${idx + 1}` })}
+                        className="w-full h-28 object-cover border-2 border-charcoal cursor-pointer hover:opacity-90 transition"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removerFoto(ev.id, idx)}
+                        className="absolute top-1 right-1 bg-brick text-white text-[10px] font-mono font-semibold px-2 py-1 border-2 border-brick"
+                        title="Remover esta foto"
+                      >
+                        ✕
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
