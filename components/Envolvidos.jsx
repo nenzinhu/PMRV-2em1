@@ -17,6 +17,8 @@ import {
 import { WhatsAppIcon } from './icons';
 import MentionInput from './MentionInput';
 
+const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
+
 const EMPTY_ENV = () => ({
   id: 0,
   nome: '',
@@ -254,9 +256,8 @@ export default function Envolvidos() {
       alert('Sem conexão com a internet.\n\nA correção com IA precisa de internet.');
       return;
     }
-    const apiKey = obterChaveIA();
 
-    const btn = document.getElementById(`env_ia_${id}`);
+    const btn = document.getElementById(`env_ia_${ev.id}`);
     const rotulo = btn ? btn.textContent : '✨ Corrigir com IA';
     if (btn) {
       btn.disabled = true;
@@ -268,10 +269,9 @@ export default function Envolvidos() {
       ev.relato;
 
     try {
-      const res = await callGroq({ apiKey, prompt, system: PMRV_AGENTE_PADRAO });
+      const res = await callGroq({ apiKey: GROQ_API_KEY, prompt, system: PMRV_AGENTE_PADRAO });
       if (res.error === 'auth') {
-        if (window.confirm('Chave da API inválida ou sem permissão.\n\nDeseja informar outra chave agora?'))
-          obterChaveIA(true);
+        alert('Chave da API inválida ou sem permissão.\n\nVerifique a configuração do sistema.');
       } else if (res.error === 'quota') {
         alert('Cota da API excedida no momento.\n\nAguarde alguns minutos e tente novamente.');
       } else if (res.text) {

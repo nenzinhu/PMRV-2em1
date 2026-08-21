@@ -9,6 +9,8 @@ import {
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
 
+const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
+
 const STORAGE_KEY = 'PMRV_RESUMO_DINAMICA';
 
 function loadResumo() {
@@ -95,12 +97,10 @@ export default function ResumoDinamica() {
         '- Preserve detalhes importantes de posicionamento, trajetória, veículos e pontos de impacto.\n\n' +
         base;
 
-      const apiKey = obterChaveIA();
-      const res = await callGroq({ apiKey, prompt, system: PMRV_AGENTE_PADRAO });
+      const res = await callGroq({ apiKey: GROQ_API_KEY, prompt, system: PMRV_AGENTE_PADRAO });
 
       if (res.error === 'auth') {
-        if (window.confirm('Chave da API inválida ou sem permissão.\n\nDeseja informar outra chave agora?'))
-          obterChaveIA(true);
+        alert('Chave da API inválida ou sem permissão.\n\nVerifique a configuração do sistema.');
         setStatusIA('');
       } else if (res.error === 'quota') {
         alert('Cota da API excedida no momento.\n\nAguarde alguns minutos e tente novamente.');
@@ -133,12 +133,10 @@ export default function ResumoDinamica() {
         'Melhore o resumo abaixo de um sinistro de trânsito: corrija ortografia, acentuação, concordância e pontuação, mantenha os fatos e a norma culta do português do Brasil. Responda APENAS com o texto corrigido, sem comentários.\n\n' +
         resumo;
 
-      const apiKey = obterChaveIA();
-      const res = await callGroq({ apiKey, prompt, system: PMRV_AGENTE_PADRAO });
+      const res = await callGroq({ apiKey: GROQ_API_KEY, prompt, system: PMRV_AGENTE_PADRAO });
 
       if (res.error === 'auth') {
-        if (window.confirm('Chave da API inválida ou sem permissão.\n\nDeseja informar outra chave agora?'))
-          obterChaveIA(true);
+        alert('Chave da API inválida ou sem permissão.\n\nVerifique a configuração do sistema.');
         setStatusIA('');
       } else if (res.error === 'quota') {
         alert('Cota da API excedida no momento.\n\nAguarde alguns minutos e tente novamente.');
