@@ -5,14 +5,14 @@
 :root {
   --ds-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --ds-font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  --ds-bg: #F5F0E8;
+  --ds-bg: #F4F6F5;
   --ds-surface: #FFFFFF;
   --ds-text: #2B2B2B;
-  --ds-ink: #0A0A0A;
+  --ds-ink: #008448;
   --ds-border: #2B2B2B;
-  --ds-accent: #C8933F;
-  --ds-danger: #C44536;
-  --ds-muted: #D8D2C4;
+  --ds-accent: #FFC300;
+  --ds-danger: #E6232B;
+  --ds-muted: #CFE3D8;
 }
 
 @layer base {

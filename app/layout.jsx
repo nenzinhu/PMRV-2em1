@@ -14,27 +14,27 @@ export default function RootLayout() {
       <head>
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <meta name="theme-color" content="#0A0A0A" />
+        <meta name="theme-color" content="#008448" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-        <meta name="apple-mobile-web-app-title" content="PMRv P19" />
+        <meta name="apple-mobile-web-app-title" content="PM SC" />
         <link
           href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
-        <title>Relato Policial Padrão</title>
-        <meta name="description" content="Sistema de Relatórios PMRv Posto 19" />
+        <title>Relato Policial — PMSC</title>
+        <meta name="description" content="Sistema de Relatórios da Polícia Militar de Santa Catarina" />
       </head>
       <body className="bg-bone text-charcoal antialiased font-sans pb-10">
         <SWRegister />
 
-        <header className="bg-white border-b-2 border-charcoal sticky top-0 z-50">
+        <header className="bg-pmrv text-white sticky top-0 z-50 border-b-[3px] border-brick">
           <div className="max-w-xl mx-auto flex justify-between items-center px-4">
             <div className="flex items-center gap-3">
-              <span className="w-4 h-4 bg-gold border-2 border-pmrv" aria-hidden="true" />
-              <h1 className="text-base sm:text-lg font-mono font-semibold tracking-tight uppercase text-pmrv">
-                Relato Policial Padrão
+              <span className="w-4 h-4 bg-gold border-2 border-white" aria-hidden="true" />
+              <h1 className="text-base sm:text-lg font-mono font-semibold tracking-tight uppercase text-white">
+                Relato Policial
               </h1>
             </div>
             <span
@@ -46,14 +46,14 @@ export default function RootLayout() {
           </div>
         </header>
 
-        <nav className="bg-white border-b-2 border-charcoal sticky top-[60px] sm:top-[68px] z-40">
+        <nav className="bg-pmrv text-white sticky top-[57px] sm:top-[65px] z-40">
           <div className="max-w-xl mx-auto flex">
             <button
               onClick={() => setAba('envolvidos')}
               className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-sm border-b-4 transition ${
                 aba === 'envolvidos'
-                  ? 'border-pmrv text-white bg-pmrv'
-                  : 'border-transparent text-charcoal hover:bg-bone'
+                  ? 'border-gold text-white bg-pmrv-dark'
+                  : 'border-transparent text-white/80 hover:bg-pmrv-dark'
               }`}
             >
               Envolvidos
@@ -62,8 +62,8 @@ export default function RootLayout() {
               onClick={() => setAba('relato')}
               className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-sm border-b-4 transition ${
                 aba === 'relato'
-                  ? 'border-pmrv text-white bg-pmrv'
-                  : 'border-transparent text-charcoal hover:bg-bone'
+                  ? 'border-gold text-white bg-pmrv-dark'
+                  : 'border-transparent text-white/80 hover:bg-pmrv-dark'
               }`}
             >
               Relato Policial

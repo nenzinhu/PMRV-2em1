@@ -631,7 +631,7 @@ export default function RelatoPolicial() {
             </div>
             <div>
               <label className="ds-label text-brick text-center">Óbitos</label>
-              <input type="number" min={0} value={form.qtdGravissima} onChange={(e) => set({ qtdGravissima: e.target.value })} className="ds-input bg-[#F9ECE9] border-brick text-center font-mono font-semibold text-lg text-brick" />
+              <input type="number" min={0} value={form.qtdGravissima} onChange={(e) => set({ qtdGravissima: e.target.value })} className="ds-input bg-[#FBE9EA] border-brick text-center font-mono font-semibold text-lg text-brick" />
             </div>
           </div>
           <div className="flex gap-3 pt-4">
@@ -665,7 +665,7 @@ export default function RelatoPolicial() {
               value={finalReport}
               onChange={onRelatorioEdit}
               spellCheck
-              className="w-full bg-pmrv text-bone p-4 font-mono text-xs leading-relaxed outline-none focus:ring-2 focus:ring-gold transition-all border-2 border-charcoal"
+              className="w-full bg-charcoal text-bone p-4 font-mono text-xs leading-relaxed outline-none focus:ring-2 focus:ring-gold transition-all border-2 border-charcoal"
             />
             <button
               id="btn-revisar-ia"
