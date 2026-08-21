@@ -26,7 +26,7 @@ const EMPTY_ENV = () => ({
   endereco: '',
   telefone: '',
   placa: '',
-  placa_tipo: 'br',
+  placa_estrangeira: false,
   modelo: '',
   cor: '',
   relato: '',
@@ -62,7 +62,13 @@ export default function Envolvidos() {
 
   useEffect(() => {
     const { lista, seq: s } = loadEnvolvidos();
-    setEnvolvidos(lista);
+    // Migração simples: se não existir placa_estrangeira, assume false
+    const migrada = (lista || []).map((ev) => ({
+      ...ev,
+      placa_estrangeira: ev.placa_estrangeira === true,
+      placa_tipo: ev.placa_tipo || 'br',
+    }));
+    setEnvolvidos(migrada);
     setSeq(s);
     setPlacaToken(localStorage.getItem(PLACA_TOKEN_KEY) || '');
   }, []);
@@ -103,18 +109,22 @@ export default function Envolvidos() {
     salvar(lista);
   }
 
-  function updatePlaca(id, tipo, raw) {
-    const placa = formatPlacaValue(tipo, raw);
-    update(id, { placa_tipo: tipo, placa });
-  }
-
-  async function consultarPlaca(id, placa, tipo) {
-    if (!placa || placa.length < 7) {
-      alert('Informe uma placa válida (mínimo 7 caracteres) para consultar.');
+  function updatePlaca(id, raw, estrangeira) {
+    if (estrangeira) {
+      update(id, { placa: (raw || '').toUpperCase(), placa_estrangeira: true });
       return;
     }
-    if (tipo === 'estrangeira') {
+    const placa = formatPlacaValue('br', raw);
+    update(id, { placa, placa_estrangeira: false });
+  }
+
+  async function consultarPlaca(id, placa, estrangeira) {
+    if (estrangeira) {
       alert('Consulta de placa não disponível para placas estrangeiras.');
+      return;
+    }
+    if (!placa || placa.length < 7) {
+      alert('Informe uma placa válida (formato AAA0X00 ou AAA9999) para consultar.');
       return;
     }
 
@@ -403,31 +413,37 @@ export default function Envolvidos() {
               </div>
               <div>
                 <label className="ds-label">Placa do Veículo</label>
-                <select
-                  value={ev.placa_tipo}
-                  onChange={(e) => updatePlaca(ev.id, e.target.value, ev.placa)}
-                  className="ds-input text-xs mb-1"
-                >
-                  <option value="br">Brasil (ABC1234)</option>
-                  <option value="mercosul">Mercosul (ABC1D23)</option>
-                  <option value="estrangeira">Estrangeira (livre)</option>
-                </select>
+                <div className="flex items-center gap-2 mb-1">
+                  <input
+                    id={`placa_ext_${ev.id}`}
+                    type="checkbox"
+                    checked={ev.placa_estrangeira}
+                    onChange={(e) => update(ev.id, { placa_estrangeira: e.target.checked, placa: '' })}
+                    className="h-4 w-4 border-2 border-charcoal rounded-none accent-pmrv"
+                  />
+                  <label htmlFor={`placa_ext_${ev.id}`} className="text-xs font-mono text-charcoal cursor-pointer select-none">
+                    Estrangeiro
+                  </label>
+                </div>
                 <div className="flex gap-2">
                   <input
                     value={ev.placa}
-                    placeholder="ABC1234"
-                    onChange={(e) => updatePlaca(ev.id, ev.placa_tipo, e.target.value)}
+                    placeholder={ev.placa_estrangeira ? 'Digite a placa estrangeira' : 'AAA0X00 ou AAA9999'}
+                    onChange={(e) => updatePlaca(ev.id, e.target.value, ev.placa_estrangeira)}
                     className="ds-input text-sm uppercase flex-1"
+                    title={ev.placa_estrangeira ? 'Placa estrangeira: digitação livre' : 'Placa brasileira: formato AAA0X00 ou AAA9999'}
                   />
-                  <button
-                    type="button"
-                    onClick={() => consultarPlaca(ev.id, ev.placa, ev.placa_tipo)}
-                    disabled={loadingPlaca[ev.id] || !ev.placa || ev.placa.length < 7}
-                    className="btn-outline text-xs px-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Consultar placa e preencher modelo automaticamente"
-                  >
-                    {loadingPlaca[ev.id] ? '...' : '🔍'}
-                  </button>
+                  {!ev.placa_estrangeira && (
+                    <button
+                      type="button"
+                      onClick={() => consultarPlaca(ev.id, ev.placa, ev.placa_estrangeira)}
+                      disabled={loadingPlaca[ev.id] || !ev.placa || ev.placa.length < 7}
+                      className="btn-outline text-xs px-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Consultar placa e preencher modelo automaticamente"
+                    >
+                      {loadingPlaca[ev.id] ? '...' : '🔍'}
+                    </button>
+                  )}
                 </div>
                 {placaError[ev.id] && (
                   <p className="text-[10px] font-mono text-brick mt-1">{placaError[ev.id]}</p>
