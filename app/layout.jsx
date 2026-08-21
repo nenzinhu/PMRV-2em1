@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import RelatoPolicial from '@/components/RelatoPolicial';
 import Envolvidos from '@/components/Envolvidos';
+import ResumoDinamica from '@/components/ResumoDinamica';
 import SWRegister from '@/components/SWRegister';
 import './globals.css';
 
@@ -81,11 +82,21 @@ export default function RootLayout() {
             >
               Relato Policial
             </button>
+            <button
+              onClick={() => setAba('resumo')}
+              className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-sm border-b-4 transition ${
+                aba === 'resumo'
+                  ? 'border-gold text-white bg-pmrv-dark'
+                  : 'border-transparent text-white/80 hover:bg-pmrv-dark'
+              }`}
+            >
+              Resumo da Dinâmica
+            </button>
           </div>
         </nav>
 
         <main className="w-full">
-          {aba === 'envolvidos' ? <Envolvidos /> : <RelatoPolicial />}
+          {aba === 'envolvidos' ? <Envolvidos /> : aba === 'relato' ? <RelatoPolicial /> : <ResumoDinamica />}
         </main>
       </body>
     </html>
