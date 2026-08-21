@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-export default function MentionInput({ value, onChange, envolvidos, placeholder, rows = 4, className = '' }) {
+export default function MentionInput({ value, onChange, envolvidos, placeholder, rows = 4, className = '', gpsLocation = null }) {
   const textareaRef = useRef(null);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
   const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // Build list of mentionable items from envolvidos
+  // Build list of mentionable items from envolvidos + optional GPS
   const mentionableItems = (envolvidos || []).flatMap((ev) => {
     const items = [];
     if (ev.nome && ev.nome.trim()) {
@@ -37,6 +37,17 @@ export default function MentionInput({ value, onChange, envolvidos, placeholder,
     }
     return items;
   });
+
+  if (gpsLocation && gpsLocation.rodovia && !gpsLocation.foraDaRodovia) {
+    const gpsInsert = `${gpsLocation.rodovia} KM ${gpsLocation.km}`;
+    mentionableItems.push({
+      type: 'gps',
+      id: 'gps',
+      label: gpsInsert,
+      sublabel: 'Localização GPS',
+      insert: gpsInsert,
+    });
+  }
 
   const filteredItems = mentionableItems.filter((item) =>
     item.label.toLowerCase().includes(mentionFilter.toLowerCase())
@@ -170,9 +181,11 @@ export default function MentionInput({ value, onChange, envolvidos, placeholder,
               <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-xs font-mono font-bold ${
                 item.type === 'pessoa'
                   ? 'bg-pmrv/10 text-pmrv border border-pmrv/30'
-                  : 'bg-gold/20 text-charcoal border border-gold/50'
+                  : item.type === 'veiculo'
+                    ? 'bg-gold/20 text-charcoal border border-gold/50'
+                    : 'bg-white text-charcoal border border-charcoal/40'
               }`}>
-                {item.type === 'pessoa' ? '👤' : '🚗'}
+                {item.type === 'pessoa' ? '👤' : item.type === 'veiculo' ? '🚗' : '📍'}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-charcoal truncate">{item.label}</p>

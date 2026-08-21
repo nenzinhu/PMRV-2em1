@@ -61,6 +61,7 @@ export default function Envolvidos() {
   const [loadingPlaca, setLoadingPlaca] = useState({});
   const [placaError, setPlacaError] = useState({});
   const [placaToken, setPlacaToken] = useState('');
+  const [gpsInfo, setGpsInfo] = useState(null);
 
   useEffect(() => {
     const { lista, seq: s } = loadEnvolvidos();
@@ -73,6 +74,14 @@ export default function Envolvidos() {
     setEnvolvidos(migrada);
     setSeq(s);
     setPlacaToken(localStorage.getItem(PLACA_TOKEN_KEY) || '');
+  }, []);
+
+  useEffect(() => {
+    function onGpsChange(e) {
+      setGpsInfo(e.detail || null);
+    }
+    window.addEventListener('gps-change', onGpsChange);
+    return () => window.removeEventListener('gps-change', onGpsChange);
   }, []);
 
   function persist(lista, s) {
@@ -469,8 +478,9 @@ export default function Envolvidos() {
                 onChange={(value) => update(ev.id, { relato: value })}
                 envolvidos={envolvidos}
                 rows={4}
-                placeholder="Descreva o que aconteceu... Use @ para mencionar pessoas ou veículos"
+                placeholder="Descreva o que aconteceu... Use @ para mencionar pessoas, veículos ou localização GPS"
                 className="w-full p-2 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none text-sm leading-relaxed"
+                gpsLocation={gpsInfo}
               />
             </div>
 
