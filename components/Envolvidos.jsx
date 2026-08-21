@@ -110,21 +110,13 @@ export default function Envolvidos() {
   }
 
   function updatePlaca(id, raw, estrangeira) {
-    if (estrangeira) {
-      update(id, { placa: (raw || '').toUpperCase(), placa_estrangeira: true });
-      return;
-    }
-    const placa = formatPlacaValue('br', raw);
-    update(id, { placa, placa_estrangeira: false });
+    const placa = (raw || '').toUpperCase().replace(/\s/g, '');
+    update(id, { placa, placa_estrangeira: !!estrangeira });
   }
 
   async function consultarPlaca(id, placa, estrangeira) {
-    if (estrangeira) {
-      alert('Consulta de placa não disponível para placas estrangeiras.');
-      return;
-    }
     if (!placa || placa.length < 7) {
-      alert('Informe uma placa válida (formato AAA0X00 ou AAA9999) para consultar.');
+      alert('Informe uma placa válida (mínimo 7 caracteres) para consultar.');
       return;
     }
 
@@ -428,10 +420,10 @@ export default function Envolvidos() {
                 <div className="flex gap-2">
                   <input
                     value={ev.placa}
-                    placeholder={ev.placa_estrangeira ? 'Digite a placa estrangeira' : 'AAA0X00 ou AAA9999'}
+                    placeholder="Digite a placa"
                     onChange={(e) => updatePlaca(ev.id, e.target.value, ev.placa_estrangeira)}
                     className="ds-input text-sm uppercase flex-1"
-                    title={ev.placa_estrangeira ? 'Placa estrangeira: digitação livre' : 'Placa brasileira: formato AAA0X00 ou AAA9999'}
+                    title={ev.placa_estrangeira ? 'Placa estrangeira: digitação livre' : 'Placa: formato AAA0X00 ou AAA9999'}
                   />
                   {!ev.placa_estrangeira && (
                     <button
