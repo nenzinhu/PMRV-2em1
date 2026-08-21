@@ -13,6 +13,19 @@
   --ds-accent: #fbbf24;
   --ds-danger: #dc2626;
   --ds-muted: #dbeafe;
+  --ds-primary: #008448;
+}
+
+:root.dark {
+  --ds-bg: #0f172a;
+  --ds-surface: #1e293b;
+  --ds-text: #eaeaea;
+  --ds-ink: #60a5fa;
+  --ds-border: #334155;
+  --ds-accent: #fbbf24;
+  --ds-danger: #f87171;
+  --ds-muted: #1e293b;
+  --ds-primary: #22c55e;
 }
 
 @layer base {
@@ -81,7 +94,10 @@
   }
 
   .ds-btn-primary {
-    @apply ds-btn bg-pmrv text-white border-pmrv shadow-[4px_4px_0_#C8933F] hover:bg-charcoal py-4;
+    @apply ds-btn border-2 shadow-[4px_4px_0_var(--ds-accent)] py-4;
+    background-color: var(--ds-primary);
+    color: #fff;
+    border-color: var(--ds-primary);
   }
 
   .ds-btn-ghost {
@@ -89,11 +105,17 @@
   }
 
   .ds-btn-whatsapp {
-    @apply ds-btn bg-whatsapp hover:bg-green-700 text-white border-pmrv shadow-[4px_4px_0_#0A0A0A] py-5 text-lg transform active:scale-95;
+    @apply ds-btn border-2 shadow-[4px_4px_0_#0A0A0A] py-5 text-lg transform active:scale-95;
+    background-color: #25d366;
+    color: #fff;
+    border-color: var(--ds-primary);
   }
 
   .ds-btn-gold {
-    @apply ds-btn bg-gold hover:bg-[#B8842F] text-pmrv border-pmrv shadow-[4px_4px_0_#0A0A0A] py-4 transform active:scale-95;
+    @apply ds-btn border-2 shadow-[4px_4px_0_#0A0A0A] py-4 transform active:scale-95;
+    background-color: var(--ds-accent);
+    color: #000;
+    border-color: var(--ds-primary);
   }
 
   .ds-btn-danger {
@@ -150,6 +172,21 @@
   50% {
     transform: scale(1.1);
   }
+}
+
+@keyframes cardIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-card-in {
+  animation: cardIn 0.35s ease-out both;
 }
 
 /* ============================================================

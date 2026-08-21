@@ -5,6 +5,9 @@ import RelatoPolicial from '@/components/RelatoPolicial';
 import Envolvidos from '@/components/Envolvidos';
 import ResumoDinamica from '@/components/ResumoDinamica';
 import SWRegister from '@/components/SWRegister';
+import ThemeConfig from '@/components/theme/ThemeConfig';
+import { useSwipe } from '@/hooks/useSwipe';
+import { useFullscreen } from '@/hooks/useFullscreen';
 import './globals.css';
 
 function formatKMFromNumber(km) {
@@ -16,6 +19,20 @@ function formatKMFromNumber(km) {
 export default function RootLayout() {
   const [aba, setAba] = useState('envolvidos');
   const [gpsInfo, setGpsInfo] = useState(null);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const { elRef, active: fsActive, toggle: toggleFs } = useFullscreen();
+
+  useSwipe({
+    threshold: 70,
+    onSwipeLeft: () => {
+      if (aba === 'envolvidos') setAba('relato');
+      else if (aba === 'relato') setAba('resumo');
+    },
+    onSwipeRight: () => {
+      if (aba === 'resumo') setAba('relato');
+      else if (aba === 'relato') setAba('envolvidos');
+    },
+  });
 
   useEffect(() => {
     function onGpsChange(e) {
@@ -64,7 +81,6 @@ export default function RootLayout() {
     window.addEventListener('gps-change', onGpsChange);
     window.addEventListener('navigate-to', onNavigate);
     window.addEventListener('set-dinamica', onSetDinamica);
-    // expõe o handler para o botão do header poder chamar
     window.__pmrvTransferLocation = onTransferLocation;
 
     return () => {
@@ -103,83 +119,113 @@ export default function RootLayout() {
       <body className="bg-bone text-charcoal antialiased font-sans">
         <SWRegister />
 
-        <header className="bg-pmrv text-white sticky top-0 z-50 border-b-[3px] border-brick">
-          <div className="max-w-5xl mx-auto flex justify-between items-center px-4">
-            <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo-pmrv-sc.svg"
-                alt="Brasão PMRV-SC"
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-md shadow-sm"
-              />
-              <div className="leading-tight">
-                <h1 className="text-base sm:text-lg font-mono font-semibold tracking-tight uppercase text-white">
-                  Relato Policial
-                </h1>
-                <p className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-white/80">
-                  PMRV-SC
-                </p>
+        <div ref={elRef} className="min-h-screen flex flex-col">
+          <header className="text-white sticky top-0 z-50 border-b-[3px] border-brick" style={{ backgroundColor: 'var(--ds-primary)' }}>
+            <div className="max-w-5xl mx-auto flex justify-between items-center px-3 sm:px-4">
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/logo-pmrv-sc.svg"
+                  alt="Brasão PMRV-SC"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-md shadow-sm"
+                />
+                <div className="leading-tight">
+                  <h1 className="text-sm sm:text-base md:text-lg font-mono font-semibold tracking-tight uppercase text-white">
+                    Relato Policial
+                  </h1>
+                  <p className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-white/80">
+                    PMRV-SC
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {showLocation && (
+              <div className="flex items-center gap-1 sm:gap-2">
+                {showLocation && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => window.__pmrvTransferLocation && window.__pmrvTransferLocation()}
+                      className="hidden sm:inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
+                      title="Toque para inserir a localização no campo de texto ativo"
+                    >
+                      📍 {locationLabel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => window.__pmrvTransferLocation && window.__pmrvTransferLocation()}
+                      className="sm:hidden bg-white/10 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider w-8 h-8 flex items-center justify-center rounded"
+                      title="Inserir localização"
+                    >
+                      📍
+                    </button>
+                  </>
+                )}
                 <button
                   type="button"
-                  onClick={() => window.__pmrvTransferLocation && window.__pmrvTransferLocation()}
+                  onClick={() => setThemeOpen(true)}
                   className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
-                  title="Toque para inserir a localização no campo de texto ativo"
+                  title="Personalizar tema"
                 >
-                  📍 {locationLabel}
+                  🎨 Tema
                 </button>
-              )}
-              <span
-                id="offline-indicator"
-                className="hidden bg-brick text-white text-[10px] px-2 py-1 font-mono font-semibold uppercase tracking-wider animate-pulse"
-              >
-                Offline
-              </span>
+                <button
+                  type="button"
+                  onClick={toggleFs}
+                  className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
+                  title={fsActive ? 'Sair da tela cheia' : 'Modo imersivo'}
+                >
+                  {fsActive ? '⛶' : '⛶'}
+                </button>
+                <span
+                  id="offline-indicator"
+                  className="hidden bg-brick text-white text-[10px] px-2 py-1 font-mono font-semibold uppercase tracking-wider animate-pulse"
+                >
+                  Offline
+                </span>
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <nav className="bg-pmrv text-white sticky top-[57px] sm:top-[65px] z-40">
-          <div className="max-w-5xl mx-auto flex">
-            <button
-              onClick={() => setAba('envolvidos')}
-              className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-sm border-b-4 transition ${
-                aba === 'envolvidos'
-                  ? 'border-gold text-white bg-pmrv-dark'
-                  : 'border-transparent text-white/80 hover:bg-pmrv-dark'
-              }`}
-            >
-              Envolvidos
-            </button>
-            <button
-              onClick={() => setAba('relato')}
-              className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-sm border-b-4 transition ${
-                aba === 'relato'
-                  ? 'border-gold text-white bg-pmrv-dark'
-                  : 'border-transparent text-white/80 hover:bg-pmrv-dark'
-              }`}
-            >
-              Relato Policial
-            </button>
-            <button
-              onClick={() => setAba('resumo')}
-              className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-sm border-b-4 transition ${
-                aba === 'resumo'
-                  ? 'border-gold text-white bg-pmrv-dark'
-                  : 'border-transparent text-white/80 hover:bg-pmrv-dark'
-              }`}
-            >
-              Resumo da Dinâmica
-            </button>
-          </div>
-        </nav>
+          <nav className="text-white sticky top-[57px] sm:top-[65px] z-40" style={{ backgroundColor: 'var(--ds-primary)' }}>
+            <div className="max-w-5xl mx-auto flex">
+              <button
+                onClick={() => setAba('envolvidos')}
+                className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-xs sm:text-sm border-b-4 transition ${
+                  aba === 'envolvidos'
+                    ? 'border-gold text-white bg-pmrv-dark'
+                    : 'border-transparent text-white/80 hover:bg-pmrv-dark'
+                }`}
+              >
+                Envolvidos
+              </button>
+              <button
+                onClick={() => setAba('relato')}
+                className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-xs sm:text-sm border-b-4 transition ${
+                  aba === 'relato'
+                    ? 'border-gold text-white bg-pmrv-dark'
+                    : 'border-transparent text-white/80 hover:bg-pmrv-dark'
+                }`}
+              >
+                Relato Policial
+              </button>
+              <button
+                onClick={() => setAba('resumo')}
+                className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-xs sm:text-sm border-b-4 transition ${
+                  aba === 'resumo'
+                    ? 'border-gold text-white bg-pmrv-dark'
+                    : 'border-transparent text-white/80 hover:bg-pmrv-dark'
+                }`}
+              >
+                Resumo da Dinâmica
+              </button>
+            </div>
+          </nav>
 
-        <main className="w-full">
-          {aba === 'envolvidos' ? <Envolvidos /> : aba === 'relato' ? <RelatoPolicial /> : <ResumoDinamica />}
-        </main>
+          <main className="w-full flex-1">
+            {aba === 'envolvidos' ? <Envolvidos /> : aba === 'relato' ? <RelatoPolicial /> : <ResumoDinamica />}
+          </main>
+        </div>
+
+        {themeOpen && <ThemeConfig onClose={() => setThemeOpen(false)} />}
       </body>
     </html>
   );

@@ -1,10 +1,13 @@
-const CACHE_NAME = 'pmrv-p19-next-v1';
+const CACHE_NAME = 'pmrv-sc-relatos-v2';
 const ASSETS = [
   '/',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
   '/apple-touch-icon.png',
+  '/favicon-32.png',
+  '/favicon-pmrv-sc.svg',
+  '/logo-pmrv-sc.svg',
 ];
 
 self.addEventListener('install', (event) => {

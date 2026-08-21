@@ -24,6 +24,7 @@ import {
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
 import { matchRodovia } from '@/lib/gps';
+import { useSwipe } from '@/hooks/useSwipe';
 
 const DANOS = 'Sinistro de trânsito com danos materiais';
 const VITIMA = 'Sinistro de trânsito com vítima(s)';
@@ -84,6 +85,12 @@ export default function RelatoPolicial() {
   const [form, setForm] = useState(INITIAL);
   const [manualEdit, setManualEdit] = useState(false);
   const [manualText, setManualText] = useState('');
+
+  useSwipe({
+    threshold: 70,
+    onSwipeLeft: () => nextStep(),
+    onSwipeRight: () => prevStep(),
+  });
 
   const ehVitima = form.ocorrencia === VITIMA;
 
@@ -578,7 +585,7 @@ export default function RelatoPolicial() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="ds-label">Rodovia</label>
-              <select value={form.rodovia} onChange={(e) => onRodoviaChange(e.target.value)} className="ds-input font-mono font-semibold">
+              <select value={form.rodovia} onChange={(e) => onRodoviaChange(e.target.value)} className="ds-input font-mono font-semibold text-sm sm:text-base">
                 {RODOVIAS.map((r) => (
                   <option key={r} value={r}>{r}</option>
                 ))}
@@ -591,7 +598,7 @@ export default function RelatoPolicial() {
                 placeholder="Ex: 12,345"
                 maxLength={6}
                 onChange={(e) => set({ km: formatKM(e.target.value) })}
-                className="ds-input text-center font-mono font-semibold"
+                className="ds-input text-center font-mono font-semibold text-sm sm:text-base"
               />
             </div>
           </div>

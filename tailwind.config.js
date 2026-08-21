@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: 'class',
   content: [
     './app/**/*.{js,jsx}',
     './components/**/*.{js,jsx}',
@@ -12,18 +13,18 @@ module.exports = {
       },
       colors: {
         // Paleta extraída do brasão PMRV-SC (watermarked_img)
-        pmrv: '#2b6cb0',        // Azul do céu (primário / cabeçalho)
-        'pmrv-dark': '#1e4e8c', // Azul mais escuro (hover)
-        charcoal: '#1e293b',    // Ardósia (texto / estrutura — cor da via)
-        bone: '#eaf2fb',        // Fundo claro azulado (céu claro)
-        gold: '#fbbf24',        // Dourado (destaque)
-        brick: '#dc2626',       // Vermelho do brasão (perigo / ação)
-        'brick-dark': '#b91c1c',
-        'step-idle': '#dbeafe', // Azul claro (steps não feitos)
-        'step-done': '#2b6cb0',
-        'pm-green': '#4ade80',  // Verde da grama (acento)
+        pmrv: 'var(--ds-primary)',
+        'pmrv-dark': 'var(--ds-primary)',
+        charcoal: 'var(--ds-text)',
+        bone: 'var(--ds-bg)',
+        gold: 'var(--ds-accent)',
+        brick: 'var(--ds-danger)',
+        'brick-dark': 'var(--ds-danger)',
+        'step-idle': 'var(--ds-muted)',
+        'step-done': 'var(--ds-primary)',
+        'pm-green': '#4ade80',
         whatsapp: '#25D366',
-        'pm-gray': '#cbd5e1',   // Prata da borda
+        'pm-gray': '#cbd5e1',
       },
     },
   },

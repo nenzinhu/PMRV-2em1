@@ -22,7 +22,7 @@ export default function Stepper({ currentStep, ehVitima }) {
   }
 
   return (
-    <div className="max-w-xl mx-auto px-6 py-5">
+    <div className="max-w-xl mx-auto px-3 sm:px-6 py-4 sm:py-5">
       <div className="flex items-center justify-between relative">
         <div className="absolute left-0 top-1/2 w-full h-0.5 bg-step-idle -translate-y-1/2 z-0" />
         <div
@@ -35,7 +35,7 @@ export default function Stepper({ currentStep, ehVitima }) {
           .map((d) => (
             <div
               key={d.n}
-              className={`step-dot z-10 w-9 h-9 ${dotClass(d.n)} flex items-center justify-center font-mono font-semibold text-sm`}
+              className={`step-dot z-10 w-8 h-8 sm:w-9 sm:h-9 ${dotClass(d.n)} flex items-center justify-center font-mono font-semibold text-xs sm:text-sm`}
             >
               {d.label}
             </div>

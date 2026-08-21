@@ -301,19 +301,19 @@ export default function Envolvidos() {
   const ufOpts = PMRV_UFS.map((u) => ({ v: u, label: u }));
 
   return (
-    <div className="max-w-xl mx-auto p-4 relative overflow-hidden">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvidos</h2>
+    <div className="max-w-xl mx-auto p-3 sm:p-4 relative overflow-hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+        <h2 className="text-base sm:text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvidos</h2>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={salvarToken}
-            className="btn-outline text-xs"
+            className="btn-outline text-xs active:scale-95"
             title="Configurar token da API de placa"
           >
             🔧 Placa
           </button>
-          <button onClick={adicionar} className="btn-ios text-xs">
+          <button onClick={adicionar} className="btn-ios text-xs active:scale-95">
             + Adicionar
           </button>
         </div>
@@ -325,12 +325,12 @@ export default function Envolvidos() {
 
       <div className="space-y-6">
         {envolvidos.map((ev) => (
-          <div key={ev.id} className="ds-card animate-[slideIn_0.3s_ease-out]">
-            <div className="flex justify-between items-center border-b-2 border-charcoal pb-2">
-              <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvido #{ev.id}</h3>
+          <div key={ev.id} className="ds-card animate-card-in">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-charcoal pb-2 gap-2">
+              <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm sm:text-base">Envolvido #{ev.id}</h3>
               <button
                 onClick={() => remover(ev.id)}
-                className="btn-ios text-xs bg-brick !border-brick"
+                className="btn-ios text-xs bg-brick !border-brick active:scale-95"
               >
                 Remover
               </button>
@@ -454,7 +454,7 @@ export default function Envolvidos() {
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-1">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1 gap-2">
                 <label className="ds-label mb-0">Relato Individual</label>
                 <button
                   id={`env_ia_${ev.id}`}
@@ -550,7 +550,7 @@ export default function Envolvidos() {
       </div>
 
       {envolvidos.length === 0 && (
-        <div className="bg-white border-2 border-dashed border-charcoal p-8 text-center font-mono text-sm text-charcoal/60">
+        <div className="bg-white border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal/60">
           Nenhum envolvido adicionado ainda.
         </div>
       )}

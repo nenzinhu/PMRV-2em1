@@ -1,18 +1,20 @@
 {
-  "name": "PMRv - Posto 19 Report",
-  "short_name": "PMRv P19",
-  "description": "Sistema de Relatórios PMRv Posto 19",
+  "name": "Relato Policial — PMSC",
+  "short_name": "PMRV-SC",
+  "description": "Sistema de Relatórios da Polícia Militar Rodoviária de Santa Catarina",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#F5F0E8",
-  "theme_color": "#0A0A0A",
+  "background_color": "#ffffff",
+  "theme_color": "#008448",
+  "categories": ["utilities", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icon-512.png",
