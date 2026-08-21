@@ -12,6 +12,7 @@ import {
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
 
 const STORAGE_KEY = 'PMRV_RESUMO_DINAMICA';
+const ENVOLVIDOS_KEY = 'PMRV_ENVOLVIDOS';
 
 function loadResumo() {
   try {
@@ -33,12 +34,26 @@ function persistResumo(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function loadEnvolvidos() {
+  try {
+    const raw = localStorage.getItem(ENVOLVIDOS_KEY);
+    if (raw) {
+      const obj = JSON.parse(raw);
+      return Array.isArray(obj.lista) ? obj.lista : [];
+    }
+  } catch (e) {
+    /* ignore */
+  }
+  return [];
+}
+
 export default function ResumoDinamica() {
   const [relatos, setRelatos] = useState([]);
   const [resumo, setResumo] = useState('');
   const [loadingIA, setLoadingIA] = useState(false);
   const [statusIA, setStatusIA] = useState('');
   const init = useRef(false);
+  const [hasImported, setHasImported] = useState(false);
 
   useEffect(() => {
     const s = loadResumo();
@@ -72,9 +87,39 @@ export default function ResumoDinamica() {
     save(relatos.filter((r) => r.id !== id));
   }
 
+  function importarRelatosEnvolvidos() {
+    const envolvidos = loadEnvolvidos();
+    const individuais = envolvidos
+      .filter((ev) => ev.relato && ev.relato.trim())
+      .map((ev) => ({
+        id: Date.now() + Math.random(),
+        texto: ev.relato.trim(),
+        envolvidoId: ev.id,
+        envolvidoNome: ev.nome && ev.nome.trim() ? ev.nome.trim() : `Envolvido #${ev.id}`,
+      }));
+
+    if (individuais.length === 0) {
+      alert('Nenhum relato individual encontrado nos envolvidos.');
+      return;
+    }
+
+    const merged = [...relatos];
+    individuais.forEach((novo) => {
+      const exists = merged.some((r) => r.envolvidoId === novo.envolvidoId);
+      if (!exists) merged.push(novo);
+    });
+
+    save(merged, resumo);
+    setHasImported(true);
+    setTimeout(() => setHasImported(false), 3000);
+  }
+
   async function gerarResumo() {
     const base = relatos
-      .map((r, idx) => `Relato ${idx + 1}: ${r.texto}`)
+      .map((r, idx) => {
+        const cabecalho = r.envolvidoNome ? `${r.envolvidoNome}: ` : '';
+        return `${cabecalho}${r.texto}`;
+      })
       .join('\n\n');
 
     if (!base.trim()) {
@@ -179,11 +224,26 @@ export default function ResumoDinamica() {
         Adicione relatos individuais e gere automaticamente um resumo unificado da dinâmica do ocorrido.
       </p>
 
+      <div className="mb-3">
+        <button
+          type="button"
+          onClick={importarRelatosEnvolvidos}
+          className="btn-outline text-xs w-full"
+        >
+          📥 Importar relatos individuais dos envolvidos
+        </button>
+        {hasImported && (
+          <p className="text-[10px] font-mono text-pmrv mt-1">Relatos importados com sucesso.</p>
+        )}
+      </div>
+
       <div className="space-y-4">
         {relatos.map((r, idx) => (
           <div key={r.id} className="ds-card">
             <div className="flex justify-between items-center border-b-2 border-charcoal pb-2">
-              <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv">Relato #{idx + 1}</h3>
+              <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv">
+                Relato #{idx + 1} {r.envolvidoNome ? `— ${r.envolvidoNome}` : ''}
+              </h3>
               <button type="button" onClick={() => removerRelato(r.id)} className="btn-ios text-xs bg-brick !border-brick">
                 Remover
               </button>
@@ -230,8 +290,20 @@ export default function ResumoDinamica() {
 
       {resumo && (
         <div className="mt-6 ds-card">
-          <div className="border-b-2 border-charcoal pb-2 mb-3">
+          <div className="border-b-2 border-charcoal pb-2 mb-3 flex justify-between items-center">
             <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv">Resumo Gerado</h3>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('PMRV_RESUMO_CLIPBOARD', resumo);
+                  alert('Resumo copiado para a área de transferência do app.');
+                }
+              }}
+              className="btn-outline text-[10px]"
+            >
+              📋 Usar no Relato Policial
+            </button>
           </div>
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{resumo}</p>
         </div>

@@ -679,7 +679,29 @@ export default function RelatoPolicial() {
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="ds-label mb-0">Descrição da Dinâmica (Editável)</label>
-              <button onClick={() => obterChaveIA(true)} className="btn-outline p-1 text-xs leading-none" title="Configurar chave da IA (Groq/Qwen)">🔑</button>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    const raw = localStorage.getItem('PMRV_RESUMO_DINAMICA');
+                    const data = raw ? JSON.parse(raw) : null;
+                    const texto = (data && typeof data.resumo === 'string' ? data.resumo : '').trim();
+                    if (!texto) {
+                      alert('Nenhum resumo da dinâmica disponível.');
+                      return;
+                    }
+                    if (typeof window !== 'undefined' && window.confirm('Deseja substituir a dinâmica atual pelo resumo salvo?')) {
+                      set({ dinamica: texto });
+                    }
+                  } catch (e) {
+                    alert('Não foi possível carregar o resumo da dinâmica.');
+                  }
+                }}
+                className="btn-outline p-1 text-xs leading-none"
+                title="Importar resumo salvo na aba Resumo da Dinâmica"
+              >
+                📥 Importar Resumo
+              </button>
             </div>
             <div className="mb-2">
               <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-gold mb-1">Descrição IA</span>
