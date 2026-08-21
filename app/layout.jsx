@@ -1,14 +1,84 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import RelatoPolicial from '@/components/RelatoPolicial';
 import Envolvidos from '@/components/Envolvidos';
 import ResumoDinamica from '@/components/ResumoDinamica';
 import SWRegister from '@/components/SWRegister';
 import './globals.css';
 
+function formatKMFromNumber(km) {
+  if (typeof km !== 'number') return '';
+  const fixed = km.toFixed(3);
+  return fixed.replace('.', ',');
+}
+
 export default function RootLayout() {
   const [aba, setAba] = useState('envolvidos');
+  const [gpsInfo, setGpsInfo] = useState(null);
+
+  useEffect(() => {
+    function onGpsChange(e) {
+      setGpsInfo(e.detail || null);
+    }
+    function onNavigate(e) {
+      const target = e.detail;
+      if (target && ['envolvidos', 'relato', 'resumo'].includes(target)) {
+        setAba(target);
+      }
+    }
+    function onSetDinamica(e) {
+      const texto = e.detail;
+      if (typeof texto === 'string') {
+        const el = document.getElementById('pmrv_dinamica_texto');
+        if (el) {
+          el.value = texto;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }
+    }
+    function onTransferLocation() {
+      if (!gpsInfo?.rodovia || gpsInfo?.foraDaRodovia) return;
+      const loc = `${gpsInfo.rodovia} KM ${formatKMFromNumber(gpsInfo.km)}`;
+      const ta = document.activeElement;
+      if (ta && (ta.tagName === 'TEXTAREA' || ta.tagName === 'INPUT')) {
+        const start = ta.selectionStart || ta.value.length;
+        const end = ta.selectionEnd || ta.value.length;
+        const before = ta.value.slice(0, start);
+        const after = ta.value.slice(end);
+        const insert = (before.endsWith('@') || before.endsWith(' ') ? '' : ' ') + loc;
+        ta.value = before + insert + after;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        const newPos = start + insert.length;
+        ta.setSelectionRange(newPos, newPos);
+        ta.focus();
+      } else {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(loc).then(() => alert('Localização copiada: ' + loc));
+        } else {
+          alert('Localização: ' + loc);
+        }
+      }
+    }
+
+    window.addEventListener('gps-change', onGpsChange);
+    window.addEventListener('navigate-to', onNavigate);
+    window.addEventListener('set-dinamica', onSetDinamica);
+    // expõe o handler para o botão do header poder chamar
+    window.__pmrvTransferLocation = onTransferLocation;
+
+    return () => {
+      window.removeEventListener('gps-change', onGpsChange);
+      window.removeEventListener('navigate-to', onNavigate);
+      window.removeEventListener('set-dinamica', onSetDinamica);
+      delete window.__pmrvTransferLocation;
+    };
+  }, [gpsInfo]);
+
+  const showLocation = gpsInfo && gpsInfo.rodovia && !gpsInfo.foraDaRodovia;
+  const locationLabel = showLocation
+    ? `${gpsInfo.rodovia} KM ${formatKMFromNumber(gpsInfo.km)}`
+    : '';
 
   return (
     <html lang="pt-BR">
@@ -51,12 +121,24 @@ export default function RootLayout() {
                 </p>
               </div>
             </div>
-            <span
-              id="offline-indicator"
-              className="hidden bg-brick text-white text-[10px] px-2 py-1 font-mono font-semibold uppercase tracking-wider animate-pulse"
-            >
-              Offline
-            </span>
+            <div className="flex items-center gap-2">
+              {showLocation && (
+                <button
+                  type="button"
+                  onClick={() => window.__pmrvTransferLocation && window.__pmrvTransferLocation()}
+                  className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
+                  title="Toque para inserir a localização no campo de texto ativo"
+                >
+                  📍 {locationLabel}
+                </button>
+              )}
+              <span
+                id="offline-indicator"
+                className="hidden bg-brick text-white text-[10px] px-2 py-1 font-mono font-semibold uppercase tracking-wider animate-pulse"
+              >
+                Offline
+              </span>
+            </div>
           </div>
         </header>
 

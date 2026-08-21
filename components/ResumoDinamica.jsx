@@ -54,6 +54,7 @@ export default function ResumoDinamica() {
   const [statusIA, setStatusIA] = useState('');
   const init = useRef(false);
   const [hasImported, setHasImported] = useState(false);
+  const [transferindoId, setTransferindoId] = useState(null);
 
   useEffect(() => {
     const s = loadResumo();
@@ -61,6 +62,17 @@ export default function ResumoDinamica() {
     setResumo(s.resumo);
     init.current = true;
   }, []);
+
+  function transferirParaRelatoPolicial(id) {
+    const relato = relatos.find((r) => r.id === id);
+    if (!relato) return;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'relato' }));
+      window.dispatchEvent(new CustomEvent('set-dinamica', { detail: relato.texto }));
+    }
+    setTransferindoId(id);
+    setTimeout(() => setTransferindoId(null), 2000);
+  }
 
   function save(nextRelatos, nextResumo) {
     const state = {
@@ -244,9 +256,18 @@ export default function ResumoDinamica() {
               <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv">
                 Relato #{idx + 1} {r.envolvidoNome ? `— ${r.envolvidoNome}` : ''}
               </h3>
-              <button type="button" onClick={() => removerRelato(r.id)} className="btn-ios text-xs bg-brick !border-brick">
-                Remover
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => transferirParaRelatoPolicial(r.id)}
+                  className="btn-outline text-xs"
+                >
+                  {transferindoId === r.id ? 'Transferido!' : '📤 Transferir p/ Relato Policial'}
+                </button>
+                <button type="button" onClick={() => removerRelato(r.id)} className="btn-ios text-xs bg-brick !border-brick">
+                  Remover
+                </button>
+              </div>
             </div>
             <textarea
               rows={4}

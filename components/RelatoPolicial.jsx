@@ -157,6 +157,26 @@ export default function RelatoPolicial() {
   }, [gpsOn, geojson]);
   // --------------------------------------------------------------------------
 
+  // Dispara mudanças do GPS para o header
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('gps-change', { detail: gpsInfo }));
+    }
+  }, [gpsInfo]);
+
+  // Recebe localização externa para o campo de dinâmica
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    function onSetDinamica(e) {
+      const texto = e.detail;
+      if (typeof texto === 'string') {
+        setForm((f) => ({ ...f, dinamica: texto }));
+      }
+    }
+    window.addEventListener('set-dinamica', onSetDinamica);
+    return () => window.removeEventListener('set-dinamica', onSetDinamica);
+  }, []);
+
   function setTemplate() {
     setForm((f) => ({ ...f, dinamica: templateFor(f) }));
   }
