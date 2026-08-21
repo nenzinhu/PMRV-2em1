@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Stepper from './Stepper';
 import { ArrowRightIcon, ArrowLeftIcon, WhatsAppIcon, CopyIcon } from './icons';
 import {
   PMRV_DINAMICAS,
   PMRV_SUBTIPOS,
   RODOVIAS,
+  RODOVIAS_GEOJSON_URL,
   FLORIPA_RODOVIAS,
   formatKM,
   formatSade,
@@ -22,6 +23,7 @@ import {
   extractJSON,
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
+import { matchRodovia } from '@/lib/gps';
 
 const DANOS = 'Sinistro de trânsito com danos materiais';
 const VITIMA = 'Sinistro de trânsito com vítima(s)';
@@ -101,6 +103,59 @@ export default function RelatoPolicial() {
   }, [form.vtr]);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  // ---- GPS: localização automática da rodovia + KM a partir de lat/long ----
+  const [gpsOn, setGpsOn] = useState(false);
+  const [gpsInfo, setGpsInfo] = useState(null); // { rodovia, km, dist, foraDaRodovia, lat, lon, erro }
+  const [geojson, setGeojson] = useState(null);
+  const watchRef = useRef(null);
+
+  useEffect(() => {
+    if (!gpsOn) {
+      if (watchRef.current && navigator.geolocation) {
+        navigator.geolocation.clearWatch(watchRef.current);
+        watchRef.current = null;
+      }
+      return;
+    }
+    let cancelled = false;
+    // carrega a malha viária (offline-friendly: fica em cache do navegador)
+    if (!geojson) {
+      fetch(RODOVIAS_GEOJSON_URL)
+        .then((r) => r.json())
+        .then((g) => !cancelled && setGeojson(g))
+        .catch(() => !cancelled && setGpsInfo({ erro: 'Falha ao carregar malha viária.' }));
+    }
+    if (!navigator.geolocation) {
+      setGpsInfo({ erro: 'Geolocalização não suportada neste dispositivo.' });
+      return;
+    }
+    watchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setGpsInfo((prev) => ({ ...(prev || {}), lat: latitude, lon: longitude, erro: null }));
+        if (geojson) {
+          const m = matchRodovia(geojson, latitude, longitude, 150);
+          if (m) {
+            if (m.foraDaRodovia) {
+              setGpsInfo((prev) => ({ ...prev, foraDaRodovia: true, dist: m.d, lat: latitude, lon: longitude }));
+            } else {
+              setGpsInfo({ rodovia: m.rodovia, km: m.km, nome: m.nome, dist: m.d, lat: latitude, lon: longitude, foraDaRodovia: false });
+              // auto-preenche rodovia + KM (somente quando sobre a rodovia)
+              set({ rodovia: m.rodovia, km: formatKM(String(Math.round(m.km * 1000) / 1000)) });
+            }
+          }
+        }
+      },
+      (err) => setGpsInfo({ erro: 'GPS indisponível: ' + err.message }),
+      { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+    );
+    return () => {
+      cancelled = true;
+      if (watchRef.current && navigator.geolocation) navigator.geolocation.clearWatch(watchRef.current);
+    };
+  }, [gpsOn, geojson]);
+  // --------------------------------------------------------------------------
 
   function setTemplate() {
     setForm((f) => ({ ...f, dinamica: templateFor(f) }));
@@ -434,6 +489,57 @@ export default function RelatoPolicial() {
               <option value="pela guarnição">Pela Guarnição</option>
             </select>
           </div>
+
+          {/* GPS: detecta rodovia + KM automaticamente a partir da posição */}
+          <div className="mt-4 rounded-lg border-2 border-pmrv/40 bg-white p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-mono font-semibold uppercase text-sm text-pmrv">Localização por GPS</p>
+                <p className="text-[11px] text-charcoal/70">
+                  Detecta a rodovia e o KM automaticamente (malha oficial SC).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setGpsOn((v) => !v)}
+                className={`px-4 py-2 rounded-md font-mono font-semibold text-sm border-2 transition ${
+                  gpsOn
+                    ? 'bg-pmrv text-white border-pmrv'
+                    : 'bg-white text-pmrv border-pmrv hover:bg-pmrv/10'
+                }`}
+              >
+                {gpsOn ? 'GPS Ligado' : 'Ativar GPS'}
+              </button>
+            </div>
+
+            {gpsInfo?.erro && (
+              <p className="mt-2 text-xs font-mono text-brick">{gpsInfo.erro}</p>
+            )}
+            {gpsOn && !gpsInfo?.erro && gpsInfo?.foraDaRodovia && (
+              <p className="mt-2 text-xs font-mono text-brick">
+                Fora da rodovia ({Math.round(gpsInfo.dist)} m). Aproxime-se da via para capturar.
+              </p>
+            )}
+            {gpsInfo && !gpsInfo.foraDaRodovia && gpsInfo.rodovia && (
+              <div className="mt-2 flex flex-wrap gap-2 text-xs font-mono">
+                <span className="bg-pmrv/10 text-pmrv border border-pmrv/40 px-2 py-1 rounded">
+                  Rodovia: <b>{gpsInfo.rodovia}</b>
+                </span>
+                <span className="bg-gold/15 text-charcoal border border-gold/50 px-2 py-1 rounded">
+                  KM: <b>{Math.round(gpsInfo.km * 1000) / 1000}</b>
+                </span>
+                <span className="bg-gray-100 text-charcoal/70 px-2 py-1 rounded">
+                  ±{Math.round(gpsInfo.dist)} m
+                </span>
+              </div>
+            )}
+            {gpsInfo && gpsInfo.lat != null && (
+              <p className="mt-2 text-[10px] font-mono text-charcoal/60">
+                Lat {gpsInfo.lat.toFixed(5)} · Lon {gpsInfo.lon.toFixed(5)}
+              </p>
+            )}
+          </div>
+
           <button onClick={nextStep} className="ds-btn-primary w-full">
             Seguinte
             <ArrowRightIcon />
