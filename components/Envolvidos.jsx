@@ -28,6 +28,7 @@ const EMPTY_ENV = () => ({
   placa: '',
   placa_tipo: 'br',
   modelo: '',
+  cor: '',
   relato: '',
   fotos: [],
 });
@@ -133,8 +134,11 @@ export default function Envolvidos() {
       }
 
       const marca = [data.MARCA, data.MODELO, data.SUBMODELO, data.VERSAO].filter(Boolean).join(' ');
+      const cor = data.cor && data.cor.trim() ? data.cor.trim() : '';
       if (marca) {
-        update(id, { modelo: marca });
+        update(id, { modelo: marca, cor });
+      } else if (cor) {
+        update(id, { cor });
       }
     } catch (err) {
       setPlacaError((prev) => ({ ...prev, [id]: err.message }));

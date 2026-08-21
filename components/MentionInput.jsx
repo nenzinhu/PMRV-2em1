@@ -22,13 +22,17 @@ export default function MentionInput({ value, onChange, envolvidos, placeholder,
       });
     }
     if (ev.placa && ev.placa.trim()) {
-      const modelStr = ev.modelo && ev.modelo.trim() ? ` (${ev.modelo.trim()})` : '';
+      const marca = ev.modelo && ev.modelo.trim() ? ev.modelo.trim() : '';
+      const cor = ev.cor && ev.cor.trim() ? ev.cor.trim() : '';
+      const insert = marca
+        ? `${marca}${cor ? ' ' + cor : ''} COM PLACA ${ev.placa.trim().toUpperCase()}`
+        : `${ev.placa.trim().toUpperCase()}`;
       items.push({
         type: 'veiculo',
         id: ev.id,
         label: ev.placa.trim().toUpperCase(),
-        sublabel: `Veículo ${modelStr}`,
-        insert: `${ev.placa.trim().toUpperCase()}`,
+        sublabel: marca ? `Veículo ${marca}${cor ? ' ' + cor : ''}` : 'Veículo',
+        insert,
       });
     }
     return items;
