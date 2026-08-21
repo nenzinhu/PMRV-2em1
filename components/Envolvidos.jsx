@@ -247,7 +247,7 @@ export default function Envolvidos() {
     <div className="max-w-xl mx-auto p-4 relative overflow-hidden">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvidos</h2>
-        <button onClick={adicionar} className="ds-btn bg-pmrv text-white text-xs py-2 px-3 shadow-[3px_3px_0_#006338]">
+        <button onClick={adicionar} className="ds-btn bg-pmrv text-white text-xs py-2 px-3 shadow-[3px_3px_0_#1e4e8c]">
           + Adicionar
         </button>
       </div>
@@ -265,7 +265,7 @@ export default function Envolvidos() {
               <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvido #{ev.id}</h3>
               <button
                 onClick={() => remover(ev.id)}
-                className="text-brick text-xs font-mono font-semibold uppercase border-2 border-brick px-2 py-1 hover:bg-[#FBE9EA] transition"
+                className="text-brick text-xs font-mono font-semibold uppercase border-2 border-brick px-2 py-1 hover:bg-[#fde8e8] transition"
               >
                 Remover
               </button>
@@ -391,7 +391,7 @@ export default function Envolvidos() {
                 <label className="ds-label mb-0">Fotos do Veículo (4 ângulos)</label>
                 <button
                   onClick={() => tirarQuatroFotos(ev.id)}
-                  className="ds-btn bg-pmrv text-white text-[10px] font-mono font-semibold uppercase py-1 px-2 shadow-[2px_2px_0_#006338]"
+                  className="ds-btn bg-pmrv text-white text-[10px] font-mono font-semibold uppercase py-1 px-2 shadow-[2px_2px_0_#1e4e8c]"
                   title="Abre a câmera 4x em sequência: Frontal, Traseira, Vista Esquerda, Vista Direita"
                 >
                   📷 Tirar 4 fotos
@@ -446,7 +446,7 @@ export default function Envolvidos() {
                             <button
                               type="button"
                               onClick={() => removerFoto(ev.id, s.key)}
-                              className="text-[10px] font-mono font-semibold uppercase border-2 border-brick text-brick px-2 py-1 bg-white hover:bg-[#FBE9EA] transition"
+                              className="text-[10px] font-mono font-semibold uppercase border-2 border-brick text-brick px-2 py-1 bg-white hover:bg-[#fde8e8] transition"
                               title="Remover esta foto"
                             >
                               ✕
@@ -529,7 +529,7 @@ export default function Envolvidos() {
                             <button
                               type="button"
                               onClick={() => removerFoto(ev.id, s.key)}
-                              className="text-[10px] font-mono font-semibold uppercase border-2 border-brick text-brick px-2 py-1 bg-white hover:bg-[#FBE9EA] transition"
+                              className="text-[10px] font-mono font-semibold uppercase border-2 border-brick text-brick px-2 py-1 bg-white hover:bg-[#fde8e8] transition"
                               title="Remover esta foto"
                             >
                               ✕

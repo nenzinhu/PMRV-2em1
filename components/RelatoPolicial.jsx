@@ -631,7 +631,7 @@ export default function RelatoPolicial() {
             </div>
             <div>
               <label className="ds-label text-brick text-center">Óbitos</label>
-              <input type="number" min={0} value={form.qtdGravissima} onChange={(e) => set({ qtdGravissima: e.target.value })} className="ds-input bg-[#FBE9EA] border-brick text-center font-mono font-semibold text-lg text-brick" />
+              <input type="number" min={0} value={form.qtdGravissima} onChange={(e) => set({ qtdGravissima: e.target.value })} className="ds-input bg-[#fde8e8] border-brick text-center font-mono font-semibold text-lg text-brick" />
             </div>
           </div>
           <div className="flex gap-3 pt-4">

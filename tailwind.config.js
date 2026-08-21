@@ -11,18 +11,19 @@ module.exports = {
         mono: ['IBM Plex Mono', 'ui-monospace', 'monospace'],
       },
       colors: {
-        // Paleta oficial PM Santa Catarina (pm.sc.gov.br)
-        pmrv: '#008448',       // Verde PM (cor primária / cabeçalho)
-        'pmrv-dark': '#006338', // Verde PM mais escuro (hover)
-        charcoal: '#2B2B2B',   // Texto / estrutura
-        bone: '#F4F6F5',       // Fundo claro (levemente esverdeado)
-        gold: '#FFC300',        // Dourado PM (destaque)
-        brick: '#E6232B',       // Vermelho PM (perigo / ação forte)
-        'brick-dark': '#C0171F',
-        'step-idle': '#CFE3D8', // Verde claro (steps não feitos)
-        'step-done': '#008448',
+        // Paleta extraída do brasão PMRV-SC (watermarked_img)
+        pmrv: '#2b6cb0',        // Azul do céu (primário / cabeçalho)
+        'pmrv-dark': '#1e4e8c', // Azul mais escuro (hover)
+        charcoal: '#1e293b',    // Ardósia (texto / estrutura — cor da via)
+        bone: '#eaf2fb',        // Fundo claro azulado (céu claro)
+        gold: '#fbbf24',        // Dourado (destaque)
+        brick: '#dc2626',       // Vermelho do brasão (perigo / ação)
+        'brick-dark': '#b91c1c',
+        'step-idle': '#dbeafe', // Azul claro (steps não feitos)
+        'step-done': '#2b6cb0',
+        'pm-green': '#4ade80',  // Verde da grama (acento)
         whatsapp: '#25D366',
-        'pm-gray': '#868075',
+        'pm-gray': '#cbd5e1',   // Prata da borda
       },
     },
   },
