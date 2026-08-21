@@ -491,7 +491,7 @@ export default function RelatoPolicial() {
           </div>
 
           {/* GPS: detecta rodovia + KM automaticamente a partir da posição */}
-          <div className="mt-4 rounded-lg border-2 border-pmrv/40 bg-white p-3">
+          <div className="estilo-glass p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-mono font-semibold uppercase text-sm text-pmrv">Localização por GPS</p>
@@ -502,11 +502,7 @@ export default function RelatoPolicial() {
               <button
                 type="button"
                 onClick={() => setGpsOn((v) => !v)}
-                className={`px-4 py-2 rounded-md font-mono font-semibold text-sm border-2 transition ${
-                  gpsOn
-                    ? 'bg-pmrv text-white border-pmrv'
-                    : 'bg-white text-pmrv border-pmrv hover:bg-pmrv/10'
-                }`}
+                className={`btn-ios text-xs ${gpsOn ? 'bg-gold !border-gold !text-pmrv' : ''}`}
               >
                 {gpsOn ? 'GPS Ligado' : 'Ativar GPS'}
               </button>
@@ -540,7 +536,7 @@ export default function RelatoPolicial() {
             )}
           </div>
 
-          <button onClick={nextStep} className="ds-btn-primary w-full">
+          <button onClick={nextStep} className="btn-ios w-full text-sm">
             Seguinte
             <ArrowRightIcon />
           </button>
@@ -622,8 +618,8 @@ export default function RelatoPolicial() {
             )}
           </div>
           <div className="flex gap-3 pt-4">
-            <button onClick={prevStep} className="ds-btn-ghost flex-1">Voltar</button>
-            <button onClick={nextStep} className="ds-btn-primary flex-[2]">Seguinte</button>
+            <button onClick={prevStep} className="btn-outline flex-1">Voltar</button>
+            <button onClick={nextStep} className="btn-ios flex-[2]">Seguinte</button>
           </div>
         </section>
       )}
@@ -683,7 +679,7 @@ export default function RelatoPolicial() {
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="ds-label mb-0">Descrição da Dinâmica (Editável)</label>
-              <button onClick={() => obterChaveIA(true)} className="p-1 border border-charcoal hover:bg-bone text-xs leading-none" title="Configurar chave da IA (Groq/Qwen)">🔑</button>
+              <button onClick={() => obterChaveIA(true)} className="btn-outline p-1 text-xs leading-none" title="Configurar chave da IA (Groq/Qwen)">🔑</button>
             </div>
             <div className="mb-2">
               <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-gold mb-1">Descrição IA</span>
@@ -697,7 +693,7 @@ export default function RelatoPolicial() {
                     key={estilo.id}
                     disabled={iaLoading !== null}
                     onClick={() => gerarDescricaoIA(estilo.id)}
-                    className="ds-btn flex-1 bg-white text-pmrv text-xs py-2 border-2 border-charcoal hover:bg-bone disabled:opacity-50"
+                    className="btn-outline flex-1 text-xs disabled:opacity-50"
                   >
                     {iaLoading === estilo.id ? 'Gerando…' : estilo.label}
                   </button>
@@ -712,10 +708,9 @@ export default function RelatoPolicial() {
               className="w-full p-3 bg-white border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition leading-relaxed"
             />
           </div>
-
           <div className="flex gap-3 pt-4">
-            <button onClick={prevStep} className="ds-btn-ghost flex-1">Voltar</button>
-            <button onClick={nextStep} className="ds-btn-primary flex-[2]">Seguinte</button>
+            <button onClick={prevStep} className="btn-outline flex-1">Voltar</button>
+            <button onClick={nextStep} className="btn-ios flex-[2]">Seguinte</button>
           </div>
         </section>
       )}
@@ -741,8 +736,8 @@ export default function RelatoPolicial() {
             </div>
           </div>
           <div className="flex gap-3 pt-4">
-            <button onClick={prevStep} className="ds-btn-ghost flex-1">Voltar</button>
-            <button onClick={nextStep} className="ds-btn-primary flex-[2]">Seguinte</button>
+            <button onClick={prevStep} className="btn-outline flex-1">Voltar</button>
+            <button onClick={nextStep} className="btn-ios flex-[2]">Seguinte</button>
           </div>
         </section>
       )}
@@ -777,7 +772,7 @@ export default function RelatoPolicial() {
               id="btn-revisar-ia"
               onClick={revisarOrtografia}
               disabled={reviewLoading}
-              className="ds-btn w-full mt-2 bg-white text-pmrv text-xs py-3 border-2 border-charcoal hover:bg-bone disabled:opacity-50"
+              className="btn-ios w-full mt-2 text-xs disabled:opacity-50"
             >
               🔍 {reviewLoading ? 'Revisando…' : 'Revisar Ortografia com IA (Norma Culta)'}
             </button>
@@ -792,8 +787,8 @@ export default function RelatoPolicial() {
               Copiar Relatório p/ Mobile (Limpo)
             </button>
             <div className="flex gap-2 text-sm">
-              <button onClick={prevStep} className="ds-btn-ghost flex-1">Voltar</button>
-              <button onClick={limpar} className="ds-btn-danger flex-1">Nova Ocorrência</button>
+              <button onClick={prevStep} className="btn-outline flex-1">Voltar</button>
+              <button onClick={limpar} className="btn-ios flex-1 bg-brick !border-brick">Nova Ocorrência</button>
             </div>
           </div>
         </section>

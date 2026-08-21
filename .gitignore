@@ -1,11 +1,26 @@
-/node_modules
-/.next
-/out
-/build
-.DS_Store
-*.log
-.env*.local
-next-env.d.ts
+# dependencias
+node_modules/
 
-.vercel
-.env*
+# build
+.next/
+out/
+build/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ambiente
+.env
+.env.local
+.env*.local
+
+# SO
+.DS_Store
+Thumbs.db
+
+# editores
+.vscode/
+.idea/

@@ -152,6 +152,71 @@
   }
 }
 
+/* ============================================================
+   Mobile UI Skills — utilitários (estilizar-botao / ajustar-layout /
+   alterar-estilo-interface). Mantém o design-system neo-brutalista do
+   PMRV (bordas grossas, sombra dura) e respeita a paleta oficial.
+   ============================================================ */
+
+@layer components {
+  /* estilizar-botao: ios_rounded (botão primário touch-first) */
+  .btn-ios {
+    @apply font-mono font-semibold uppercase tracking-wider border-2 transition-all flex items-center justify-center gap-2;
+    border-radius: 14px;
+    padding: 14px 20px;
+    background-color: var(--ds-ink);
+    color: #fff;
+    border-color: var(--ds-ink);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    min-height: 44px;
+  }
+  .btn-ios:active {
+    transform: scale(0.97);
+    filter: brightness(0.95);
+  }
+
+  /* estilizar-botao: outline (botão secundário touch-first) */
+  .btn-outline {
+    @apply font-mono font-semibold uppercase tracking-wider border-2 bg-white transition-all flex items-center justify-center gap-2;
+    border-radius: 14px;
+    padding: 12px 18px;
+    color: var(--ds-ink);
+    border-color: var(--ds-ink);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    min-height: 44px;
+  }
+  .btn-outline:active {
+    transform: scale(0.97);
+    background-color: rgba(43, 108, 176, 0.08);
+  }
+
+  /* ajustar-layout: header_glass (sub-barra fixa com blur) */
+  .layout-header-glass {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 40;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 255, 255, 0.72);
+    padding-top: env(safe-area-inset-top);
+    border-bottom: 2px solid var(--ds-ink);
+  }
+
+  /* alterar-estilo-interface: ios_glassmorphism (banner/info) */
+  .estilo-glass {
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 2px solid rgba(43, 108, 176, 0.35);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 .recording-active {
   animation: pulse-red 1s infinite;
   color: var(--ds-danger) !important;

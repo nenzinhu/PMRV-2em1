@@ -142,6 +142,49 @@ export default function Envolvidos() {
     salvar(lista);
   }
 
+  // Adiciona fotos da galeria (sem por-ângulo): preenche os lugares vazios
+  // na ordem dos slots e, se ainda houver imagens, sobrescreve do início.
+  function adicionarDaGaleria(id, slots, fileList) {
+    const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith('image/'));
+    if (!files.length) return;
+    Promise.all(
+      files.map(
+        (f) =>
+          new Promise((resolve) => {
+            const r = new FileReader();
+            r.onload = () => resolve(r.result);
+            r.readAsDataURL(f);
+          })
+      )
+    ).then((dataUrls) => {
+      let i = 0;
+      const nova = envolvidos.map((e) => {
+        if (e.id !== id) return e;
+        const fotos = { ...e.fotos };
+        const fotoAngulos = { ...e.fotoAngulos };
+        // primeiro, preenche os slots ainda vazios
+        for (const s of slots) {
+          if (i >= dataUrls.length) break;
+          if (!fotos[s.key]) {
+            fotos[s.key] = dataUrls[i];
+            if (s.angulo) fotoAngulos[s.key] = s.angulo;
+            i++;
+          }
+        }
+        // depois, se ainda sobrou imagem, sobrescreve do início
+        for (const s of slots) {
+          if (i >= dataUrls.length) break;
+          fotos[s.key] = dataUrls[i];
+          if (s.angulo) fotoAngulos[s.key] = s.angulo;
+          i++;
+        }
+        return { ...e, fotos, fotoAngulos };
+      });
+      setEnvolvidos(nova);
+      salvar(nova);
+    });
+  }
+
   // Lightbox de pré-visualização (clicar na foto abre ampliada).
   const [preview, setPreview] = useState(null); // { src, label }
 
@@ -157,12 +200,9 @@ export default function Envolvidos() {
         return;
       }
       let done = false;
-      const handler = (e) => {
+      const handler = () => {
         if (done) return;
         done = true;
-        const file = e.target.files && e.target.files[0];
-        if (file) anexarFoto(id, slot, file);
-        input.value = '';
         resolve(true);
       };
       input.addEventListener('change', handler, { once: true });
@@ -177,12 +217,20 @@ export default function Envolvidos() {
     });
   }
 
-  async function tirarQuatroFotos(id) {
-    const veicSlots = PMRV_FOTO_SLOTS.filter((s) => s.veiculo);
-    for (const s of veicSlots) {
-      const ok = await dispararCamera(id, s.key);
+  // Captura sequencial das fotos de um conjunto de slots (câmera, sem janela).
+  async function tirarSequencia(id, slots) {
+    for (const s of slots) {
+      const ok = await Promise.race([dispararCamera(id, s.key), new Promise((r) => setTimeout(() => r(false), 60000))]);
       if (!ok) break; // cancelou/erro — interrompe a sequência
     }
+  }
+
+  function tirarQuatroFotos(id) {
+    return tirarSequencia(id, PMRV_FOTO_SLOTS.filter((s) => s.veiculo));
+  }
+
+  function tirarFotosLocal(id) {
+    return tirarSequencia(id, PMRV_FOTO_SLOTS.filter((s) => !s.veiculo));
   }
 
   async function corrigirRelato(id) {
@@ -247,15 +295,15 @@ export default function Envolvidos() {
     <div className="max-w-xl mx-auto p-4 relative overflow-hidden">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvidos</h2>
-        <button onClick={adicionar} className="ds-btn bg-pmrv text-white text-xs py-2 px-3 shadow-[3px_3px_0_#1e4e8c]">
+        <button onClick={adicionar} className="btn-ios text-xs">
           + Adicionar
         </button>
       </div>
 
-      <p className="text-xs text-charcoal/70 font-mono mb-4">
+      <p className="estilo-glass text-xs text-charcoal/70 font-mono mb-4 p-3">
         Cada envolvido tem dados, relato individual (com correção por IA) e fotos (4 ângulos do veículo +
-        2 do local), com opção de tirar foto na câmera ou escolher da galeria. Tudo é salvo automaticamente
-        neste navegador.
+        2 do local). Use <b>📷 Tirar 4 fotos</b> para a câmera em sequência (sem sair da tela) ou <b>🖼️ Galeria</b> para
+        acrescentar da galeria. Tudo é salvo automaticamente neste navegador.
       </p>
 
       <div className="space-y-6">
@@ -265,7 +313,7 @@ export default function Envolvidos() {
               <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvido #{ev.id}</h3>
               <button
                 onClick={() => remover(ev.id)}
-                className="text-brick text-xs font-mono font-semibold uppercase border-2 border-brick px-2 py-1 hover:bg-[#fde8e8] transition"
+                className="btn-ios text-xs bg-brick !border-brick"
               >
                 Remover
               </button>
@@ -373,7 +421,7 @@ export default function Envolvidos() {
                 <button
                   id={`env_ia_${ev.id}`}
                   onClick={() => corrigirRelato(ev.id)}
-                  className="text-[10px] font-mono font-semibold uppercase border-2 border-charcoal px-2 py-1 hover:bg-bone transition"
+                  className="btn-outline text-[10px]"
                 >
                   ✨ Corrigir com IA
                 </button>
@@ -387,16 +435,36 @@ export default function Envolvidos() {
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-2">
+              <div className="layout-header-glass rounded-t-xl px-3 py-2 mb-3 flex flex-wrap justify-between items-center gap-2">
                 <label className="ds-label mb-0">Fotos do Veículo (4 ângulos)</label>
-                <button
-                  onClick={() => tirarQuatroFotos(ev.id)}
-                  className="ds-btn bg-pmrv text-white text-[10px] font-mono font-semibold uppercase py-1 px-2 shadow-[2px_2px_0_#1e4e8c]"
-                  title="Abre a câmera 4x em sequência: Frontal, Traseira, Vista Esquerda, Vista Direita"
-                >
-                  📷 Tirar 4 fotos
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => tirarQuatroFotos(ev.id)}
+                    className="btn-ios text-[10px]"
+                    title="Abre a câmera 4x em sequência: Frontal, Traseira, Vista Esquerda, Vista Direita"
+                  >
+                    📷 Tirar 4 fotos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById(`gal_${ev.id}`).click()}
+                    className="btn-outline text-[10px]"
+                    title="Adicionar fotos da galeria"
+                  >
+                    🖼️ Galeria
+                  </button>
+                </div>
               </div>
+              {/* input único de galeria (adiciona nas posições vazias, na ordem) */}
+              <input
+                id={`gal_${ev.id}`}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => { adicionarDaGaleria(ev.id, PMRV_FOTO_SLOTS.filter((s) => s.veiculo), e.target.files); e.target.value = ''; }}
+              />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {PMRV_FOTO_SLOTS.filter((s) => s.veiculo).map((s) => {
                   const src = ev.fotos[s.key];
@@ -408,7 +476,6 @@ export default function Envolvidos() {
                           {s.label}
                         </span>
                         <div className="flex gap-1">
-                          <label className="sr-only" htmlFor={`cam_${ev.id}_${s.key}`}>Câmera</label>
                           <input
                             id={`cam_${ev.id}_${s.key}`}
                             ref={(el) => (cameraRefs.current[`${ev.id}_${s.key}`] = el)}
@@ -416,37 +483,17 @@ export default function Envolvidos() {
                             accept="image/*"
                             capture="environment"
                             className="hidden"
-                            onChange={(e) => anexarFoto(ev.id, s.key, e.target.files && e.target.files[0], anguloAtual)}
+                            onChange={(e) => {
+                              const file = e.target.files && e.target.files[0];
+                              if (file) anexarFoto(ev.id, s.key, file, anguloAtual);
+                              e.target.value = '';
+                            }}
                           />
-                          <label className="sr-only" htmlFor={`gal_${ev.id}_${s.key}`}>Galeria</label>
-                          <input
-                            id={`gal_${ev.id}_${s.key}`}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => anexarFoto(ev.id, s.key, e.target.files && e.target.files[0], anguloAtual)}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById(`cam_${ev.id}_${s.key}`).click()}
-                            className="text-[10px] font-mono font-semibold uppercase border-2 border-charcoal px-2 py-1 bg-white hover:bg-bone transition"
-                            title="Tirar foto (câmera)"
-                          >
-                            Câmera
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById(`gal_${ev.id}_${s.key}`).click()}
-                            className="text-[10px] font-mono font-semibold uppercase border-2 border-charcoal px-2 py-1 bg-white hover:bg-bone transition"
-                            title="Escolher da galeria"
-                          >
-                            Galeria
-                          </button>
                           {src && (
                             <button
                               type="button"
                               onClick={() => removerFoto(ev.id, s.key)}
-                              className="text-[10px] font-mono font-semibold uppercase border-2 border-brick text-brick px-2 py-1 bg-white hover:bg-[#fde8e8] transition"
+                              className="btn-outline text-[10px] !text-brick !border-brick"
                               title="Remover esta foto"
                             >
                               ✕
@@ -483,7 +530,35 @@ export default function Envolvidos() {
             </div>
 
             <div>
-              <label className="ds-label">Fotos do Local</label>
+              <div className="layout-header-glass rounded-t-xl px-3 py-2 mb-3 flex flex-wrap justify-between items-center gap-2">
+                <label className="ds-label mb-0">Fotos do Local</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => tirarFotosLocal(ev.id)}
+                    className="btn-ios text-[10px]"
+                    title="Abre a câmera em sequência para as fotos do local"
+                  >
+                    📷 Tirar fotos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById(`galL_${ev.id}`).click()}
+                    className="btn-outline text-[10px]"
+                    title="Adicionar fotos da galeria"
+                  >
+                    🖼️ Galeria
+                  </button>
+                </div>
+              </div>
+              <input
+                id={`galL_${ev.id}`}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => { adicionarDaGaleria(ev.id, PMRV_FOTO_SLOTS.filter((s) => !s.veiculo), e.target.files); e.target.value = ''; }}
+              />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {PMRV_FOTO_SLOTS.filter((s) => !s.veiculo).map((s) => {
                   const src = ev.fotos[s.key];
@@ -500,36 +575,17 @@ export default function Envolvidos() {
                             accept="image/*"
                             capture="environment"
                             className="hidden"
-                            onChange={(e) => anexarFoto(ev.id, s.key, e.target.files && e.target.files[0])}
+                            onChange={(e) => {
+                              const file = e.target.files && e.target.files[0];
+                              if (file) anexarFoto(ev.id, s.key, file);
+                              e.target.value = '';
+                            }}
                           />
-                          <input
-                            id={`galL_${ev.id}_${s.key}`}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => anexarFoto(ev.id, s.key, e.target.files && e.target.files[0])}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById(`camL_${ev.id}_${s.key}`).click()}
-                            className="text-[10px] font-mono font-semibold uppercase border-2 border-charcoal px-2 py-1 bg-white hover:bg-bone transition"
-                            title="Tirar foto (câmera)"
-                          >
-                            Câmera
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById(`galL_${ev.id}_${s.key}`).click()}
-                            className="text-[10px] font-mono font-semibold uppercase border-2 border-charcoal px-2 py-1 bg-white hover:bg-bone transition"
-                            title="Escolher da galeria"
-                          >
-                            Galeria
-                          </button>
                           {src && (
                             <button
                               type="button"
                               onClick={() => removerFoto(ev.id, s.key)}
-                              className="text-[10px] font-mono font-semibold uppercase border-2 border-brick text-brick px-2 py-1 bg-white hover:bg-[#fde8e8] transition"
+                              className="btn-outline text-[10px] !text-brick !border-brick"
                               title="Remover esta foto"
                             >
                               ✕
@@ -584,7 +640,7 @@ export default function Envolvidos() {
           />
           <button
             onClick={() => setPreview(null)}
-            className="ds-btn bg-white text-pmrv text-xs py-2 px-4 border-2 border-pmrv mt-4"
+            className="btn-ios text-xs mt-4"
           >
             Fechar
           </button>
