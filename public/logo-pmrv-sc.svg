@@ -1,0 +1,101 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PMRV-SC — Comando de Polícia Militar Rodoviária">
+  <defs>
+    <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2f2f2"/>
+      <stop offset="0.5" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#b9b9b9"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b7fd0"/>
+      <stop offset="0.55" stop-color="#9ec8ec"/>
+      <stop offset="1" stop-color="#ffd34d"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d62828"/>
+      <stop offset="1" stop-color="#a4161a"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe27a"/>
+      <stop offset="0.5" stop-color="#f4b400"/>
+      <stop offset="1" stop-color="#c98a00"/>
+    </linearGradient>
+    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5bb34a"/>
+      <stop offset="1" stop-color="#2f7d32"/>
+    </linearGradient>
+  </defs>
+
+  <!-- App-icon frame -->
+  <rect x="6" y="6" width="500" height="500" rx="96" fill="url(#silver)"/>
+  <rect x="20" y="20" width="472" height="472" rx="84" fill="url(#sky)"/>
+
+  <!-- Sun -->
+  <circle cx="256" cy="250" r="70" fill="#fff3c4" opacity="0.85"/>
+  <circle cx="256" cy="250" r="46" fill="#fffbe6"/>
+
+  <!-- Ground / grass -->
+  <path d="M20 360 Q256 320 492 360 V492 H20 Z" fill="url(#grass)"/>
+
+  <!-- Road -->
+  <path d="M120 492 Q200 410 256 372 Q320 410 392 492 Z" fill="#3a3a3a"/>
+  <path d="M256 372 L256 492" stroke="#ffd34d" stroke-width="6" stroke-dasharray="18 16"/>
+
+  <!-- Shield -->
+  <g transform="translate(256 150)">
+    <path d="M-96 0 H96 V70 Q96 150 0 210 Q-96 150 -96 70 Z" fill="url(#red)" stroke="#7a1013" stroke-width="4"/>
+    <!-- gold border -->
+    <path d="M-96 0 H96 V70 Q96 150 0 210 Q-96 150 -96 70 Z" fill="none" stroke="url(#gold)" stroke-width="6"/>
+
+    <!-- crossed pistols (top) -->
+    <g stroke="url(#gold)" stroke-width="9" stroke-linecap="round">
+      <line x1="-58" y1="20" x2="18" y2="64"/>
+      <line x1="58" y1="20" x2="-18" y2="64"/>
+    </g>
+    <!-- anchor + key (middle) -->
+    <g transform="translate(0 104)" stroke="url(#gold)" stroke-width="8" stroke-linecap="round" fill="none">
+      <path d="M-34 -22 L34 22 M34 -22 L-34 22 M0 -22 V22"/>
+      <circle cx="0" cy="-30" r="6" fill="url(#gold)"/>
+      <line x1="22" y1="-34" x2="40" y2="-10"/>
+      <circle cx="44" cy="-6" r="8"/>
+    </g>
+  </g>
+
+  <!-- Big star on top -->
+  <g transform="translate(256 96)">
+    <polygon points="0,-46 11,-15 44,-15 17,7 27,40 0,20 -27,40 -17,7 -44,-15 -11,-15"
+             fill="url(#gold)" stroke="#b97f00" stroke-width="3"/>
+    <path d="M0 -52 Q-12 -80 0 -104 Q12 -80 0 -52" fill="#ff6b35"/>
+  </g>
+
+  <!-- Clipboard (left) -->
+  <g transform="rotate(-14 150 250)">
+    <rect x="58" y="120" width="184" height="244" rx="10" fill="#f7f7f7" stroke="#9aa0a6" stroke-width="3"/>
+    <rect x="118" y="104" width="64" height="34" rx="8" fill="#cfd6db" stroke="#8a9097" stroke-width="3"/>
+    <circle cx="150" cy="121" r="6" fill="#eef1f3"/>
+    <text x="150" y="200" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" text-anchor="middle" fill="#1f1f1f">PMRV-SC</text>
+    <g stroke="#c9ced3" stroke-width="6" stroke-linecap="round">
+      <line x1="82" y1="230" x2="218" y2="230"/>
+      <line x1="82" y1="258" x2="218" y2="258"/>
+      <line x1="82" y1="286" x2="218" y2="286"/>
+      <line x1="82" y1="314" x2="180" y2="314"/>
+    </g>
+    <polygon points="78,216 84,232 101,232 87,243 92,260 78,249 64,260 69,243 55,232 72,232" fill="url(#gold)" stroke="#b97f00" stroke-width="1.5"/>
+  </g>
+
+  <!-- Pen (right) -->
+  <g transform="translate(372 250) rotate(40)">
+    <rect x="-12" y="-120" width="24" height="200" rx="6" fill="#1565c0"/>
+    <rect x="-12" y="60" width="24" height="40" fill="#0d3c75"/>
+    <polygon points="-12,100 12,100 0,128" fill="#222"/>
+    <rect x="-8" y="-132" width="16" height="14" rx="4" fill="#9aa0a6"/>
+  </g>
+
+  <!-- Ribbon -->
+  <g>
+    <path d="M44 404 Q256 452 468 404 L468 446 Q256 498 44 446 Z" fill="url(#red)" stroke="#7a1013" stroke-width="3"/>
+    <path d="M44 404 L18 384 L44 364 Z" fill="#7a1013"/>
+    <path d="M468 404 L494 384 L468 364 Z" fill="#7a1013"/>
+    <text x="256" y="436" font-family="Arial, Helvetica, sans-serif" font-size="17" font-weight="800"
+          text-anchor="middle" fill="url(#gold)" letter-spacing="0.5">COMANDO DE POLÍCIA MILITAR RODOVIÁRIA</text>
+  </g>
+</svg>

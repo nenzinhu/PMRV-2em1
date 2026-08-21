@@ -13,6 +13,8 @@ export default function RootLayout() {
     <html lang="pt-BR">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="icon" type="image/svg+xml" href="/favicon-pmrv-sc.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#008448" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -32,10 +34,20 @@ export default function RootLayout() {
         <header className="bg-pmrv text-white sticky top-0 z-50 border-b-[3px] border-brick">
           <div className="max-w-xl mx-auto flex justify-between items-center px-4">
             <div className="flex items-center gap-3">
-              <span className="w-4 h-4 bg-gold border-2 border-white" aria-hidden="true" />
-              <h1 className="text-base sm:text-lg font-mono font-semibold tracking-tight uppercase text-white">
-                Relato Policial
-              </h1>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-pmrv-sc.svg"
+                alt="Brasão PMRV-SC"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-md shadow-sm"
+              />
+              <div className="leading-tight">
+                <h1 className="text-base sm:text-lg font-mono font-semibold tracking-tight uppercase text-white">
+                  Relato Policial
+                </h1>
+                <p className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-white/80">
+                  PMRV-SC
+                </p>
+              </div>
             </div>
             <span
               id="offline-indicator"
