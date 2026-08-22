@@ -109,14 +109,36 @@ export default function RootLayout() {
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
                 {showLocation && (
-                  <span className="hidden sm:inline-flex items-center gap-1 bg-white/10 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const loc = locationLabel || '';
+                      if (!loc) return;
+                      if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(loc).catch(() => {});
+                      }
+                    }}
+                    className="hidden sm:inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
+                    title="Toque para copiar a localização"
+                  >
                     📍 {locationLabel}
-                  </span>
+                  </button>
                 )}
                 {showLocation && (
-                  <span className="sm:hidden bg-white/10 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const loc = locationLabel || '';
+                      if (!loc) return;
+                      if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(loc).catch(() => {});
+                      }
+                    }}
+                    className="sm:hidden bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider w-8 h-8 flex items-center justify-center rounded cursor-pointer"
+                    title="Copiar localização"
+                  >
                     📍
-                  </span>
+                  </button>
                 )}
                 <button
                   type="button"
