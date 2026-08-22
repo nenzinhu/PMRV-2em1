@@ -4,13 +4,12 @@ import { useEffect, useRef } from 'react';
 
 function isEditable(el) {
   if (!el) return false;
-  const tag = el.tagName;
-  if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
+  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') return true;
   if (el.isContentEditable) return true;
   return false;
 }
 
-export function useSwipe({ onSwipeLeft, onSwipeRight, threshold = 120, preventScrollOnSwipe = false } = {}) {
+export function useSwipe({ onSwipeLeft, onSwipeRight, threshold = 140, preventScrollOnSwipe = false } = {}) {
   const start = useRef({ x: 0, y: 0 });
   const moving = useRef(false);
 
@@ -30,10 +29,15 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, threshold = 120, preventSc
     }
 
     function getTarget(e) {
-      if (typeof TouchEvent !== 'undefined' && e instanceof TouchEvent && e.target && e.target.elementFromPoint) {
-        return e.target.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY) || e.target;
+      // Para toques, usar elementFromPoint pode ajudar em casos de elementos sobrepostos,
+      // mas se o target já for um campo editável, basta usá-lo.
+      const target = e.target;
+      if (target && isEditable(target)) return target;
+      if (typeof TouchEvent !== 'undefined' && e instanceof TouchEvent && e.touches && e.touches[0] && target && target.elementFromPoint) {
+        const point = target.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+        if (point && isEditable(point)) return point;
       }
-      return e.target;
+      return target;
     }
 
     function onPointerDown(e) {

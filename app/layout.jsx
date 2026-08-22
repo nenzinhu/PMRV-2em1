@@ -17,7 +17,7 @@ export default function RootLayout() {
   const { elRef, active: fsActive, toggle: toggleFs } = useFullscreen();
 
   useSwipe({
-    threshold: 140,
+    threshold: 180,
     onSwipeLeft: () => {
       if (aba === 'envolvidos') setAba('relato');
       else if (aba === 'relato') setAba('resumo');
