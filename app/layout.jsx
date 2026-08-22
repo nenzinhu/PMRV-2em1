@@ -8,6 +8,7 @@ import SWRegister from '@/components/SWRegister';
 import ThemeConfig from '@/components/theme/ThemeConfig';
 import { useSwipe } from '@/hooks/useSwipe';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import { useInstallPWA } from '@/hooks/useInstallPWA';
 import './globals.css';
 
 export default function RootLayout() {
@@ -15,6 +16,7 @@ export default function RootLayout() {
   const [gpsInfo, setGpsInfo] = useState(null);
   const [themeOpen, setThemeOpen] = useState(false);
   const { elRef, active: fsActive, toggle: toggleFs } = useFullscreen();
+  const { install, supportsInstall, isInstalled, isStandalone } = useInstallPWA();
 
   useSwipe({
     threshold: 180,
@@ -75,8 +77,10 @@ export default function RootLayout() {
         <meta name="theme-color" content="#008448" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black" />
-        <meta name="apple-mobile-web-app-title" content="PM SC" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="PM RV-SC" />
+        <meta name="application-name" content="Relato Policial" />
+        <meta name="apple-itunes-app" content="app-id=" />
         <link
           href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
           rel="stylesheet"
@@ -148,6 +152,16 @@ export default function RootLayout() {
                 >
                   🎨 Tema
                 </button>
+                {supportsInstall && !isInstalled && !isStandalone && (
+                  <button
+                    type="button"
+                    onClick={install}
+                    className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
+                    title="Instalar o app"
+                  >
+                    ⤓ Instalar
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={toggleFs}
