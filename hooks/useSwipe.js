@@ -2,7 +2,15 @@
 
 import { useEffect, useRef } from 'react';
 
-export function useSwipe({ onSwipeLeft, onSwipeRight, threshold = 60, preventScrollOnSwipe = false } = {}) {
+function isEditable(el) {
+  if (!el) return false;
+  const tag = el.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return true;
+  if (el.isContentEditable) return true;
+  return false;
+}
+
+export function useSwipe({ onSwipeLeft, onSwipeRight, threshold = 120, preventScrollOnSwipe = false } = {}) {
   const start = useRef({ x: 0, y: 0 });
   const moving = useRef(false);
 
@@ -14,15 +22,31 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, threshold = 60, preventScr
       return e.clientX || 0;
     }
 
+    function getClientY(e) {
+      if (typeof TouchEvent !== 'undefined' && e instanceof TouchEvent && e.touches && e.touches[0]) {
+        return e.touches[0].clientY;
+      }
+      return e.clientY || 0;
+    }
+
+    function getTarget(e) {
+      if (typeof TouchEvent !== 'undefined' && e instanceof TouchEvent && e.target && e.target.elementFromPoint) {
+        return e.target.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY) || e.target;
+      }
+      return e.target;
+    }
+
     function onPointerDown(e) {
-      start.current = { x: getClientX(e), y: e.clientY || 0 };
+      const target = getTarget(e);
+      if (isEditable(target)) return;
+      start.current = { x: getClientX(e), y: getClientY(e) };
       moving.current = false;
     }
 
     function onPointerMove(e) {
       if (!moving.current && start.current.x !== 0) {
         const dx = Math.abs(getClientX(e) - start.current.x);
-        const dy = Math.abs((e.clientY || 0) - start.current.y);
+        const dy = Math.abs(getClientY(e) - start.current.y);
         if (dx > dy && dx > 10) moving.current = true;
       }
       if (moving.current && preventScrollOnSwipe) e.preventDefault();
@@ -31,7 +55,8 @@ export function useSwipe({ onSwipeLeft, onSwipeRight, threshold = 60, preventScr
     function onPointerUp(e) {
       if (!moving.current) return;
       const dx = getClientX(e) - start.current.x;
-      if (Math.abs(dx) >= threshold) {
+      const dy = getClientY(e) - start.current.y;
+      if (Math.abs(dx) >= threshold && Math.abs(dx) > Math.abs(dy)) {
         if (dx < 0) onSwipeLeft && onSwipeLeft();
         else onSwipeRight && onSwipeRight();
       }
