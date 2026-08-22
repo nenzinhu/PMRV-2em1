@@ -15,7 +15,6 @@ export default function MobileNav({ active, onChange }) {
   const measure = useCallback(() => {
     const el = document.querySelector(`[data-tab="${active}"]`);
     if (!el) return;
-    const parent = el.parentElement;
     setIndicator({
       left: el.offsetLeft,
       width: el.offsetWidth,
@@ -34,7 +33,7 @@ export default function MobileNav({ active, onChange }) {
   }, [measure]);
 
   return (
-    <nav className="relative w-full bg-charcoal/90 backdrop-blur-md border-t border-white/10">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-charcoal/90 backdrop-blur-md border-t border-white/10">
       <div className="mx-auto max-w-md">
         <div className="relative flex items-center justify-between px-2 pb-2 pt-1">
           <div

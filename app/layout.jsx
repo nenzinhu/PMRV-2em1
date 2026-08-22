@@ -190,7 +190,7 @@ export default function RootLayout() {
             <MobileNav active={aba} onChange={setAba} />
           )}
 
-          <main className="w-full flex-1">
+          <main className={`w-full flex-1 ${isMobile ? 'pb-24' : ''}`}>
             {isMobile ? (
               <div className="page-slide" key={aba}>
                 {aba === 'envolvidos' ? <Envolvidos /> : aba === 'relato' ? <RelatoPolicial /> : <ResumoDinamica />}
