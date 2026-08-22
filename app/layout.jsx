@@ -6,17 +6,21 @@ import Envolvidos from '@/components/Envolvidos';
 import ResumoDinamica from '@/components/ResumoDinamica';
 import SWRegister from '@/components/SWRegister';
 import ThemeConfig from '@/components/theme/ThemeConfig';
+import MobileNav from '@/components/MobileNav';
 import { useSwipe } from '@/hooks/useSwipe';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useInstallPWA } from '@/hooks/useInstallPWA';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import './globals.css';
 
 export default function RootLayout() {
   const [aba, setAba] = useState('envolvidos');
   const [gpsInfo, setGpsInfo] = useState(null);
   const [themeOpen, setThemeOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { elRef, active: fsActive, toggle: toggleFs } = useFullscreen();
   const { install, supportsInstall, isInstalled, isStandalone } = useInstallPWA();
+  const isMobile = useIsMobile();
 
   useSwipe({
     threshold: 180,
@@ -31,6 +35,7 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    setMounted(true);
     function onGpsChange(e) {
       setGpsInfo(e.detail || null);
     }
@@ -60,7 +65,7 @@ export default function RootLayout() {
       window.removeEventListener('navigate-to', onNavigate);
       window.removeEventListener('set-dinamica', onSetDinamica);
     };
-  }, [gpsInfo]);
+  }, [aba]);
 
   const showLocation = gpsInfo && gpsInfo.rodovia;
   const locationLabel = showLocation
@@ -94,7 +99,7 @@ export default function RootLayout() {
 
         <div ref={elRef} className="min-h-screen flex flex-col">
           <header className="text-white sticky top-0 z-50 border-b-[3px] border-brick" style={{ backgroundColor: 'var(--ds-primary)' }}>
-            <div className="max-w-5xl mx-auto flex justify-between items-center px-3 sm:px-4">
+            <div className="mx-auto max-w-5xl flex justify-between items-center px-3 sm:px-4">
               <div className="flex items-center gap-2 sm:gap-3">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -112,7 +117,7 @@ export default function RootLayout() {
                 </div>
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
-                {showLocation && (
+                {mounted && showLocation && (
                   <button
                     type="button"
                     onClick={() => {
@@ -122,27 +127,16 @@ export default function RootLayout() {
                         navigator.clipboard.writeText(loc).catch(() => {});
                       }
                     }}
-                    className="hidden sm:inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
+                    className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
                     title="Toque para copiar a localização"
                   >
-                    📍 {locationLabel}
+                    📍 {isMobile ? '' : locationLabel}
                   </button>
                 )}
-                {showLocation && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const loc = locationLabel || '';
-                      if (!loc) return;
-                      if (navigator.clipboard && navigator.clipboard.writeText) {
-                        navigator.clipboard.writeText(loc).catch(() => {});
-                      }
-                    }}
-                    className="sm:hidden bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider w-8 h-8 flex items-center justify-center rounded cursor-pointer"
-                    title="Copiar localização"
-                  >
+                {mounted && showLocation && isMobile && (
+                  <span className="sm:hidden text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1">
                     📍
-                  </button>
+                  </span>
                 )}
                 <button
                   type="button"
@@ -165,58 +159,47 @@ export default function RootLayout() {
                 <button
                   type="button"
                   onClick={toggleFs}
-                  className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
+                  className="hidden sm:inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
                   title={fsActive ? 'Sair da tela cheia' : 'Modo imersivo'}
                 >
                   {fsActive ? '⛶' : '⛶'}
                 </button>
-                <span
-                  id="offline-indicator"
-                  className="hidden bg-brick text-white text-[10px] px-2 py-1 font-mono font-semibold uppercase tracking-wider animate-pulse"
-                >
-                  Offline
-                </span>
               </div>
             </div>
+            {mounted && showLocation && isMobile && (
+              <div className="px-3 pb-2 sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const loc = locationLabel || '';
+                    if (!loc) return;
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      navigator.clipboard.writeText(loc).catch(() => {});
+                    }
+                  }}
+                  className="gps-chip inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
+                  title="Toque para copiar a localização"
+                >
+                  📍 {locationLabel}
+                </button>
+              </div>
+            )}
           </header>
 
-          <nav className="text-white sticky top-[57px] sm:top-[65px] z-40" style={{ backgroundColor: 'var(--ds-primary)' }}>
-            <div className="max-w-5xl mx-auto flex">
-              <button
-                onClick={() => setAba('envolvidos')}
-                className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-xs sm:text-sm border-b-4 transition ${
-                  aba === 'envolvidos'
-                    ? 'border-gold text-white bg-pmrv-dark'
-                    : 'border-transparent text-white/80 hover:bg-pmrv-dark'
-                }`}
-              >
-                Envolvidos
-              </button>
-              <button
-                onClick={() => setAba('relato')}
-                className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-xs sm:text-sm border-b-4 transition ${
-                  aba === 'relato'
-                    ? 'border-gold text-white bg-pmrv-dark'
-                    : 'border-transparent text-white/80 hover:bg-pmrv-dark'
-                }`}
-              >
-                Relato Policial
-              </button>
-              <button
-                onClick={() => setAba('resumo')}
-                className={`flex-1 py-3 font-mono font-semibold uppercase tracking-wider text-xs sm:text-sm border-b-4 transition ${
-                  aba === 'resumo'
-                    ? 'border-gold text-white bg-pmrv-dark'
-                    : 'border-transparent text-white/80 hover:bg-pmrv-dark'
-                }`}
-              >
-                Resumo da Dinâmica
-              </button>
-            </div>
-          </nav>
+          {isMobile && mounted && (
+            <MobileNav active={aba} onChange={setAba} />
+          )}
 
           <main className="w-full flex-1">
-            {aba === 'envolvidos' ? <Envolvidos /> : aba === 'relato' ? <RelatoPolicial /> : <ResumoDinamica />}
+            {isMobile ? (
+              <div className="page-slide" key={aba}>
+                {aba === 'envolvidos' ? <Envolvidos /> : aba === 'relato' ? <RelatoPolicial /> : <ResumoDinamica />}
+              </div>
+            ) : (
+              <>
+                {aba === 'envolvidos' ? <Envolvidos /> : aba === 'relato' ? <RelatoPolicial /> : <ResumoDinamica />}
+              </>
+            )}
           </main>
         </div>
 
