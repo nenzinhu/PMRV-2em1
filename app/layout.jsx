@@ -7,6 +7,7 @@ import ResumoDinamica from '@/components/ResumoDinamica';
 import SWRegister from '@/components/SWRegister';
 import ThemeConfig from '@/components/theme/ThemeConfig';
 import MobileNav from '@/components/MobileNav';
+import Toast from '@/components/Toast';
 import { useSwipe } from '@/hooks/useSwipe';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useInstallPWA } from '@/hooks/useInstallPWA';
@@ -129,12 +130,13 @@ export default function RootLayout() {
                     }}
                     className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
                     title="Toque para copiar a localização"
+                    aria-label={`Copiar localização: ${locationLabel}`}
                   >
                     📍 {isMobile ? '' : locationLabel}
                   </button>
                 )}
                 {mounted && showLocation && isMobile && (
-                  <span className="sm:hidden text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1">
+                  <span className="sm:hidden text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1" aria-hidden="true">
                     📍
                   </span>
                 )}
@@ -143,6 +145,7 @@ export default function RootLayout() {
                   onClick={() => setThemeOpen(true)}
                   className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
                   title="Personalizar tema"
+                  aria-label="Abrir personalização de tema"
                 >
                   🎨 Tema
                 </button>
@@ -152,6 +155,7 @@ export default function RootLayout() {
                     onClick={install}
                     className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
                     title="Instalar o app"
+                    aria-label="Instalar aplicativo"
                   >
                     ⤓ Instalar
                   </button>
@@ -161,6 +165,7 @@ export default function RootLayout() {
                   onClick={toggleFs}
                   className="hidden sm:inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
                   title={fsActive ? 'Sair da tela cheia' : 'Modo imersivo'}
+                  aria-label={fsActive ? 'Sair da tela cheia' : 'Entrar em modo imersivo'}
                 >
                   {fsActive ? '⛶' : '⛶'}
                 </button>
@@ -179,6 +184,7 @@ export default function RootLayout() {
                   }}
                   className="gps-chip inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
                   title="Toque para copiar a localização"
+                  aria-label={`Localização atual: ${locationLabel}. Toque para copiar.`}
                 >
                   📍 {locationLabel}
                 </button>
@@ -190,7 +196,7 @@ export default function RootLayout() {
             <MobileNav active={aba} onChange={setAba} />
           )}
 
-          <main className={`w-full flex-1 ${isMobile ? 'pb-24' : ''}`}>
+          <main className={`w-full flex-1 ${isMobile ? 'pb-24' : ''}`} role="main">
             {isMobile ? (
               <div className="page-slide" key={aba}>
                 {aba === 'envolvidos' ? <Envolvidos /> : aba === 'relato' ? <RelatoPolicial /> : <ResumoDinamica />}
@@ -203,7 +209,15 @@ export default function RootLayout() {
           </main>
         </div>
 
-        {themeOpen && <ThemeConfig onClose={() => setThemeOpen(false)} />}
+        {themeOpen && (
+          <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center">
+            <div className="absolute inset-0 bg-pmrv/80" onClick={() => setThemeOpen(false)} aria-hidden="true" />
+            <div className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-white border-t-2 sm:border-2 border-charcoal shadow-[6px_6px_0_#2B2B2B] rounded-t-2xl sm:rounded-none animate-slideUp" role="dialog" aria-label="Personalizar tema" aria-modal="true">
+              <ThemeConfig onClose={() => setThemeOpen(false)} />
+            </div>
+          </div>
+        )}
+        <Toast />
       </body>
     </html>
   );

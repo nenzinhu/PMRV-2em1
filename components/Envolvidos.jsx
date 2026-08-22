@@ -16,6 +16,8 @@ import {
 } from '@/lib/pmrv';
 import { WhatsAppIcon } from './icons';
 import MentionInput from './MentionInput';
+import Skeleton from './Skeleton';
+import { showToast } from '@/components/Toast';
 
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
 
@@ -191,6 +193,7 @@ export default function Envolvidos() {
     });
     setEnvolvidos(lista);
     salvar(lista);
+    showToast('Foto removida', 'info', 1500);
   }
 
   function adicionarDaGaleria(id, fileList) {
@@ -334,12 +337,13 @@ export default function Envolvidos() {
 
       <div className="space-y-6">
         {envolvidos.map((ev) => (
-          <div key={ev.id} className="ds-card animate-card-in">
+          <article key={ev.id} className="ds-card animate-card-in">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-charcoal pb-2 gap-2">
               <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm sm:text-base">Envolvido #{ev.id}</h3>
               <button
-                onClick={() => remover(ev.id)}
+                onClick={() => { remover(ev.id); showToast('Envolvido removido', 'warning', 1500); }}
                 className="btn-ios text-xs bg-brick !border-brick active:scale-95"
+                aria-label={`Remover envolvido ${ev.id}`}
               >
                 Remover
               </button>
@@ -561,6 +565,7 @@ export default function Envolvidos() {
 
       {envolvidos.length === 0 && (
         <div className="bg-white border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal/60">
+          <div className="text-3xl mb-2" aria-hidden="true">👮‍♂️</div>
           Nenhum envolvido adicionado ainda.
         </div>
       )}
@@ -574,6 +579,8 @@ export default function Envolvidos() {
         <div
           onClick={() => setPreview(null)}
           className="fixed inset-0 z-[100] bg-pmrv/90 flex flex-col items-center justify-center p-4 cursor-zoom-out"
+          role="dialog"
+          aria-label="Pré-visualização da foto"
         >
           <span className="text-bone font-mono text-xs uppercase tracking-wider mb-3">{preview.label}</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}

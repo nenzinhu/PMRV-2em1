@@ -8,6 +8,7 @@ import {
   cleanIAResponse,
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
+import { showToast } from '@/components/Toast';
 
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
 
@@ -166,6 +167,7 @@ export default function ResumoDinamica() {
         const texto = cleanIAResponse(res.text);
         save(relatos, texto);
         setStatusIA('Resumo gerado com sucesso.');
+        showToast('Resumo gerado com sucesso', 'success', 2000);
       }
     } catch (err) {
       console.error('Erro ao gerar resumo:', err);
@@ -202,6 +204,7 @@ export default function ResumoDinamica() {
         const texto = cleanIAResponse(res.text);
         save(relatos, texto);
         setStatusIA('Resumo melhorado com sucesso.');
+        showToast('Resumo melhorado com sucesso', 'success', 2000);
       }
     } catch (err) {
       console.error('Erro ao melhorar resumo:', err);
@@ -216,6 +219,7 @@ export default function ResumoDinamica() {
     if (!window.confirm('Limpar todos os relatos e o resumo?')) return;
     save([], '');
     setStatusIA('');
+    showToast('Tudo limpo', 'warning', 1500);
   }
 
   return (
@@ -282,6 +286,7 @@ export default function ResumoDinamica() {
 
       {relatos.length === 0 && (
         <div className="bg-white border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal/60">
+          <div className="text-3xl mb-2" aria-hidden="true">📋</div>
           Nenhum relato adicionado ainda.
         </div>
       )}

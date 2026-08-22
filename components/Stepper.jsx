@@ -15,7 +15,7 @@ export default function Stepper({ currentStep, ehVitima }) {
   ];
 
   function dotClass(n) {
-    if (n === currentStep) return 'bg-pmrv border-pmrv';
+    if (n === currentStep) return 'bg-pmrv border-pmrv shadow-[0_0_0_4px_rgba(0,132,72,0.15)]';
     if (stepsMap.indexOf(n) !== -1 && stepsMap.indexOf(n) < activeIndex)
       return 'bg-step-done border-charcoal';
     return 'bg-step-idle border-charcoal';
@@ -35,7 +35,7 @@ export default function Stepper({ currentStep, ehVitima }) {
           .map((d) => (
             <div
               key={d.n}
-              className={`step-dot z-10 w-8 h-8 sm:w-9 sm:h-9 ${dotClass(d.n)} flex items-center justify-center font-mono font-semibold text-xs sm:text-sm`}
+              className={`step-dot z-10 w-8 h-8 sm:w-9 sm:h-9 ${dotClass(d.n)} flex items-center justify-center font-mono font-semibold text-xs sm:text-sm border-2 transition-all duration-300`}
             >
               {d.label}
             </div>

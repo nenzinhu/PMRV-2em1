@@ -25,6 +25,7 @@ import {
 } from '@/lib/pmrv';
 import { matchRodovia } from '@/lib/gps';
 import { useSwipe } from '@/hooks/useSwipe';
+import { showToast } from '@/components/Toast';
 
 const DANOS = 'Sinistro de trânsito com danos materiais';
 const VITIMA = 'Sinistro de trânsito com vítima(s)';
@@ -416,13 +417,14 @@ export default function RelatoPolicial() {
 
   function enviarWhatsApp() {
     window.open('https://wa.me/?text=' + encodeURIComponent(finalReport), '_blank');
+    showToast('Abrindo WhatsApp...', 'info', 1500);
   }
 
   function copiarPMSC() {
     const cleanText = finalReport.replace(/\*/g, '');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(cleanText).then(
-        () => alert('RELATÓRIO COMPLETO COPIADO!\n\nO texto foi limpo (sem asteriscos) e está pronto para colar no PMSC Mobile.'),
+        () => showToast('Relatório copiado para a área de transferência', 'success', 2500),
         () => alert('Erro ao copiar. Por favor, selecione o texto e copie manualmente.')
       );
     } else {
@@ -436,6 +438,7 @@ export default function RelatoPolicial() {
       setManualEdit(false);
       setManualText('');
       setStep(1);
+      showToast('Nova ocorrência iniciada', 'warning', 1500);
     }
   }
 
@@ -577,7 +580,7 @@ export default function RelatoPolicial() {
             <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">
               <span className="text-gold">2.</span> Localização
             </h2>
-            <button type="button" onClick={() => startRecognition(onVoiceStep2)} className="ds-icon-btn" title="Preencher por voz (Diga: Rodovia..., KM...)">
+            <button type="button" onClick={() => startRecognition(onVoiceStep2)} className="ds-icon-btn" title="Preencher por voz (Diga: Rodovia..., KM...)" aria-label="Preencher localização por voz">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
             </button>
           </div>
@@ -657,7 +660,7 @@ export default function RelatoPolicial() {
             <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">
               <span className="text-gold">3.</span> Natureza e Dinâmica
             </h2>
-            <button type="button" onClick={() => startRecognition(onVoiceAppend('pmrv_dinamica_texto'))} className="ds-icon-btn" title="Gravar por voz">
+            <button type="button" onClick={() => startRecognition(onVoiceAppend('pmrv_dinamica_texto'))} className="ds-icon-btn" title="Gravar por voz" aria-label="Gravar dinâmica por voz">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
             </button>
           </div>
@@ -718,6 +721,7 @@ export default function RelatoPolicial() {
                     }
                     if (typeof window !== 'undefined' && window.confirm('Deseja substituir a dinâmica atual pelo resumo salvo?')) {
                       set({ dinamica: texto });
+                      showToast('Resumo importado', 'success', 1500);
                     }
                   } catch (e) {
                     alert('Não foi possível carregar o resumo da dinâmica.');
@@ -797,7 +801,7 @@ export default function RelatoPolicial() {
             <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">
               <span className="text-gold">✓</span> Revisão e Edição Final
             </h2>
-            <button type="button" onClick={() => startRecognition(onVoiceAppend('pmrv_relatorio_edit'))} className="ds-icon-btn" title="Adicionar por voz">
+            <button type="button" onClick={() => startRecognition(onVoiceAppend('pmrv_relatorio_edit'))} className="ds-icon-btn" title="Adicionar por voz" aria-label="Adicionar ao relatório por voz">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
             </button>
           </div>

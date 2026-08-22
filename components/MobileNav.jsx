@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { showToast } from '@/components/Toast';
 
 const TABS = [
   { key: 'envolvidos', label: 'Envolvidos', icon: '👥' },
@@ -11,6 +12,7 @@ const TABS = [
 export default function MobileNav({ active, onChange }) {
   const [indicator, setIndicator] = useState({ left: 0, width: 0 });
   const [pressing, setPressing] = useState(null);
+  const [lastActive, setLastActive] = useState(active);
 
   const measure = useCallback(() => {
     const el = document.querySelector(`[data-tab="${active}"]`);
@@ -32,8 +34,16 @@ export default function MobileNav({ active, onChange }) {
     };
   }, [measure]);
 
+  useEffect(() => {
+    if (active !== lastActive) {
+      setLastActive(active);
+      const tab = TABS.find((t) => t.key === active);
+      if (tab) showToast(`${tab.label}`, 'info', 1200);
+    }
+  }, [active, lastActive]);
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-charcoal/90 backdrop-blur-md border-t border-white/10">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-charcoal/90 backdrop-blur-md border-t border-white/10" aria-label="Navegação principal">
       <div className="mx-auto max-w-md">
         <div className="relative flex items-center justify-between px-2 pb-2 pt-1">
           <div
@@ -42,11 +52,14 @@ export default function MobileNav({ active, onChange }) {
               left: indicator.left,
               width: indicator.width,
             }}
+            aria-hidden="true"
           />
           {TABS.map((tab) => (
             <button
               key={tab.key}
               data-tab={tab.key}
+              aria-label={`Aba ${tab.label}`}
+              aria-pressed={active === tab.key}
               onClick={() => onChange(tab.key)}
               onTouchStart={() => setPressing(tab.key)}
               onTouchEnd={() => setPressing(null)}
@@ -57,7 +70,7 @@ export default function MobileNav({ active, onChange }) {
                 active === tab.key ? 'text-white' : 'text-white/60 hover:text-white/80'
               } ${pressing === tab.key ? 'tab-press' : ''}`}
             >
-              <span className="text-lg leading-none">{tab.icon}</span>
+              <span className="text-lg leading-none" aria-hidden="true">{tab.icon}</span>
               {tab.label}
             </button>
           ))}
