@@ -559,7 +559,7 @@ export default function Envolvidos() {
                 </div>
               )}
             </div>
-          </div>
+          </article>
         ))}
       </div>
 
