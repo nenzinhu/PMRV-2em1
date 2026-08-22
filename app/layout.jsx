@@ -54,40 +54,15 @@ export default function RootLayout() {
         }
       }
     }
-    function onTransferLocation() {
-      if (!gpsInfo?.rodovia || gpsInfo?.foraDaRodovia) return;
-      const loc = `${gpsInfo.rodovia} KM ${formatKMFromNumber(gpsInfo.km)}`;
-      const ta = document.activeElement;
-      if (ta && (ta.tagName === 'TEXTAREA' || ta.tagName === 'INPUT')) {
-        const start = ta.selectionStart || ta.value.length;
-        const end = ta.selectionEnd || ta.value.length;
-        const before = ta.value.slice(0, start);
-        const after = ta.value.slice(end);
-        const insert = (before.endsWith('@') || before.endsWith(' ') ? '' : ' ') + loc;
-        ta.value = before + insert + after;
-        ta.dispatchEvent(new Event('input', { bubbles: true }));
-        const newPos = start + insert.length;
-        ta.setSelectionRange(newPos, newPos);
-        ta.focus();
-      } else {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(loc).then(() => alert('Localização copiada: ' + loc));
-        } else {
-          alert('Localização: ' + loc);
-        }
-      }
-    }
 
     window.addEventListener('gps-change', onGpsChange);
     window.addEventListener('navigate-to', onNavigate);
     window.addEventListener('set-dinamica', onSetDinamica);
-    window.__pmrvTransferLocation = onTransferLocation;
 
     return () => {
       window.removeEventListener('gps-change', onGpsChange);
       window.removeEventListener('navigate-to', onNavigate);
       window.removeEventListener('set-dinamica', onSetDinamica);
-      delete window.__pmrvTransferLocation;
     };
   }, [gpsInfo]);
 
@@ -140,24 +115,14 @@ export default function RootLayout() {
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
                 {showLocation && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => window.__pmrvTransferLocation && window.__pmrvTransferLocation()}
-                      className="hidden sm:inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
-                      title="Toque para inserir a localização no campo de texto ativo"
-                    >
-                      📍 {locationLabel}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => window.__pmrvTransferLocation && window.__pmrvTransferLocation()}
-                      className="sm:hidden bg-white/10 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider w-8 h-8 flex items-center justify-center rounded"
-                      title="Inserir localização"
-                    >
-                      📍
-                    </button>
-                  </>
+                  <span className="hidden sm:inline-flex items-center gap-1 bg-white/10 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded">
+                    📍 {locationLabel}
+                  </span>
+                )}
+                {showLocation && (
+                  <span className="sm:hidden bg-white/10 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded">
+                    📍
+                  </span>
                 )}
                 <button
                   type="button"
