@@ -10,12 +10,6 @@ import { useSwipe } from '@/hooks/useSwipe';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import './globals.css';
 
-function formatKMFromNumber(km) {
-  if (typeof km !== 'number') return '';
-  const fixed = km.toFixed(3);
-  return fixed.replace('.', ',');
-}
-
 export default function RootLayout() {
   const [aba, setAba] = useState('envolvidos');
   const [gpsInfo, setGpsInfo] = useState(null);
@@ -66,9 +60,9 @@ export default function RootLayout() {
     };
   }, [gpsInfo]);
 
-  const showLocation = gpsInfo && gpsInfo.rodovia && !gpsInfo.foraDaRodovia;
+  const showLocation = gpsInfo && gpsInfo.rodovia;
   const locationLabel = showLocation
-    ? `${gpsInfo.rodovia} KM ${formatKMFromNumber(gpsInfo.km)}`
+    ? `${gpsInfo.rodovia} KM ${typeof gpsInfo.km === 'number' ? gpsInfo.km.toFixed(3).replace('.', ',') : gpsInfo.km || ''}`
     : '';
 
   return (

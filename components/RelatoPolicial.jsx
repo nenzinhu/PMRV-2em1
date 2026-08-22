@@ -595,9 +595,8 @@ export default function RelatoPolicial() {
               <label className="ds-label">KM</label>
               <input
                 value={form.km}
-                placeholder="Ex: 12,345"
-                maxLength={6}
-                onChange={(e) => set({ km: formatKM(e.target.value) })}
+                placeholder="Informe o KM"
+                onChange={(e) => set({ km: e.target.value })}
                 className="ds-input text-center font-mono font-semibold text-sm sm:text-base"
               />
             </div>
