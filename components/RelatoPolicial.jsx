@@ -8,6 +8,8 @@ import {
   PMRV_SUBTIPOS,
   RODOVIAS,
   FLORIPA_RODOVIAS,
+  rodoviaLabel,
+  rodoviasDoSeletor,
   formatKM,
   formatSade,
   formatVtr,
@@ -116,6 +118,9 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
     const parsed = parseRelatoDraft(localStorage.getItem(RELATO_DRAFT_KEY));
     if (parsed) {
       const merged = mergeRelatoDraft(parsed, INITIAL);
+      if (merged.form.rodovia) {
+        merged.form.rodovia = rodoviaLabel(merged.form.rodovia) || merged.form.rodovia;
+      }
       setForm(merged.form);
       setStep(merged.step);
       setManualEdit(merged.manualEdit);
@@ -563,7 +568,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
             {gpsInfo && !gpsInfo.foraDaRodovia && gpsInfo.rodovia && (
               <div className="mt-2 flex flex-wrap gap-2 text-xs font-mono">
                 <span className="bg-pmrv/10 text-pmrv border border-pmrv/40 px-2 py-1 rounded">
-                  Rodovia: <b>{gpsInfo.rodovia}</b>
+                  Rodovia: <b>{rodoviaLabel(gpsInfo.rodovia) || gpsInfo.rodovia}</b>
                 </span>
                 <span className="bg-gold/15 text-charcoal border border-gold/50 px-2 py-1 rounded">
                   KM: <b>{Math.round(gpsInfo.km * 1000) / 1000}</b>
@@ -616,8 +621,12 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
             <div>
               <label className="ds-label">Rodovia</label>
               <select value={form.rodovia} onChange={(e) => onRodoviaChange(e.target.value)} className="ds-input font-mono font-semibold text-sm sm:text-base">
-                {RODOVIAS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
+                {rodoviasDoSeletor(form.rodovia).map((grupo) => (
+                  <optgroup key={grupo.grupo} label={grupo.grupo}>
+                    {grupo.itens.map((r) => (
+                      <option key={r} value={r}>{rodoviaLabel(r)}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>

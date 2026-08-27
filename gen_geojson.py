@@ -3,6 +3,13 @@ import shapefile, json, math
 SRC = "_shp_src/Rodovias_SC"
 OUT = "public/rodovias-sc.geojson"
 
+# Nomes exibidos no app (seletor e relatório). A malha oficial usa TIC01–TIC03.
+TIC_NOMES = {
+    "TIC01": "P. Hercílio Luz",
+    "TIC02": "P. C. Machado Salles",
+    "TIC03": "P. Pedro Ivo Campos",
+}
+
 # ---- Douglas-Peucker simplification (planar, meters) ----
 def dp(points, eps):
     if len(points) < 3:
@@ -27,7 +34,7 @@ EPS = 18.0  # ~18 m tolerance
 sf = shapefile.Reader(SRC)
 feats = []
 for i, r in enumerate(sf.records()):
-    rod = (r['RODOVIA'] or '').strip()
+    rod = TIC_NOMES.get((r['RODOVIA'] or '').strip(), (r['RODOVIA'] or '').strip())
     ki = float(r['KM INICIAL'] or 0.0)
     kf = float(r['KM FINAL'] or 0.0)
     sit = (r['SITUAÇÃO'] or '').strip()

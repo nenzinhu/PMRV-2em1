@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { matchRodovia } from '@/lib/gps';
-import { RODOVIAS_GEOJSON_URL } from '@/lib/rodovias-list';
+import { RODOVIAS_GEOJSON_URL, rodoviaLabel } from '@/lib/rodovias-list';
 
 async function fetchEndereco(lat, lon) {
   const r = await fetch(`/api/geocode/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`);
@@ -66,7 +66,7 @@ export function useGpsLocation() {
           geoKeyRef.current = '';
           setGpsInfo({
             ...base,
-            rodovia: m.rodovia,
+            rodovia: rodoviaLabel(m.rodovia) || m.rodovia,
             km: m.km,
             nome: m.nome,
             dist: m.d,

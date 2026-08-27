@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { rodoviaLabel } from '@/lib/rodovias-list';
 
 export default function MentionInput({ value, onChange, envolvidos, placeholder, rows = 4, className = '', gpsLocation = null }) {
   const textareaRef = useRef(null);
@@ -39,7 +40,8 @@ export default function MentionInput({ value, onChange, envolvidos, placeholder,
   });
 
   if (gpsLocation && gpsLocation.rodovia && !gpsLocation.foraDaRodovia) {
-    const gpsInsert = `${gpsLocation.rodovia} KM ${gpsLocation.km}`;
+    const via = rodoviaLabel(gpsLocation.rodovia) || gpsLocation.rodovia;
+    const gpsInsert = `${via} KM ${gpsLocation.km}`;
     mentionableItems.push({
       type: 'gps',
       id: 'gps',
