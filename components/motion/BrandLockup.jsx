@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { gsap, Observer, SplitText, prefersReducedMotion, registerGsap, useGSAP } from '@/lib/gsap-register';
+import { gsap, Observer, prefersReducedMotion, registerGsap, useGSAP } from '@/lib/gsap-register';
 
 registerGsap();
 
@@ -20,21 +20,16 @@ export default function BrandLockup() {
 
       if (prefersReducedMotion()) return;
 
-      const split = SplitText.create(title, { type: 'chars', aria: 'auto' });
-      gsap.from(split.chars, {
-        y: 12,
-        autoAlpha: 0,
-        stagger: 0.028,
-        duration: 0.42,
-        ease: 'pmrv',
-      });
-      gsap.from(logo, {
-        scale: 0.72,
-        autoAlpha: 0,
-        rotation: -10,
-        duration: 0.55,
-        ease: 'pmrv',
-      });
+      gsap.fromTo(
+        title,
+        { y: 8, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, ease: 'pmrv' }
+      );
+      gsap.fromTo(
+        logo,
+        { scale: 0.78, opacity: 0, rotation: -8 },
+        { scale: 1, opacity: 1, rotation: 0, duration: 0.55, ease: 'pmrv' }
+      );
       if (shineRef.current) {
         gsap.fromTo(
           shineRef.current,
@@ -73,27 +68,21 @@ export default function BrandLockup() {
   );
 
   return (
-    <div ref={wrapRef} className="brand-lockup flex items-center gap-2 sm:gap-3">
-      <div className="brand-logo-wrap" style={{ perspective: '420px' }}>
+    <div ref={wrapRef} className="brand-lockup flex items-center gap-2 sm:gap-3 min-w-0 flex-1 pr-2">
+      <div className="brand-logo-wrap shrink-0" style={{ perspective: '420px' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           ref={logoRef}
-          src="/logo-pmrv-sc.svg"
-          alt="Brasão PMRV-SC"
-          className="w-8 h-8 sm:w-10 sm:h-10 rounded-md shadow-sm will-change-transform"
+          src="/logo-pmrv-sc.png"
+          alt="Brasão do Comando de Polícia Militar Rodoviária de Santa Catarina"
+          className="brand-logo will-change-transform"
         />
       </div>
-      <div className="leading-tight relative overflow-hidden">
+      <div className="relative min-w-0">
         <div ref={shineRef} className="brand-shine" aria-hidden="true" />
-        <h1
-          ref={titleRef}
-          className="text-sm sm:text-base md:text-lg font-mono font-semibold tracking-tight uppercase text-white"
-        >
-          Relato Policial
+        <h1 ref={titleRef} className="brand-title">
+          <span className="brand-title-text">POLICIA MILITAR RODOVIARIA ESTADUAL DE SC</span>
         </h1>
-        <p className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-white/80">
-          PMRV-SC
-        </p>
       </div>
     </div>
   );

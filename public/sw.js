@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pmrv-sc-relatos-v3';
+const CACHE_NAME = 'pmrv-sc-relatos-v4';
 const ASSETS = [
   '/',
   '/manifest.json',
@@ -6,8 +6,7 @@ const ASSETS = [
   '/icon-512.png',
   '/apple-touch-icon.png',
   '/favicon-32.png',
-  '/favicon-pmrv-sc.svg',
-  '/logo-pmrv-sc.svg',
+  '/logo-pmrv-sc.png',
 ];
 
 self.addEventListener('install', (event) => {
