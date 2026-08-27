@@ -18,6 +18,15 @@ import { WhatsAppIcon } from './icons';
 import MentionInput from './MentionInput';
 import Skeleton from './Skeleton';
 import { showToast } from '@/components/Toast';
+import {
+  envolvidosParaStorage,
+  precisaMigrarFotos,
+  novoFotoId,
+  salvarFotoBlob,
+  apagarFoto,
+  migrarFotosLegadas,
+  hidratarFotos,
+} from '@/lib/foto-store';
 
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
 
@@ -66,16 +75,33 @@ export default function Envolvidos() {
   const [gpsInfo, setGpsInfo] = useState(null);
 
   useEffect(() => {
-    const { lista, seq: s } = loadEnvolvidos();
-    // Migração simples: se não existir placa_estrangeira, assume false
-    const migrada = (lista || []).map((ev) => ({
-      ...ev,
-      placa_estrangeira: ev.placa_estrangeira === true,
-      placa_tipo: ev.placa_tipo || 'br',
-    }));
-    setEnvolvidos(migrada);
-    setSeq(s);
-    setPlacaToken(localStorage.getItem(PLACA_TOKEN_KEY) || '');
+    let cancelled = false;
+    async function boot() {
+      const { lista, seq: s } = loadEnvolvidos();
+      const migrada = (lista || []).map((ev) => ({
+        ...ev,
+        placa_estrangeira: ev.placa_estrangeira === true,
+        placa_tipo: ev.placa_tipo || 'br',
+      }));
+      let next = migrada;
+      try {
+        if (precisaMigrarFotos(next)) {
+          next = await migrarFotosLegadas(next);
+        }
+        next = await hidratarFotos(next);
+        persist(next, s);
+      } catch (e) {
+        console.error('Falha ao hidratar fotos:', e);
+      }
+      if (cancelled) return;
+      setEnvolvidos(next);
+      setSeq(s);
+      setPlacaToken(localStorage.getItem(PLACA_TOKEN_KEY) || '');
+    }
+    boot();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -87,7 +113,10 @@ export default function Envolvidos() {
   }, []);
 
   function persist(lista, s) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ lista, seq: s }));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ lista: envolvidosParaStorage(lista), seq: s })
+    );
   }
 
   function salvar(lista) {
@@ -105,6 +134,10 @@ export default function Envolvidos() {
 
   function remover(id) {
     if (!window.confirm('Remover este envolvido?')) return;
+    const alvo = envolvidos.find((e) => e.id === id);
+    (alvo?.fotos || []).forEach((f) => {
+      if (f && f.id) apagarFoto(f.id).catch(() => {});
+    });
     const lista = envolvidos.filter((e) => e.id !== id);
     setEnvolvidos(lista);
     salvar(lista);
@@ -171,21 +204,34 @@ export default function Envolvidos() {
     }
   }
 
-  function anexarFoto(id, file) {
+  async function anexarFoto(id, file) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const lista = envolvidos.map((e) => {
+    const fotoId = novoFotoId();
+    try {
+      await salvarFotoBlob(fotoId, file);
+    } catch (err) {
+      console.error('Erro ao gravar foto:', err);
+      alert('Não foi possível salvar a foto neste dispositivo.');
+      return;
+    }
+    const src = URL.createObjectURL(file);
+    setEnvolvidos((prev) => {
+      const lista = prev.map((e) => {
         if (e.id !== id) return e;
-        return { ...e, fotos: [...(e.fotos || []), { src: reader.result }] };
+        return { ...e, fotos: [...(e.fotos || []), { id: fotoId, src }] };
       });
-      setEnvolvidos(lista);
-      salvar(lista);
-    };
-    reader.readAsDataURL(file);
+      persist(lista, seq);
+      return lista;
+    });
   }
 
   function removerFoto(id, index) {
+    const alvo = envolvidos.find((e) => e.id === id);
+    const foto = alvo && (alvo.fotos || [])[index];
+    if (foto && foto.id) apagarFoto(foto.id).catch(() => {});
+    if (foto && foto.src && String(foto.src).startsWith('blob:')) {
+      URL.revokeObjectURL(foto.src);
+    }
     const lista = envolvidos.map((e) => {
       if (e.id !== id) return e;
       const fotos = (e.fotos || []).filter((_, i) => i !== index);
@@ -200,22 +246,24 @@ export default function Envolvidos() {
     const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith('image/'));
     if (!files.length) return;
     Promise.all(
-      files.map(
-        (f) =>
-          new Promise((resolve) => {
-            const r = new FileReader();
-            r.onload = () => resolve(r.result);
-            r.readAsDataURL(f);
-          })
-      )
-    ).then((dataUrls) => {
-      const nova = envolvidos.map((e) => {
-        if (e.id !== id) return e;
-        return { ...e, fotos: [...(e.fotos || []), ...dataUrls.map((src) => ({ src }))] };
+      files.map(async (file) => {
+        const fotoId = novoFotoId();
+        await salvarFotoBlob(fotoId, file);
+        return { id: fotoId, src: URL.createObjectURL(file) };
+      })
+    )
+      .then((novas) => {
+        const lista = envolvidos.map((e) => {
+          if (e.id !== id) return e;
+          return { ...e, fotos: [...(e.fotos || []), ...novas] };
+        });
+        setEnvolvidos(lista);
+        salvar(lista);
+      })
+      .catch((err) => {
+        console.error('Erro ao gravar fotos da galeria:', err);
+        alert('Não foi possível salvar as fotos neste dispositivo.');
       });
-      setEnvolvidos(nova);
-      salvar(nova);
-    });
   }
 
   const [preview, setPreview] = useState(null);
@@ -332,7 +380,7 @@ export default function Envolvidos() {
       </div>
 
       <p className="estilo-glass text-xs text-charcoal/70 font-mono mb-4 p-3">
-        Cada envolvido tem dados, relato individual (com correção por IA) e fotos. Use <b>📷 Tirar fotos</b> ou <b>🖼️ Galeria</b>. Tudo é salvo automaticamente neste navegador.
+        Cada envolvido tem dados, relato individual (com correção por IA) e fotos. Use <b>📷 Tirar fotos</b> ou <b>🖼️ Galeria</b>. Dados no navegador; fotos no armazenamento local (não no texto salvo).
       </p>
 
       <div className="space-y-6">
@@ -538,7 +586,7 @@ export default function Envolvidos() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {(ev.fotos || []).map((f, idx) => (
-                    <div key={idx} className="relative border-2 border-charcoal p-1 bg-bone">
+                    <div key={f.id || idx} className="relative border-2 border-charcoal p-1 bg-bone">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={f.src}

@@ -15,6 +15,7 @@ import {
   capitalizarFrase,
   subtipoLabel,
   generateReport,
+  nowFato,
   buildIAPrompt,
   reviewReportPrompt,
   callGroq,
@@ -23,6 +24,12 @@ import {
   extractJSON,
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
+import {
+  RELATO_DRAFT_KEY,
+  parseRelatoDraft,
+  serializeRelatoDraft,
+  mergeRelatoDraft,
+} from '@/lib/relato-draft';
 import { matchRodovia } from '@/lib/gps';
 import { useSwipe } from '@/hooks/useSwipe';
 import { showToast } from '@/components/Toast';
@@ -44,6 +51,8 @@ const INITIAL = {
   sentidoManual: '',
   horaTipo: 'auto',
   horaManual: '',
+  dataFato: '',
+  horaFato: '',
   ocorrencia: DANOS,
   subtipo: '1.2',
   objeto: '',
@@ -86,6 +95,7 @@ export default function RelatoPolicial() {
   const [form, setForm] = useState(INITIAL);
   const [manualEdit, setManualEdit] = useState(false);
   const [manualText, setManualText] = useState('');
+  const [draftReady, setDraftReady] = useState(false);
 
   useSwipe({
     threshold: 70,
@@ -100,15 +110,31 @@ export default function RelatoPolicial() {
     return generateReport(form, true);
   }, [form, manualEdit, manualText]);
 
-  // Persistência / pré-preenchimento da viatura
+  // Rascunho do relato: restaura fatos gravados. Sem rascunho, congela data/hora atuais uma vez (não no gerar).
   useEffect(() => {
-    if (form.vtr) localStorage.setItem('PMRV_VTR', form.vtr);
-    else {
-      const saved = localStorage.getItem('PMRV_VTR');
-      if (saved) setForm((f) => ({ ...f, vtr: saved }));
+    const parsed = parseRelatoDraft(localStorage.getItem(RELATO_DRAFT_KEY));
+    if (parsed) {
+      const merged = mergeRelatoDraft(parsed, INITIAL);
+      setForm(merged.form);
+      setStep(merged.step);
+      setManualEdit(merged.manualEdit);
+      setManualText(merged.manualText);
+    } else {
+      const savedVtr = localStorage.getItem('PMRV_VTR') || '';
+      const stamp = nowFato();
+      setForm((f) => ({ ...f, vtr: savedVtr || f.vtr, ...stamp }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.vtr]);
+    setDraftReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    localStorage.setItem(
+      RELATO_DRAFT_KEY,
+      serializeRelatoDraft({ form, step, manualEdit, manualText })
+    );
+    if (form.vtr) localStorage.setItem('PMRV_VTR', form.vtr);
+  }, [draftReady, form, step, manualEdit, manualText]);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -434,7 +460,9 @@ export default function RelatoPolicial() {
 
   function limpar() {
     if (window.confirm('Deseja iniciar uma nova ocorrência? Todos os dados serão perdidos.')) {
-      setForm(INITIAL);
+      const savedVtr = localStorage.getItem('PMRV_VTR') || form.vtr || '';
+      const stamp = nowFato();
+      setForm({ ...INITIAL, vtr: savedVtr, ...stamp });
       setManualEdit(false);
       setManualText('');
       setStep(1);
@@ -479,6 +507,15 @@ export default function RelatoPolicial() {
             />
           </div>
           <div>
+            <label className="ds-label">Data do Sinistro</label>
+            <input
+              type="date"
+              value={form.dataFato || ''}
+              onChange={(e) => set({ dataFato: e.target.value })}
+              className="ds-input"
+            />
+          </div>
+          <div>
             <label className="ds-label">Hora do Sinistro</label>
             <div className="flex gap-4 p-3 bg-bone border-2 border-charcoal">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -486,10 +523,17 @@ export default function RelatoPolicial() {
                   type="radio"
                   name="pmrv_hora_tipo"
                   checked={form.horaTipo === 'auto'}
-                  onChange={() => set({ horaTipo: 'auto' })}
+                  onChange={() => {
+                    const n = nowFato();
+                    set({
+                      horaTipo: 'auto',
+                      horaFato: n.horaFato,
+                      dataFato: form.dataFato || n.dataFato,
+                    });
+                  }}
                   className="w-4 h-4 text-pmrv focus:ring-gold"
                 />
-                <span className="text-sm">Automática (Agora)</span>
+                <span className="text-sm">Capturada</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -502,6 +546,11 @@ export default function RelatoPolicial() {
                 <span className="text-sm">Manual</span>
               </label>
             </div>
+            {form.horaTipo === 'auto' && (
+              <p className="mt-2 text-[11px] font-mono text-charcoal/70">
+                Hora no relatório: {form.horaFato || '---'} (não muda ao gerar)
+              </p>
+            )}
             {form.horaTipo === 'manual' && (
               <input
                 type="time"
