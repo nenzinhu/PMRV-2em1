@@ -27,6 +27,7 @@ import {
   migrarFotosLegadas,
   hidratarFotos,
 } from '@/lib/foto-store';
+import { salvarRelatoNoResumo, retirarRelatoDoResumo } from '@/lib/resumo-relatos';
 
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
 
@@ -124,12 +125,14 @@ export default function Envolvidos() {
   }
 
   function adicionar() {
-    const nextSeq = seq + 1;
-    const ev = novoEnvolvido(nextSeq);
-    const lista = [...envolvidos, ev];
-    setEnvolvidos(lista);
-    setSeq(nextSeq);
-    persist(lista, nextSeq);
+    setEnvolvidos((prev) => {
+      const maxId = prev.reduce((m, e) => Math.max(m, Number(e.id) || 0), seq);
+      const nextSeq = maxId + 1;
+      const lista = [...prev, novoEnvolvido(nextSeq)];
+      setSeq(nextSeq);
+      persist(lista, nextSeq);
+      return lista;
+    });
   }
 
   function remover(id) {
@@ -138,6 +141,7 @@ export default function Envolvidos() {
     (alvo?.fotos || []).forEach((f) => {
       if (f && f.id) apagarFoto(f.id).catch(() => {});
     });
+    retirarRelatoDoResumo(id);
     const lista = envolvidos.filter((e) => e.id !== id);
     setEnvolvidos(lista);
     salvar(lista);
@@ -349,6 +353,17 @@ export default function Envolvidos() {
     }
   }
 
+  function salvarRelatoIndividual(id) {
+    const ev = envolvidos.find((e) => e.id === id);
+    if (!ev) return;
+    const result = salvarRelatoNoResumo(ev);
+    if (!result.ok) {
+      alert('Escreva o relato individual antes de salvar.');
+      return;
+    }
+    showToast(`Relato do Envolvido #${result.envolvidoId} no resumo (${result.total})`, 'success', 2000);
+  }
+
   function exportarWhatsApp() {
     const txt = envolvidosText(envolvidos);
     if (!txt) {
@@ -380,7 +395,7 @@ export default function Envolvidos() {
       </div>
 
       <p className="estilo-glass text-xs text-charcoal/70 font-mono mb-4 p-3">
-        Cada envolvido tem dados, relato individual (com correção por IA) e fotos. Use <b>📷 Tirar fotos</b> ou <b>🖼️ Galeria</b>. Dados no navegador; fotos no armazenamento local (não no texto salvo).
+        Cada envolvido tem dados, relato individual (com correção por IA) e fotos. <b>Salvar relato</b> envia o texto para o Resumo da Dinâmica. Use <b>📷 Tirar fotos</b> ou <b>🖼️ Galeria</b>.
       </p>
 
       <div className="space-y-6">
@@ -517,13 +532,22 @@ export default function Envolvidos() {
             <div>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1 gap-2">
                 <label className="ds-label mb-0">Relato Individual</label>
-                <button
-                  id={`env_ia_${ev.id}`}
-                  onClick={() => corrigirRelato(ev.id)}
-                  className="btn-outline text-[10px]"
-                >
-                  ✨ Corrigir com IA
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    id={`env_ia_${ev.id}`}
+                    onClick={() => corrigirRelato(ev.id)}
+                    className="btn-outline text-[10px]"
+                  >
+                    ✨ Corrigir com IA
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => salvarRelatoIndividual(ev.id)}
+                    className="btn-ios text-[10px]"
+                  >
+                    Salvar relato
+                  </button>
+                </div>
               </div>
               <MentionInput
                 value={ev.relato}

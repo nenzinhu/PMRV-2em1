@@ -9,44 +9,9 @@ import {
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
 import { showToast } from '@/components/Toast';
+import { loadResumoState, persistResumoState } from '@/lib/resumo-relatos';
 
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
-
-const STORAGE_KEY = 'PMRV_RESUMO_DINAMICA';
-const ENVOLVIDOS_KEY = 'PMRV_ENVOLVIDOS';
-
-function loadResumo() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const obj = JSON.parse(raw);
-      return {
-        relatos: Array.isArray(obj.relatos) ? obj.relatos : [],
-        resumo: obj.resumo || '',
-      };
-    }
-  } catch (e) {
-    /* ignore */
-  }
-  return { relatos: [], resumo: '' };
-}
-
-function persistResumo(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function loadEnvolvidos() {
-  try {
-    const raw = localStorage.getItem(ENVOLVIDOS_KEY);
-    if (raw) {
-      const obj = JSON.parse(raw);
-      return Array.isArray(obj.lista) ? obj.lista : [];
-    }
-  } catch (e) {
-    /* ignore */
-  }
-  return [];
-}
 
 export default function ResumoDinamica() {
   const [relatos, setRelatos] = useState([]);
@@ -54,14 +19,18 @@ export default function ResumoDinamica() {
   const [loadingIA, setLoadingIA] = useState(false);
   const [statusIA, setStatusIA] = useState('');
   const init = useRef(false);
-  const [hasImported, setHasImported] = useState(false);
   const [transferindoId, setTransferindoId] = useState(null);
 
   useEffect(() => {
-    const s = loadResumo();
-    setRelatos(s.relatos);
-    setResumo(s.resumo);
+    function reload() {
+      const s = loadResumoState();
+      setRelatos(s.relatos);
+      setResumo(s.resumo);
+    }
+    reload();
     init.current = true;
+    window.addEventListener('pmrv-resumo-changed', reload);
+    return () => window.removeEventListener('pmrv-resumo-changed', reload);
   }, []);
 
   function transferirParaRelatoPolicial(id) {
@@ -82,7 +51,7 @@ export default function ResumoDinamica() {
     };
     setRelatos(state.relatos);
     setResumo(state.resumo);
-    if (init.current) persistResumo(state);
+    if (init.current) persistResumoState(state);
   }
 
   function adicionarRelato() {
@@ -100,36 +69,9 @@ export default function ResumoDinamica() {
     save(relatos.filter((r) => r.id !== id));
   }
 
-  function importarRelatosEnvolvidos() {
-    const envolvidos = loadEnvolvidos();
-    const individuais = envolvidos
-      .filter((ev) => ev.relato && ev.relato.trim())
-      .map((ev) => ({
-        id: Date.now() + Math.random(),
-        texto: ev.relato.trim(),
-        envolvidoId: ev.id,
-        envolvidoNome: ev.nome && ev.nome.trim() ? ev.nome.trim() : `Envolvido #${ev.id}`,
-      }));
-
-    if (individuais.length === 0) {
-      alert('Nenhum relato individual encontrado nos envolvidos.');
-      return;
-    }
-
-    const merged = [...relatos];
-    individuais.forEach((novo) => {
-      const exists = merged.some((r) => r.envolvidoId === novo.envolvidoId);
-      if (!exists) merged.push(novo);
-    });
-
-    save(merged, resumo);
-    setHasImported(true);
-    setTimeout(() => setHasImported(false), 3000);
-  }
-
   async function gerarResumo() {
     const base = relatos
-      .map((r, idx) => {
+      .map((r) => {
         const cabecalho = r.envolvidoNome ? `${r.envolvidoNome}: ` : '';
         return `${cabecalho}${r.texto}`;
       })
@@ -237,21 +179,8 @@ export default function ResumoDinamica() {
       </div>
 
       <p className="estilo-glass text-xs text-charcoal/70 font-mono mb-4 p-3">
-        Adicione relatos individuais e gere automaticamente um resumo unificado da dinâmica do ocorrido.
+        Os relatos individuais entram aqui ao tocar <b>Salvar relato</b> na aba Envolvidos. Depois gere o resumo unificado.
       </p>
-
-      <div className="mb-3">
-        <button
-          type="button"
-          onClick={importarRelatosEnvolvidos}
-          className="btn-outline text-xs w-full"
-        >
-          📥 Importar relatos individuais dos envolvidos
-        </button>
-        {hasImported && (
-          <p className="text-[10px] font-mono text-pmrv mt-1">Relatos importados com sucesso.</p>
-        )}
-      </div>
 
       <div className="space-y-4">
         {relatos.map((r, idx) => (
@@ -287,7 +216,7 @@ export default function ResumoDinamica() {
       {relatos.length === 0 && (
         <div className="bg-white border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal/60">
           <div className="text-3xl mb-2" aria-hidden="true">📋</div>
-          Nenhum relato adicionado ainda.
+          Nenhum relato ainda. Salve o relato individual na aba Envolvidos.
         </div>
       )}
 
