@@ -7,7 +7,6 @@ import ResumoDinamica from '@/components/ResumoDinamica';
 import ThemeConfig from '@/components/theme/ThemeConfig';
 import MobileNav from '@/components/MobileNav';
 import Toast from '@/components/Toast';
-import { useSwipe } from '@/hooks/useSwipe';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useInstallPWA } from '@/hooks/useInstallPWA';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -34,18 +33,6 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
     setAbaState(resolved);
     syncAbaUrl(resolved);
   }, []);
-
-  useSwipe({
-    threshold: 180,
-    onSwipeLeft: () => {
-      if (aba === 'envolvidos') setAba('relato');
-      else if (aba === 'relato') setAba('resumo');
-    },
-    onSwipeRight: () => {
-      if (aba === 'resumo') setAba('relato');
-      else if (aba === 'relato') setAba('envolvidos');
-    },
-  });
 
   useEffect(() => {
     setMounted(true);
@@ -179,13 +166,10 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
               </button>
             </div>
           )}
+          <MobileNav active={aba} onChange={setAba} />
         </header>
 
-        {isMobile && mounted && (
-          <MobileNav active={aba} onChange={setAba} />
-        )}
-
-        <main className={`w-full flex-1 ${isMobile ? 'pb-24' : ''}`} role="main">
+        <main className="w-full flex-1 pb-24 md:pb-0" role="main">
           {isMobile ? (
             <div className="page-slide" key={aba}>
               {aba === 'envolvidos' ? <Envolvidos /> : aba === 'relato' ? <RelatoPolicial /> : <ResumoDinamica />}

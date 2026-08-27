@@ -1,94 +1,87 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { isInteractiveTarget, pointFromEvent, swipeDirection } from '@/lib/swipe';
 
-function isEditable(el) {
-  if (!el) return false;
-  if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') return true;
-  if (el.isContentEditable) return true;
-  return false;
-}
-
-export function useSwipe({ onSwipeLeft, onSwipeRight, threshold = 140, preventScrollOnSwipe = false } = {}) {
-  const start = useRef({ x: 0, y: 0 });
+export function useSwipe({
+  onSwipeLeft,
+  onSwipeRight,
+  threshold = 140,
+  preventScrollOnSwipe = false,
+  allowMouse = false,
+  enabled = true,
+} = {}) {
+  const start = useRef(null);
+  const last = useRef(null);
   const moving = useRef(false);
+  const leftRef = useRef(onSwipeLeft);
+  const rightRef = useRef(onSwipeRight);
+  leftRef.current = onSwipeLeft;
+  rightRef.current = onSwipeRight;
 
   useEffect(() => {
-    function getClientX(e) {
-      if (typeof TouchEvent !== 'undefined' && e instanceof TouchEvent && e.touches && e.touches[0]) {
-        return e.touches[0].clientX;
-      }
-      return e.clientX || 0;
-    }
-
-    function getClientY(e) {
-      if (typeof TouchEvent !== 'undefined' && e instanceof TouchEvent && e.touches && e.touches[0]) {
-        return e.touches[0].clientY;
-      }
-      return e.clientY || 0;
-    }
-
-    function getTarget(e) {
-      // Para toques, usar elementFromPoint pode ajudar em casos de elementos sobrepostos,
-      // mas se o target já for um campo editável, basta usá-lo.
-      const target = e.target;
-      if (target && isEditable(target)) return target;
-      if (typeof TouchEvent !== 'undefined' && e instanceof TouchEvent && e.touches && e.touches[0] && target && target.elementFromPoint) {
-        const point = target.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
-        if (point && isEditable(point)) return point;
-      }
-      return target;
-    }
+    if (!enabled) return;
 
     function onPointerDown(e) {
-      const target = getTarget(e);
-      if (isEditable(target)) return;
-      start.current = { x: getClientX(e), y: getClientY(e) };
+      if (isInteractiveTarget(e.target)) {
+        start.current = null;
+        return;
+      }
+      const p = pointFromEvent(e);
+      if (!p) return;
+      start.current = p;
+      last.current = p;
       moving.current = false;
     }
 
     function onPointerMove(e) {
-      if (!moving.current && start.current.x !== 0) {
-        const dx = Math.abs(getClientX(e) - start.current.x);
-        const dy = Math.abs(getClientY(e) - start.current.y);
-        if (dx > dy && dx > 10) moving.current = true;
-      }
+      if (!start.current) return;
+      const p = pointFromEvent(e);
+      if (!p) return;
+      last.current = p;
+      const dx = Math.abs(p.x - start.current.x);
+      const dy = Math.abs(p.y - start.current.y);
+      if (dx > dy && dx > 10) moving.current = true;
       if (moving.current && preventScrollOnSwipe) e.preventDefault();
     }
 
     function onPointerUp(e) {
-      if (!moving.current) return;
-      const dx = getClientX(e) - start.current.x;
-      const dy = getClientY(e) - start.current.y;
-      if (Math.abs(dx) >= threshold && Math.abs(dx) > Math.abs(dy)) {
-        if (dx < 0) onSwipeLeft && onSwipeLeft();
-        else onSwipeRight && onSwipeRight();
+      if (!start.current || !moving.current) {
+        start.current = null;
+        moving.current = false;
+        return;
       }
+      const end = pointFromEvent(e) || last.current;
+      const dir = swipeDirection(start.current, end, threshold);
+      start.current = null;
+      last.current = null;
       moving.current = false;
+      if (dir === 'left') leftRef.current && leftRef.current();
+      if (dir === 'right') rightRef.current && rightRef.current();
     }
 
-    const node = typeof window !== 'undefined' ? window : null;
-    if (!node) return;
-
+    const node = window;
     node.addEventListener('touchstart', onPointerDown, { passive: true });
     node.addEventListener('touchmove', onPointerMove, { passive: !preventScrollOnSwipe });
     node.addEventListener('touchend', onPointerUp);
     node.addEventListener('touchcancel', onPointerUp);
 
-    node.addEventListener('mousedown', onPointerDown);
-    node.addEventListener('mousemove', onPointerMove);
-    node.addEventListener('mouseup', onPointerUp);
-    node.addEventListener('mouseleave', () => { moving.current = false; });
+    if (allowMouse) {
+      node.addEventListener('mousedown', onPointerDown);
+      node.addEventListener('mousemove', onPointerMove);
+      node.addEventListener('mouseup', onPointerUp);
+    }
 
     return () => {
       node.removeEventListener('touchstart', onPointerDown);
       node.removeEventListener('touchmove', onPointerMove);
       node.removeEventListener('touchend', onPointerUp);
       node.removeEventListener('touchcancel', onPointerUp);
-      node.removeEventListener('mousedown', onPointerDown);
-      node.removeEventListener('mousemove', onPointerMove);
-      node.removeEventListener('mouseup', onPointerUp);
-      node.removeEventListener('mouseleave', () => { moving.current = false; });
+      if (allowMouse) {
+        node.removeEventListener('mousedown', onPointerDown);
+        node.removeEventListener('mousemove', onPointerMove);
+        node.removeEventListener('mouseup', onPointerUp);
+      }
     };
-  }, [onSwipeLeft, onSwipeRight, threshold, preventScrollOnSwipe]);
+  }, [threshold, preventScrollOnSwipe, allowMouse, enabled]);
 }
