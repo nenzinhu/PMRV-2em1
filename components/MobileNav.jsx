@@ -2,36 +2,65 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { showToast } from '@/components/Toast';
+import { Flip, gsap, prefersReducedMotion, registerGsap, useGSAP } from '@/lib/gsap-register';
+
+registerGsap();
 
 const TABS = [
   { key: 'envolvidos', label: 'Envolvidos', icon: '👥' },
   { key: 'relato', label: 'Relato', icon: '📝' },
   { key: 'resumo', label: 'Resumo', icon: '📋' },
+  { key: 'salvar', label: 'Salvar', icon: '💾' },
 ];
 
 function tabAriaLabel(tab) {
   return tab.key === 'resumo' ? 'Aba Resumo Dinâmico' : `Aba ${tab.label}`;
 }
 
+function placePill(row, pill, active) {
+  if (!row || !pill) return;
+  const el = row.querySelector(`[data-tab="${active}"]`);
+  if (!el || !el.offsetWidth) return;
+  pill.style.left = `${el.offsetLeft}px`;
+  pill.style.width = `${el.offsetWidth}px`;
+}
+
 export default function MobileNav({ active, onChange }) {
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
   const [pressing, setPressing] = useState(null);
   const [lastActive, setLastActive] = useState(active);
   const mobileRowRef = useRef(null);
+  const mobilePillRef = useRef(null);
+  const desktopRowRef = useRef(null);
+  const desktopPillRef = useRef(null);
+  const firstFlip = useRef(true);
 
   const measure = useCallback(() => {
-    const row = mobileRowRef.current;
-    if (!row) return;
-    const el = row.querySelector(`[data-tab="${active}"]`);
-    if (!el || !el.offsetWidth) return;
-    setIndicator({
-      left: el.offsetLeft,
-      width: el.offsetWidth,
-    });
+    placePill(mobileRowRef.current, mobilePillRef.current, active);
+    placePill(desktopRowRef.current, desktopPillRef.current, active);
   }, [active]);
 
+  useGSAP(
+    () => {
+      const skipMotion = prefersReducedMotion() || firstFlip.current;
+      const mobileState = mobilePillRef.current ? Flip.getState(mobilePillRef.current) : null;
+      const desktopState = desktopPillRef.current ? Flip.getState(desktopPillRef.current) : null;
+      measure();
+      if (firstFlip.current) {
+        firstFlip.current = false;
+        return;
+      }
+      if (skipMotion) return;
+      if (mobileState && mobilePillRef.current) {
+        Flip.from(mobileState, { duration: 0.42, ease: 'pmrv' });
+      }
+      if (desktopState && desktopPillRef.current) {
+        Flip.from(desktopState, { duration: 0.42, ease: 'pmrv' });
+      }
+    },
+    { dependencies: [active, measure] }
+  );
+
   useEffect(() => {
-    measure();
     const onResize = () => measure();
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
@@ -46,30 +75,35 @@ export default function MobileNav({ active, onChange }) {
       setLastActive(active);
       const tab = TABS.find((t) => t.key === active);
       if (tab) showToast(`${tab.label}`, 'info', 1200);
+      const icon = document.querySelector(`[data-tab="${active}"] .tab-icon, [data-desktop-tab="${active}"] .tab-icon`);
+      if (icon && !prefersReducedMotion()) {
+        gsap.fromTo(icon, { y: 6, scale: 0.86 }, { y: 0, scale: 1, duration: 0.35, ease: 'back.out(1.5)' });
+      }
     }
   }, [active, lastActive]);
 
   return (
     <div id="pmrv-tabs">
-      <nav className="hidden md:block border-t border-white/20" aria-label="Navegação principal">
+      <nav className="hidden md:block border-t border-white/15" aria-label="Navegação principal">
         <div className="mx-auto max-w-5xl px-4">
-          <div className="flex items-center gap-1">
+          <div ref={desktopRowRef} className="relative flex items-center gap-1">
+            <div ref={desktopPillRef} className="nav-pill nav-pill-desktop" aria-hidden="true" />
             {TABS.map((tab) => {
               const isActive = active === tab.key;
               return (
                 <button
                   key={tab.key}
                   type="button"
+                  data-desktop-tab={tab.key}
+                  data-tab={tab.key}
                   aria-label={tabAriaLabel(tab)}
                   aria-pressed={isActive}
                   onClick={() => onChange(tab.key)}
-                  className={`relative flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-mono font-semibold uppercase tracking-wider border-b-2 transition-colors duration-200 ${
-                    isActive
-                      ? 'text-white border-white'
-                      : 'text-white/70 border-transparent hover:text-white hover:border-white/40'
+                  className={`relative z-10 flex items-center gap-1.5 px-2.5 lg:px-4 py-2.5 text-[10px] lg:text-[11px] font-mono font-semibold uppercase tracking-wider whitespace-nowrap ${
+                    isActive ? 'text-white' : 'text-white/70 hover:text-white'
                   }`}
                 >
-                  <span aria-hidden="true">{tab.icon}</span>
+                  <span className="tab-icon" aria-hidden="true">{tab.icon}</span>
                   <span>
                     {tab.label}
                     {tab.key === 'resumo' ? ' Dinâmico' : ''}
@@ -82,19 +116,12 @@ export default function MobileNav({ active, onChange }) {
       </nav>
 
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-charcoal/90 backdrop-blur-md border-t border-white/10"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 nav-dock"
         aria-label="Navegação no celular"
       >
         <div className="mx-auto max-w-md">
           <div ref={mobileRowRef} className="relative flex items-center justify-between px-2 pb-2 pt-1">
-            <div
-              className="absolute top-1 bottom-1 rounded-full bg-white/10 transition-all duration-300 ease-out"
-              style={{
-                left: indicator.left,
-                width: indicator.width,
-              }}
-              aria-hidden="true"
-            />
+            <div ref={mobilePillRef} className="nav-pill" aria-hidden="true" />
             {TABS.map((tab) => (
               <button
                 key={tab.key}
@@ -108,11 +135,11 @@ export default function MobileNav({ active, onChange }) {
                 onMouseDown={() => setPressing(tab.key)}
                 onMouseUp={() => setPressing(null)}
                 onMouseLeave={() => setPressing(null)}
-                className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 text-[11px] font-mono font-semibold uppercase tracking-wider transition-colors duration-200 ${
+                className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-mono font-semibold uppercase tracking-wide ${
                   active === tab.key ? 'text-white' : 'text-white/60 hover:text-white/80'
                 } ${pressing === tab.key ? 'tab-press' : ''}`}
               >
-                <span className="text-lg leading-none" aria-hidden="true">{tab.icon}</span>
+                <span className="tab-icon text-lg leading-none" aria-hidden="true">{tab.icon}</span>
                 {tab.label}
               </button>
             ))}

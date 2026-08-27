@@ -36,7 +36,13 @@
   body {
     font-family: var(--ds-font-sans);
     color: var(--ds-text);
-    background: var(--ds-bg);
+    background-color: var(--ds-bg);
+    background-image:
+      radial-gradient(1200px 600px at 12% -10%, color-mix(in srgb, var(--ds-primary) 22%, transparent), transparent 60%),
+      radial-gradient(900px 500px at 110% 8%, color-mix(in srgb, var(--ds-accent) 18%, transparent), transparent 55%),
+      linear-gradient(180deg, color-mix(in srgb, var(--ds-bg) 88%, #000) 0%, var(--ds-bg) 28%, var(--ds-bg) 100%);
+    background-attachment: fixed;
+    overflow-x: hidden;
     /* iPhone (notch e barra inferior): respeita áreas seguras quando instalado como app */
     padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
     padding-left: env(safe-area-inset-left);
@@ -62,11 +68,23 @@
 
 @layer components {
   .ds-card {
-    @apply bg-white border-2 border-charcoal shadow-[4px_4px_0_#2B2B2B] p-5 sm:p-6 space-y-4;
+    @apply p-5 sm:p-6 space-y-4;
+    background: color-mix(in srgb, var(--ds-surface) 86%, transparent);
+    border: 2px solid var(--ds-text);
+    border-radius: 18px;
+    box-shadow: 4px 4px 0 var(--ds-text), 0 18px 40px rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   .ds-card-danger {
-    @apply bg-white border-2 border-brick shadow-[4px_4px_0_#C44536] p-5 sm:p-6 space-y-4;
+    @apply p-5 sm:p-6 space-y-4;
+    background: color-mix(in srgb, #fff 82%, #F9ECE9);
+    border: 2px solid var(--ds-danger);
+    border-radius: 18px;
+    box-shadow: 4px 4px 0 var(--ds-danger), 0 18px 40px rgba(196, 69, 54, 0.12);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
   }
 
   .ds-label {
@@ -74,19 +92,19 @@
   }
 
   .ds-input {
-    @apply w-full p-3 bg-white border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition;
+    @apply w-full p-3 bg-white/90 border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition rounded-xl;
   }
 
   .ds-input-muted {
-    @apply w-full p-3 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition;
+    @apply w-full p-3 bg-bone/80 border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition rounded-xl;
   }
 
   .ds-input-danger {
-    @apply w-full p-3 bg-[#F9ECE9] border-2 border-brick focus:ring-2 focus:ring-brick outline-none transition;
+    @apply w-full p-3 bg-[#F9ECE9] border-2 border-brick focus:ring-2 focus:ring-brick outline-none transition rounded-xl;
   }
 
   .ds-icon-btn {
-    @apply p-2 border-2 border-charcoal hover:bg-bone text-pmrv transition-all;
+    @apply p-2 border-2 border-charcoal hover:bg-bone text-pmrv transition-all rounded-xl;
   }
 
   .ds-btn {
@@ -244,13 +262,24 @@
 
   /* alterar-estilo-interface: ios_glassmorphism (banner/info) */
   .estilo-glass {
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border: 2px solid rgba(43, 108, 176, 0.35);
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 2px solid color-mix(in srgb, var(--ds-primary) 28%, transparent);
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .header-chip {
+    @apply inline-flex items-center gap-1 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded-full;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .header-chip:hover {
+    background: rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -267,7 +296,11 @@
 
   .step-content,
   .recording-active,
-  .animate-pulse {
+  .animate-pulse,
+  .page-slide,
+  .animate-card-in,
+  .gps-chip,
+  .swipe-hint {
     animation: none !important;
   }
 
@@ -275,11 +308,137 @@
   #stepper-progress {
     transition: none !important;
   }
+
+  .ambient-orb,
+  .ambient-glow,
+  .brand-shine {
+    display: none;
+  }
 }
 
 /* ============================================================
    Mobile app feel — transições e micro-interações
    ============================================================ */
+
+.page-stage {
+  position: relative;
+  z-index: 1;
+}
+
+.app-header {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ds-primary) 94%, #000) 0%,
+    var(--ds-primary) 100%
+  );
+  border-bottom: 2px solid color-mix(in srgb, var(--ds-accent) 70%, #fff);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.brand-logo-wrap {
+  transform-style: preserve-3d;
+}
+
+.brand-shine {
+  position: absolute;
+  inset: -20% auto -20% 0;
+  width: 42%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+}
+
+.ambient-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ambient-orb {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(42px);
+  will-change: transform;
+  opacity: 0.72;
+}
+
+.ambient-orb-a {
+  top: -8%;
+  left: -6%;
+  width: 42vw;
+  height: 42vw;
+  max-width: 420px;
+  max-height: 420px;
+  background: color-mix(in srgb, var(--ds-primary) 55%, transparent);
+}
+
+.ambient-orb-b {
+  right: -8%;
+  bottom: 8%;
+  width: 36vw;
+  height: 36vw;
+  max-width: 360px;
+  max-height: 360px;
+  background: color-mix(in srgb, var(--ds-accent) 45%, transparent);
+}
+
+.ambient-glow {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  width: 280px;
+  height: 280px;
+  margin-left: -140px;
+  margin-top: -140px;
+  border-radius: 999px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ds-accent) 28%, transparent), transparent 70%);
+  filter: blur(12px);
+  will-change: transform;
+}
+
+.ambient-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.11;
+  background-image:
+    linear-gradient(to right, var(--ds-text) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--ds-text) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 78%);
+}
+
+.ambient-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.18) 100%);
+}
+
+.nav-dock {
+  background: color-mix(in srgb, #1a1a1a 82%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.28);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.nav-pill {
+  position: absolute;
+  top: 0.25rem;
+  bottom: 0.25rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 0 22px color-mix(in srgb, var(--ds-accent) 35%, transparent);
+  pointer-events: none;
+}
+
+.nav-pill-desktop {
+  top: 0.35rem;
+  bottom: 0.35rem;
+}
 
 .page-slide {
   animation: pageFadeSlide 0.35s ease-out both;

@@ -13,6 +13,9 @@ import {
   formatVtr,
   capitalizarFrase,
   generateReport,
+  dataFatoFieldValue,
+  maskDataFatoBr,
+  parseDataFatoBr,
   nowFato,
   buildIAPrompt,
   reviewReportPrompt,
@@ -457,10 +460,18 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
           <div>
             <label className="ds-label">Data do Sinistro</label>
             <input
-              type="date"
-              value={form.dataFato || ''}
-              onChange={(e) => set({ dataFato: e.target.value })}
-              className="ds-input"
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="dd/mm/aaaa"
+              maxLength={10}
+              value={dataFatoFieldValue(form.dataFato)}
+              onChange={(e) => {
+                const masked = maskDataFatoBr(e.target.value);
+                set({ dataFato: parseDataFatoBr(masked) || masked });
+              }}
+              className="ds-input font-mono"
+              aria-label="Data do sinistro no formato dia, mês e ano"
             />
           </div>
           <div>

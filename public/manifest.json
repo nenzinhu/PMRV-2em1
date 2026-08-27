@@ -59,6 +59,18 @@
           "type": "image/png"
         }
       ]
+    },
+    {
+      "name": "Salvar ocorrência",
+      "short_name": "Salvar",
+      "url": "/?aba=salvar",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }

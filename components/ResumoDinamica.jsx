@@ -53,11 +53,25 @@ export default function ResumoDinamica() {
     const relato = relatos.find((r) => r.id === id);
     if (!relato) return;
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'relato' }));
       window.dispatchEvent(new CustomEvent('set-dinamica', { detail: relato.texto }));
+      window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'relato' }));
     }
     setTransferindoId(id);
     setTimeout(() => setTransferindoId(null), 2000);
+  }
+
+  function salvarResumoNoRelato({ irParaSalvar } = {}) {
+    const texto = (resumo || '').trim();
+    if (!texto) {
+      alert('Não há resumo para salvar.');
+      return;
+    }
+    localStorage.setItem('PMRV_RESUMO_CLIPBOARD', texto);
+    window.dispatchEvent(new CustomEvent('set-dinamica', { detail: texto }));
+    showToast('Resumo gravado no Relato Policial', 'success', 2000);
+    if (irParaSalvar) {
+      window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'salvar' }));
+    }
   }
 
   function save(patch) {
@@ -125,8 +139,9 @@ export default function ResumoDinamica() {
           resumos: nextResumos,
           estiloResumo: modo,
         });
-        setStatusIA('Resumo gerado com sucesso.');
-        showToast(`Resumo ${ESTILO_BOTOES.find((e) => e.id === modo)?.label} gerado`, 'success', 2000);
+        window.dispatchEvent(new CustomEvent('set-dinamica', { detail: texto }));
+        setStatusIA('Resumo gerado e gravado no Relato Policial.');
+        showToast(`Resumo ${ESTILO_BOTOES.find((e) => e.id === modo)?.label} gravado no Relato`, 'success', 2000);
       }
     } catch (err) {
       console.error('Erro ao gerar resumo:', err);
@@ -166,8 +181,9 @@ export default function ResumoDinamica() {
           resumo: texto,
           resumos: { ...resumos, [modo]: texto },
         });
-        setStatusIA('Resumo melhorado com sucesso.');
-        showToast('Resumo melhorado com sucesso', 'success', 2000);
+        window.dispatchEvent(new CustomEvent('set-dinamica', { detail: texto }));
+        setStatusIA('Resumo melhorado e gravado no Relato Policial.');
+        showToast('Resumo melhorado e gravado no Relato', 'success', 2000);
       }
     } catch (err) {
       console.error('Erro ao melhorar resumo:', err);
@@ -205,7 +221,7 @@ export default function ResumoDinamica() {
       </div>
 
       <p className="estilo-glass text-xs text-charcoal/70 font-mono mb-4 p-3">
-        Os relatos individuais entram aqui ao tocar <b>Salvar relato</b> na aba Envolvidos. Depois escolha o tipo: <b>Técnico</b> (peritos e casos judiciais), <b>Policial</b> (neutro, normas e CTB) ou <b>Leigo</b> (linguagem simples).
+        Os relatos individuais entram aqui ao tocar <b>Salvar relato</b> na aba Envolvidos. Depois escolha o tipo: <b>Técnico</b> (peritos e casos judiciais), <b>Policial</b> (neutro, normas e CTB) ou <b>Leigo</b> (linguagem simples). Ao gerar ou tocar <b>Salvar</b>, o texto já vai para a dinâmica do Relato Policial.
       </p>
 
       <div className="space-y-4">
@@ -286,16 +302,11 @@ export default function ResumoDinamica() {
               </h3>
               <button
                 type="button"
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('PMRV_RESUMO_CLIPBOARD', resumo);
-                    alert('Resumo copiado para a área de transferência do app.');
-                  }
-                }}
+                onClick={() => salvarResumoNoRelato({ irParaSalvar: true })}
                 disabled={!resumo.trim()}
                 className="btn-outline text-[10px] active:scale-95 disabled:opacity-50"
               >
-                📋 Usar no Relato Policial
+                💾 Salvar
               </button>
             </div>
             <div className="flex gap-1">

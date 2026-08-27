@@ -4,14 +4,19 @@ import { useState, useEffect, useCallback } from 'react';
 import RelatoPolicial from '@/components/RelatoPolicial';
 import Envolvidos from '@/components/Envolvidos';
 import ResumoDinamica from '@/components/ResumoDinamica';
+import SalvarOcorrencia from '@/components/SalvarOcorrencia';
 import ThemeConfig from '@/components/theme/ThemeConfig';
 import MobileNav from '@/components/MobileNav';
 import Toast from '@/components/Toast';
+import AmbientField from '@/components/motion/AmbientField';
+import BrandLockup from '@/components/motion/BrandLockup';
+import PageStage from '@/components/motion/PageStage';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useInstallPWA } from '@/hooks/useInstallPWA';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useGpsLocation } from '@/hooks/useGpsLocation';
-import { abaFromSearchParam } from '@/lib/aba';
+import { ABAS, abaFromSearchParam } from '@/lib/aba';
+import { aplicarDinamicaNoRascunho } from '@/lib/relato-draft';
 import { gpsLocationLabel } from '@/lib/gps-label';
 
 function syncAbaUrl(aba) {
@@ -38,18 +43,35 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
 
   useEffect(() => {
     setMounted(true);
+    try {
+      const raw = localStorage.getItem('PMRV_THEME_CONFIG');
+      if (raw) {
+        const t = JSON.parse(raw);
+        const root = document.documentElement;
+        if (t.primary) root.style.setProperty('--ds-primary', t.primary);
+        if (t.accent) root.style.setProperty('--ds-accent', t.accent);
+        if (t.background) root.style.setProperty('--ds-bg', t.background);
+        if (t.surface) root.style.setProperty('--ds-surface', t.surface);
+        if (t.text) root.style.setProperty('--ds-text', t.text);
+        if (t.mode === 'dark') root.classList.add('dark');
+      }
+    } catch {
+      /* tema salvo inválido — mantém o padrão */
+    }
     function onGpsToggle() {
       toggleGps();
     }
     function onNavigate(e) {
       const target = e.detail;
-      if (target && ['envolvidos', 'relato', 'resumo'].includes(target)) {
+      if (target && ABAS.includes(target)) {
         setAba(target);
       }
     }
     function onSetDinamica(e) {
       const texto = e.detail;
       if (typeof texto === 'string') {
+        aplicarDinamicaNoRascunho(texto);
+        window.dispatchEvent(new CustomEvent('pmrv-relato-dinamica'));
         const el = document.getElementById('pmrv_dinamica_texto');
         if (el) {
           el.value = texto;
@@ -82,31 +104,17 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
 
   return (
     <>
-      <div ref={elRef} className="min-h-screen flex flex-col">
-        <header className="text-white sticky top-0 z-50 border-b-[3px] border-brick" style={{ backgroundColor: 'var(--ds-primary)' }}>
-          <div className="mx-auto max-w-5xl flex justify-between items-center px-3 sm:px-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo-pmrv-sc.svg"
-                alt="Brasão PMRV-SC"
-                className="w-8 h-8 sm:w-10 sm:h-10 rounded-md shadow-sm"
-              />
-              <div className="leading-tight">
-                <h1 className="text-sm sm:text-base md:text-lg font-mono font-semibold tracking-tight uppercase text-white">
-                  Relato Policial
-                </h1>
-                <p className="text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-white/80">
-                  PMRV-SC
-                </p>
-              </div>
-            </div>
+      <div ref={elRef} className="relative min-h-screen flex flex-col">
+        <AmbientField />
+        <header className="app-header text-white sticky top-0 z-50">
+          <div className="relative mx-auto max-w-5xl flex justify-between items-center px-3 sm:px-4">
+            <BrandLockup />
             <div className="flex items-center gap-1 sm:gap-2">
               {mounted && !gpsOn && (
                 <button
                   type="button"
                   onClick={toggleGps}
-                  className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
+                  className="header-chip cursor-pointer"
                   title="Ativar GPS"
                   aria-label="Ativar GPS"
                 >
@@ -114,7 +122,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                 </button>
               )}
               {mounted && gpsOn && !showLocation && !gpsInfo?.erro && (
-                <span className="inline-flex items-center gap-1 bg-white/10 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded">
+                <span className="header-chip">
                   📍 …
                 </span>
               )}
@@ -128,7 +136,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                       navigator.clipboard.writeText(loc).catch(() => {});
                     }
                   }}
-                  className="hidden sm:inline-flex items-center gap-1 max-w-xs bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
+                  className="header-chip hidden sm:inline-flex max-w-xs cursor-pointer"
                   title="Toque para copiar a localização"
                   aria-label={`Copiar localização: ${locationLabel}`}
                 >
@@ -138,7 +146,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
               <button
                 type="button"
                 onClick={() => setThemeOpen(true)}
-                className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
+                className="header-chip"
                 title="Personalizar tema"
                 aria-label="Abrir personalização de tema"
               >
@@ -148,7 +156,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                 <button
                   type="button"
                   onClick={install}
-                  className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
+                  className="header-chip"
                   title="Instalar o app"
                   aria-label="Instalar aplicativo"
                 >
@@ -158,7 +166,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
               <button
                 type="button"
                 onClick={toggleFs}
-                className="hidden sm:inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
+                className="header-chip hidden sm:inline-flex"
                 title={fsActive ? 'Sair da tela cheia' : 'Modo imersivo'}
                 aria-label={fsActive ? 'Sair da tela cheia' : 'Entrar em modo imersivo'}
               >
@@ -177,7 +185,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                     navigator.clipboard.writeText(loc).catch(() => {});
                   }
                 }}
-                  className="gps-chip inline-flex items-center gap-1 max-w-full bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
+                  className="gps-chip header-chip inline-flex items-center gap-1 max-w-full cursor-pointer"
                   title="Toque para copiar a localização"
                   aria-label={`Localização atual: ${locationLabel}. Toque para copiar.`}
                 >
@@ -188,35 +196,25 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
           <MobileNav active={aba} onChange={setAba} />
         </header>
 
-        <main className="w-full flex-1 pb-24 md:pb-0" role="main">
-          {isMobile ? (
-            <div className="page-slide" key={aba}>
-              {aba === 'envolvidos' ? (
-                <Envolvidos gpsInfo={gpsOn ? gpsInfo : null} />
-              ) : aba === 'relato' ? (
-                <RelatoPolicial gpsOn={gpsOn} gpsInfo={gpsOn ? gpsInfo : null} />
-              ) : (
-                <ResumoDinamica />
-              )}
-            </div>
-          ) : (
-            <>
-              {aba === 'envolvidos' ? (
-                <Envolvidos gpsInfo={gpsOn ? gpsInfo : null} />
-              ) : aba === 'relato' ? (
-                <RelatoPolicial gpsOn={gpsOn} gpsInfo={gpsOn ? gpsInfo : null} />
-              ) : (
-                <ResumoDinamica />
-              )}
-            </>
-          )}
+        <main className="relative z-10 w-full flex-1 pb-24 md:pb-0" role="main">
+          <PageStage aba={aba}>
+            {aba === 'envolvidos' ? (
+              <Envolvidos gpsInfo={gpsOn ? gpsInfo : null} />
+            ) : aba === 'relato' ? (
+              <RelatoPolicial gpsOn={gpsOn} gpsInfo={gpsOn ? gpsInfo : null} />
+            ) : aba === 'resumo' ? (
+              <ResumoDinamica />
+            ) : (
+              <SalvarOcorrencia />
+            )}
+          </PageStage>
         </main>
       </div>
 
       {themeOpen && (
         <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center">
-          <div className="absolute inset-0 bg-pmrv/80" onClick={() => setThemeOpen(false)} aria-hidden="true" />
-          <div className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto bg-white border-t-2 sm:border-2 border-charcoal shadow-[6px_6px_0_#2B2B2B] rounded-t-2xl sm:rounded-none animate-slideUp" role="dialog" aria-label="Personalizar tema" aria-modal="true">
+          <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={() => setThemeOpen(false)} aria-hidden="true" />
+          <div className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto ds-card !rounded-t-2xl sm:!rounded-2xl animate-slideUp" role="dialog" aria-label="Personalizar tema" aria-modal="true">
             <ThemeConfig onClose={() => setThemeOpen(false)} />
           </div>
         </div>

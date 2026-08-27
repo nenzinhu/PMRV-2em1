@@ -391,7 +391,7 @@ export default function Envolvidos({ gpsInfo = null }) {
 
       <div className="space-y-6">
         {envolvidos.map((ev) => (
-          <article key={ev.id} className="ds-card animate-card-in">
+          <article key={ev.id} className="ds-card">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-charcoal pb-2 gap-2">
               <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm sm:text-base">Envolvido #{ev.id}</h3>
               <button
