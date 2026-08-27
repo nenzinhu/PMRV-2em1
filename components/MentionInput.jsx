@@ -47,6 +47,14 @@ export default function MentionInput({ value, onChange, envolvidos, placeholder,
       sublabel: 'Localização GPS',
       insert: gpsInsert,
     });
+  } else if (gpsLocation && gpsLocation.endereco) {
+    mentionableItems.push({
+      type: 'gps',
+      id: 'gps',
+      label: gpsLocation.endereco,
+      sublabel: 'Localização GPS',
+      insert: gpsLocation.endereco,
+    });
   }
 
   const filteredItems = mentionableItems.filter((item) =>

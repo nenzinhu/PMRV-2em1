@@ -10,7 +10,9 @@ import Toast from '@/components/Toast';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useInstallPWA } from '@/hooks/useInstallPWA';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useGpsLocation } from '@/hooks/useGpsLocation';
 import { abaFromSearchParam } from '@/lib/aba';
+import { gpsLocationLabel } from '@/lib/gps-label';
 
 function syncAbaUrl(aba) {
   if (typeof window === 'undefined') return;
@@ -21,12 +23,12 @@ function syncAbaUrl(aba) {
 
 export default function AppShell({ initialAba = 'envolvidos' }) {
   const [aba, setAbaState] = useState(() => abaFromSearchParam(initialAba));
-  const [gpsInfo, setGpsInfo] = useState(null);
   const [themeOpen, setThemeOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { elRef, active: fsActive, toggle: toggleFs } = useFullscreen();
   const { install, supportsInstall, isInstalled, isStandalone } = useInstallPWA();
   const isMobile = useIsMobile();
+  const { gpsOn, gpsInfo, toggle: toggleGps } = useGpsLocation();
 
   const setAba = useCallback((next) => {
     const resolved = abaFromSearchParam(next);
@@ -36,8 +38,8 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
 
   useEffect(() => {
     setMounted(true);
-    function onGpsChange(e) {
-      setGpsInfo(e.detail || null);
+    function onGpsToggle() {
+      toggleGps();
     }
     function onNavigate(e) {
       const target = e.detail;
@@ -56,21 +58,27 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
       }
     }
 
-    window.addEventListener('gps-change', onGpsChange);
+    window.addEventListener('gps-toggle', onGpsToggle);
     window.addEventListener('navigate-to', onNavigate);
     window.addEventListener('set-dinamica', onSetDinamica);
 
     return () => {
-      window.removeEventListener('gps-change', onGpsChange);
+      window.removeEventListener('gps-toggle', onGpsToggle);
       window.removeEventListener('navigate-to', onNavigate);
       window.removeEventListener('set-dinamica', onSetDinamica);
     };
-  }, [setAba]);
+  }, [setAba, toggleGps]);
 
-  const showLocation = gpsInfo && gpsInfo.rodovia;
-  const locationLabel = showLocation
-    ? `${gpsInfo.rodovia} KM ${typeof gpsInfo.km === 'number' ? gpsInfo.km.toFixed(3).replace('.', ',') : gpsInfo.km || ''}`
-    : '';
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent('gps-change', {
+        detail: gpsOn ? { ...(gpsInfo || {}), ligado: true } : { ligado: false },
+      })
+    );
+  }, [gpsOn, gpsInfo]);
+
+  const locationLabel = gpsLocationLabel(gpsInfo);
+  const showLocation = gpsOn && !!locationLabel;
 
   return (
     <>
@@ -94,6 +102,22 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
               </div>
             </div>
             <div className="flex items-center gap-1 sm:gap-2">
+              {mounted && !gpsOn && (
+                <button
+                  type="button"
+                  onClick={toggleGps}
+                  className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
+                  title="Ativar GPS"
+                  aria-label="Ativar GPS"
+                >
+                  📍 GPS
+                </button>
+              )}
+              {mounted && gpsOn && !showLocation && !gpsInfo?.erro && (
+                <span className="inline-flex items-center gap-1 bg-white/10 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded">
+                  📍 …
+                </span>
+              )}
               {mounted && showLocation && (
                 <button
                   type="button"
@@ -104,17 +128,12 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                       navigator.clipboard.writeText(loc).catch(() => {});
                     }
                   }}
-                  className="inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
+                  className="hidden sm:inline-flex items-center gap-1 max-w-xs bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded cursor-pointer"
                   title="Toque para copiar a localização"
                   aria-label={`Copiar localização: ${locationLabel}`}
                 >
-                  📍 {isMobile ? '' : locationLabel}
+                  <span className="truncate">📍 {locationLabel}</span>
                 </button>
-              )}
-              {mounted && showLocation && isMobile && (
-                <span className="sm:hidden text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1" aria-hidden="true">
-                  📍
-                </span>
               )}
               <button
                 type="button"
@@ -158,12 +177,12 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                     navigator.clipboard.writeText(loc).catch(() => {});
                   }
                 }}
-                className="gps-chip inline-flex items-center gap-1 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
-                title="Toque para copiar a localização"
-                aria-label={`Localização atual: ${locationLabel}. Toque para copiar.`}
-              >
-                📍 {locationLabel}
-              </button>
+                  className="gps-chip inline-flex items-center gap-1 max-w-full bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded"
+                  title="Toque para copiar a localização"
+                  aria-label={`Localização atual: ${locationLabel}. Toque para copiar.`}
+                >
+                  <span className="truncate">📍 {locationLabel}</span>
+                </button>
             </div>
           )}
           <MobileNav active={aba} onChange={setAba} />
@@ -172,11 +191,23 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
         <main className="w-full flex-1 pb-24 md:pb-0" role="main">
           {isMobile ? (
             <div className="page-slide" key={aba}>
-              {aba === 'envolvidos' ? <Envolvidos /> : aba === 'relato' ? <RelatoPolicial /> : <ResumoDinamica />}
+              {aba === 'envolvidos' ? (
+                <Envolvidos gpsInfo={gpsOn ? gpsInfo : null} />
+              ) : aba === 'relato' ? (
+                <RelatoPolicial gpsOn={gpsOn} gpsInfo={gpsOn ? gpsInfo : null} />
+              ) : (
+                <ResumoDinamica />
+              )}
             </div>
           ) : (
             <>
-              {aba === 'envolvidos' ? <Envolvidos /> : aba === 'relato' ? <RelatoPolicial /> : <ResumoDinamica />}
+              {aba === 'envolvidos' ? (
+                <Envolvidos gpsInfo={gpsOn ? gpsInfo : null} />
+              ) : aba === 'relato' ? (
+                <RelatoPolicial gpsOn={gpsOn} gpsInfo={gpsOn ? gpsInfo : null} />
+              ) : (
+                <ResumoDinamica />
+              )}
             </>
           )}
         </main>

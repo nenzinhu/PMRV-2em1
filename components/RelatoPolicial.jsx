@@ -1,19 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Stepper from './Stepper';
 import { ArrowRightIcon, ArrowLeftIcon, WhatsAppIcon, CopyIcon } from './icons';
 import {
   PMRV_DINAMICAS,
   PMRV_SUBTIPOS,
   RODOVIAS,
-  RODOVIAS_GEOJSON_URL,
   FLORIPA_RODOVIAS,
   formatKM,
   formatSade,
   formatVtr,
   capitalizarFrase,
-  subtipoLabel,
   generateReport,
   nowFato,
   buildIAPrompt,
@@ -30,7 +28,7 @@ import {
   serializeRelatoDraft,
   mergeRelatoDraft,
 } from '@/lib/relato-draft';
-import { matchRodovia } from '@/lib/gps';
+import { mapsUrl } from '@/lib/gps-label';
 import { useSwipe } from '@/hooks/useSwipe';
 import { showToast } from '@/components/Toast';
 
@@ -90,7 +88,7 @@ function templateFor(form) {
   return texto;
 }
 
-export default function RelatoPolicial() {
+export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState(INITIAL);
   const [manualEdit, setManualEdit] = useState(false);
@@ -138,65 +136,15 @@ export default function RelatoPolicial() {
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
-  // ---- GPS: localização automática da rodovia + KM a partir de lat/long ----
-  const [gpsOn, setGpsOn] = useState(false);
-  const [gpsInfo, setGpsInfo] = useState(null); // { rodovia, km, dist, foraDaRodovia, lat, lon, erro }
-  const [geojson, setGeojson] = useState(null);
-  const watchRef = useRef(null);
-
   useEffect(() => {
-    if (!gpsOn) {
-      if (watchRef.current && navigator.geolocation) {
-        navigator.geolocation.clearWatch(watchRef.current);
-        watchRef.current = null;
-      }
-      return;
+    if (gpsInfo?.rodovia && !gpsInfo.foraDaRodovia && typeof gpsInfo.km === 'number') {
+      setForm((f) => ({
+        ...f,
+        rodovia: gpsInfo.rodovia,
+        km: formatKM(String(Math.round(gpsInfo.km * 1000) / 1000)),
+      }));
     }
-    let cancelled = false;
-    // carrega a malha viária (offline-friendly: fica em cache do navegador)
-    if (!geojson) {
-      fetch(RODOVIAS_GEOJSON_URL)
-        .then((r) => r.json())
-        .then((g) => !cancelled && setGeojson(g))
-        .catch(() => !cancelled && setGpsInfo({ erro: 'Falha ao carregar malha viária.' }));
-    }
-    if (!navigator.geolocation) {
-      setGpsInfo({ erro: 'Geolocalização não suportada neste dispositivo.' });
-      return;
-    }
-    watchRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setGpsInfo((prev) => ({ ...(prev || {}), lat: latitude, lon: longitude, erro: null }));
-        if (geojson) {
-          const m = matchRodovia(geojson, latitude, longitude, 150);
-          if (m) {
-            if (m.foraDaRodovia) {
-              setGpsInfo((prev) => ({ ...prev, foraDaRodovia: true, dist: m.d, lat: latitude, lon: longitude }));
-            } else {
-              setGpsInfo({ rodovia: m.rodovia, km: m.km, nome: m.nome, dist: m.d, lat: latitude, lon: longitude, foraDaRodovia: false });
-              // auto-preenche rodovia + KM (somente quando sobre a rodovia)
-              set({ rodovia: m.rodovia, km: formatKM(String(Math.round(m.km * 1000) / 1000)) });
-            }
-          }
-        }
-      },
-      (err) => setGpsInfo({ erro: 'GPS indisponível: ' + err.message }),
-      { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
-    );
-    return () => {
-      cancelled = true;
-      if (watchRef.current && navigator.geolocation) navigator.geolocation.clearWatch(watchRef.current);
-    };
-  }, [gpsOn, geojson]);
-  // --------------------------------------------------------------------------
-
-  // Dispara mudanças do GPS para o header
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('gps-change', { detail: gpsInfo }));
-    }
-  }, [gpsInfo]);
+  }, [gpsInfo?.rodovia, gpsInfo?.km, gpsInfo?.foraDaRodovia]);
 
   // Recebe localização externa para o campo de dinâmica
   useEffect(() => {
@@ -569,18 +517,18 @@ export default function RelatoPolicial() {
             </select>
           </div>
 
-          {/* GPS: detecta rodovia + KM automaticamente a partir da posição */}
+          {/* GPS: rodovia+KM na malha oficial; endereço via mapa fora dela */}
           <div className="estilo-glass p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-mono font-semibold uppercase text-sm text-pmrv">Localização por GPS</p>
                 <p className="text-[11px] text-charcoal/70">
-                  Detecta a rodovia e o KM automaticamente (malha oficial SC).
+                  Na rodovia: SC e KM. Fora dela: endereço do mapa.
                 </p>
               </div>
               <button
                 type="button"
-                onClick={() => setGpsOn((v) => !v)}
+                onClick={() => window.dispatchEvent(new CustomEvent('gps-toggle'))}
                 className={`btn-ios text-xs ${gpsOn ? 'bg-gold !border-gold !text-pmrv' : ''}`}
               >
                 {gpsOn ? 'GPS Ligado' : 'Ativar GPS'}
@@ -591,9 +539,15 @@ export default function RelatoPolicial() {
               <p className="mt-2 text-xs font-mono text-brick">{gpsInfo.erro}</p>
             )}
             {gpsOn && !gpsInfo?.erro && gpsInfo?.foraDaRodovia && (
-              <p className="mt-2 text-xs font-mono text-brick">
-                Fora da rodovia ({Math.round(gpsInfo.dist)} m). Aproxime-se da via para capturar.
-              </p>
+              <div className="mt-2 text-xs font-mono">
+                {gpsInfo.endereco ? (
+                  <span className="bg-pmrv/10 text-pmrv border border-pmrv/40 px-2 py-1 rounded inline-block">
+                    {gpsInfo.endereco}
+                  </span>
+                ) : (
+                  <p className="text-charcoal/70">Fora da rodovia. Buscando endereço no mapa…</p>
+                )}
+              </div>
             )}
             {gpsInfo && !gpsInfo.foraDaRodovia && gpsInfo.rodovia && (
               <div className="mt-2 flex flex-wrap gap-2 text-xs font-mono">
@@ -611,6 +565,19 @@ export default function RelatoPolicial() {
             {gpsInfo && gpsInfo.lat != null && (
               <p className="mt-2 text-[10px] font-mono text-charcoal/60">
                 Lat {gpsInfo.lat.toFixed(5)} · Lon {gpsInfo.lon.toFixed(5)}
+                {mapsUrl(gpsInfo.lat, gpsInfo.lon) ? (
+                  <>
+                    {' · '}
+                    <a
+                      href={mapsUrl(gpsInfo.lat, gpsInfo.lon)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-pmrv"
+                    >
+                      Ver no mapa
+                    </a>
+                  </>
+                ) : null}
               </p>
             )}
           </div>

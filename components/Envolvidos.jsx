@@ -67,13 +67,12 @@ function novoEnvolvido(seq) {
   return { ...EMPTY_ENV(), id: seq };
 }
 
-export default function Envolvidos() {
+export default function Envolvidos({ gpsInfo = null }) {
   const [envolvidos, setEnvolvidos] = useState([]);
   const [seq, setSeq] = useState(0);
   const [loadingPlaca, setLoadingPlaca] = useState({});
   const [placaError, setPlacaError] = useState({});
   const [placaToken, setPlacaToken] = useState('');
-  const [gpsInfo, setGpsInfo] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,14 +102,6 @@ export default function Envolvidos() {
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    function onGpsChange(e) {
-      setGpsInfo(e.detail || null);
-    }
-    window.addEventListener('gps-change', onGpsChange);
-    return () => window.removeEventListener('gps-change', onGpsChange);
   }, []);
 
   function persist(lista, s) {
