@@ -599,7 +599,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
           </div>
 
           <button onClick={nextStep} className="btn-ios w-full text-sm">
-            Seguinte
+            Próximo
             <ArrowRightIcon />
           </button>
         </section>
@@ -684,7 +684,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
           </div>
           <div className="flex gap-3 pt-4">
             <button onClick={prevStep} className="btn-outline flex-1">Voltar</button>
-            <button onClick={nextStep} className="btn-ios flex-[2]">Seguinte</button>
+            <button onClick={nextStep} className="btn-ios flex-[2]">Próximo</button>
           </div>
         </section>
       )}
@@ -798,7 +798,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
           </div>
           <div className="flex gap-3 pt-4">
             <button onClick={prevStep} className="btn-outline flex-1">Voltar</button>
-            <button onClick={nextStep} className="btn-ios flex-[2]">Seguinte</button>
+            <button onClick={nextStep} className="btn-ios flex-[2]">Próximo</button>
           </div>
         </section>
       )}
@@ -825,7 +825,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
           </div>
           <div className="flex gap-3 pt-4">
             <button onClick={prevStep} className="btn-outline flex-1">Voltar</button>
-            <button onClick={nextStep} className="btn-ios flex-[2]">Seguinte</button>
+            <button onClick={nextStep} className="btn-ios flex-[2]">Próximo</button>
           </div>
         </section>
       )}
@@ -860,9 +860,16 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               id="btn-revisar-ia"
               onClick={revisarOrtografia}
               disabled={reviewLoading}
-              className="btn-ios w-full mt-2 text-xs disabled:opacity-50"
+              aria-busy={reviewLoading}
+              className={`btn-ios w-full mt-2 text-xs disabled:opacity-50 ${reviewLoading ? 'is-loading' : ''}`}
             >
-              🔍 {reviewLoading ? 'Revisando…' : 'Revisar Ortografia com IA (Norma Culta)'}
+              {reviewLoading ? (
+                <>
+                  <span className="btn-spinner" aria-hidden="true" /> Revisando…
+                </>
+              ) : (
+                <>🔍 Revisar Ortografia com IA (Norma Culta)</>
+              )}
             </button>
           </div>
           <div className="space-y-3">

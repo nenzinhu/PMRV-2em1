@@ -5,6 +5,7 @@ import { WhatsAppIcon } from './icons';
 import { generateReport } from '@/lib/pmrv';
 import { RELATO_DRAFT_KEY, parseRelatoDraft } from '@/lib/relato-draft';
 import { showToast } from '@/components/Toast';
+import LimparDados from '@/components/LimparDados';
 
 function relatorioDoRascunho() {
   if (typeof window === 'undefined') return '';
@@ -91,6 +92,16 @@ export default function SalvarOcorrencia() {
           </div>
         </section>
       )}
+
+      <section className="ds-card-danger mt-4">
+        <h3 className="text-sm font-mono font-semibold uppercase tracking-tight text-brick">
+          Limpar dados e cache
+        </h3>
+        <p className="text-xs text-charcoal/70 font-mono">
+          Depois de enviar a ocorrência, limpe rascunhos, fotos e o cache do app para não acumular no aparelho. Tema, VTR e chaves de API são mantidos.
+        </p>
+        <LimparDados />
+      </section>
     </div>
   );
 }

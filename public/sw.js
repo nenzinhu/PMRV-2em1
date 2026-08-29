@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pmrv-sc-relatos-v4';
+const CACHE_NAME = 'pmrv-sc-relatos-v5';
 const ASSETS = [
   '/',
   '/manifest.json',
@@ -8,6 +8,18 @@ const ASSETS = [
   '/favicon-32.png',
   '/logo-pmrv-sc.png',
 ];
+
+function shouldCache(request, res) {
+  if (!res || res.status !== 200) return false;
+  try {
+    const url = new URL(request.url);
+    if (url.origin !== self.location.origin) return false;
+    if (url.pathname.startsWith('/api/')) return false;
+  } catch {
+    return false;
+  }
+  return true;
+}
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -37,7 +49,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          if (res && res.status === 200) {
+          if (shouldCache(request, res)) {
             const copy = res.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put('/', copy));
           }
@@ -53,7 +65,7 @@ self.addEventListener('fetch', (event) => {
       if (cached) return cached;
       return fetch(request)
         .then((res) => {
-          if (res && res.status === 200) {
+          if (shouldCache(request, res)) {
             const copy = res.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }

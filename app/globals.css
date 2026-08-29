@@ -105,10 +105,34 @@
 
   .ds-icon-btn {
     @apply p-2 border-2 border-charcoal hover:bg-bone text-pmrv transition-all rounded-xl;
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .ds-icon-btn:hover:not(:disabled) {
+    background-color: var(--ds-bg);
+  }
+  .ds-icon-btn:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+  .ds-icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .ds-btn {
     @apply font-mono font-semibold uppercase tracking-wider border-2 transition flex items-center justify-center gap-2;
+    min-height: 44px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .ds-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .ds-btn-primary {
@@ -117,9 +141,23 @@
     color: #fff;
     border-color: var(--ds-primary);
   }
+  .ds-btn-primary:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--ds-primary) 88%, #000);
+    border-color: color-mix(in srgb, var(--ds-primary) 88%, #000);
+  }
+  .ds-btn-primary:active:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--ds-accent);
+  }
 
   .ds-btn-ghost {
     @apply ds-btn bg-white text-charcoal border-charcoal hover:bg-bone py-4;
+  }
+  .ds-btn-ghost:hover:not(:disabled) {
+    background-color: var(--ds-bg);
+  }
+  .ds-btn-ghost:active:not(:disabled) {
+    transform: translate(2px, 2px);
   }
 
   .ds-btn-whatsapp {
@@ -128,6 +166,13 @@
     color: #fff;
     border-color: var(--ds-primary);
   }
+  .ds-btn-whatsapp:hover:not(:disabled) {
+    background-color: color-mix(in srgb, #25d366 86%, #000);
+  }
+  .ds-btn-whatsapp:active:not(:disabled) {
+    transform: translate(2px, 2px) scale(0.99);
+    box-shadow: 2px 2px 0 #0a0a0a;
+  }
 
   .ds-btn-gold {
     @apply ds-btn border-2 shadow-[4px_4px_0_#0A0A0A] py-4 transform active:scale-95;
@@ -135,9 +180,23 @@
     color: #000;
     border-color: var(--ds-primary);
   }
+  .ds-btn-gold:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--ds-accent) 88%, #000);
+  }
+  .ds-btn-gold:active:not(:disabled) {
+    transform: translate(2px, 2px) scale(0.99);
+    box-shadow: 2px 2px 0 #0a0a0a;
+  }
 
   .ds-btn-danger {
     @apply ds-btn bg-white text-brick border-brick hover:bg-[#F9ECE9] py-3;
+  }
+  .ds-btn-danger:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--ds-danger) 8%, #fff);
+    border-color: color-mix(in srgb, var(--ds-danger) 85%, #000);
+  }
+  .ds-btn-danger:active:not(:disabled) {
+    transform: translate(2px, 2px);
   }
 
   .ds-section-title {
@@ -226,9 +285,17 @@
     touch-action: manipulation;
     min-height: 44px;
   }
-  .btn-ios:active {
+  .btn-ios:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--ds-ink) 88%, #000);
+    border-color: color-mix(in srgb, var(--ds-ink) 88%, #000);
+  }
+  .btn-ios:active:not(:disabled) {
     transform: scale(0.97);
     filter: brightness(0.95);
+  }
+  .btn-ios:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   /* estilizar-botao: outline (botão secundário touch-first) */
@@ -242,9 +309,42 @@
     touch-action: manipulation;
     min-height: 44px;
   }
-  .btn-outline:active {
-    transform: scale(0.97);
+  .btn-outline:hover:not(:disabled) {
     background-color: rgba(43, 108, 176, 0.08);
+    border-color: color-mix(in srgb, var(--ds-ink) 82%, #000);
+  }
+  .btn-outline:active:not(:disabled) {
+    transform: scale(0.97);
+    background-color: rgba(43, 108, 176, 0.14);
+  }
+  .btn-outline:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Estado de carregamento para ações assíncronas (heurística 1 — visibilidade do status) */
+  .is-loading {
+    position: relative;
+    pointer-events: none;
+    cursor: progress;
+  }
+  .is-loading > .btn-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 999px;
+    animation: btnSpin 0.7s linear infinite;
+  }
+  .is-loading[aria-busy='true'] {
+    opacity: 0.85;
+  }
+
+  @keyframes btnSpin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   /* ajustar-layout: header_glass (sub-barra fixa com blur) */
@@ -307,6 +407,10 @@
   .step-dot,
   #stepper-progress {
     transition: none !important;
+  }
+
+  .btn-spinner {
+    animation: none !important;
   }
 
   .ambient-orb,

@@ -39,7 +39,7 @@ export default function PageStage({ aba, children }) {
   );
 
   return (
-    <div ref={stageRef} className="page-stage">
+    <div ref={stageRef} className="page-stage" role="tabpanel" id="pmrv-tabpanel" aria-labelledby={`pmrv-tab-${aba}`}>
       {children}
     </div>
   );

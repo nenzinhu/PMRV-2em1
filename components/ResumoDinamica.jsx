@@ -272,11 +272,18 @@ export default function ResumoDinamica() {
             type="button"
             onClick={() => gerarResumo(estilo.id)}
             disabled={loadingIA != null || relatos.length === 0}
+            aria-busy={loadingIA === estilo.id}
             className={`btn-outline flex-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 ${
               estiloResumo === estilo.id && resumo ? 'bg-pmrv/10 !border-pmrv text-pmrv' : ''
-            }`}
+            } ${loadingIA === estilo.id ? 'is-loading' : ''}`}
           >
-            {loadingIA === estilo.id ? 'Gerando…' : estilo.label}
+            {loadingIA === estilo.id ? (
+              <>
+                <span className="btn-spinner" aria-hidden="true" /> Gerando…
+              </>
+            ) : (
+              estilo.label
+            )}
           </button>
         ))}
       </div>
@@ -284,9 +291,18 @@ export default function ResumoDinamica() {
         type="button"
         onClick={melhorarResumo}
         disabled={loadingIA != null || !resumo.trim()}
-        className="btn-outline w-full mt-2 text-xs disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+        aria-busy={loadingIA === 'melhorar'}
+        className={`btn-outline w-full mt-2 text-xs disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 ${
+          loadingIA === 'melhorar' ? 'is-loading' : ''
+        }`}
       >
-        {loadingIA === 'melhorar' ? 'Melhorando...' : '✨ Melhorar Resumo'}
+        {loadingIA === 'melhorar' ? (
+          <>
+            <span className="btn-spinner" aria-hidden="true" /> Melhorando…
+          </>
+        ) : (
+          '✨ Melhorar Resumo'
+        )}
       </button>
 
       {statusIA && !loadingIA && (

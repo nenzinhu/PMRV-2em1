@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import LimparDados from '@/components/LimparDados';
 
 const STORAGE_KEY = 'PMRV_THEME_CONFIG';
 
@@ -238,6 +239,14 @@ export default function ThemeConfig({ onClose }) {
             <span className="px-2 py-1 border-2 border-charcoal text-xs font-mono" style={{ backgroundColor: theme.background, color: theme.text }}>Fundo</span>
             <span className="px-2 py-1 border-2 border-charcoal text-xs font-mono" style={{ backgroundColor: theme.surface, color: theme.text }}>Superfície</span>
           </div>
+        </div>
+
+        <div className="border-2 border-brick p-3 bg-[#F9ECE9]">
+          <p className="text-xs font-mono uppercase tracking-wider text-brick mb-1">Dados e cache</p>
+          <p className="text-[11px] font-mono text-charcoal/70 mb-3">
+            Remove rascunhos, fotos dos envolvidos, resumos e o cache do aplicativo para não acumular no aparelho. Tema, VTR e chaves ficam salvos.
+          </p>
+          <LimparDados />
         </div>
       </div>
 

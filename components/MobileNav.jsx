@@ -34,6 +34,34 @@ export default function MobileNav({ active, onChange }) {
   const desktopPillRef = useRef(null);
   const firstFlip = useRef(true);
 
+  // Navegação por teclado (setas direita/esquerda, Home, End) — heurística de acessibilidade
+  const onTablistKeyDown = useCallback(
+    (e) => {
+      const idx = TABS.findIndex((t) => t.key === active);
+      let next = null;
+      if (e.key === 'ArrowRight') next = TABS[(idx + 1) % TABS.length].key;
+      else if (e.key === 'ArrowLeft') next = TABS[(idx - 1 + TABS.length) % TABS.length].key;
+      else if (e.key === 'Home') next = TABS[0].key;
+      else if (e.key === 'End') next = TABS[TABS.length - 1].key;
+      else return;
+      e.preventDefault();
+      onChange(next);
+      document.querySelector(`[data-tab="${next}"]`)?.focus();
+    },
+    [active, onChange]
+  );
+
+  const tabProps = (tab) => {
+    const isActive = active === tab.key;
+    return {
+      role: 'tab',
+      id: `pmrv-tab-${tab.key}`,
+      'aria-selected': isActive,
+      'aria-controls': 'pmrv-tabpanel',
+      tabIndex: isActive ? 0 : -1,
+    };
+  };
+
   const measure = useCallback(() => {
     placePill(mobileRowRef.current, mobilePillRef.current, active);
     placePill(desktopRowRef.current, desktopPillRef.current, active);
@@ -84,7 +112,7 @@ export default function MobileNav({ active, onChange }) {
 
   return (
     <div id="pmrv-tabs">
-      <nav className="hidden md:block border-t border-white/15" aria-label="Navegação principal">
+      <nav className="hidden md:block border-t border-white/15" aria-label="Navegação principal" role="tablist" aria-orientation="horizontal" onKeyDown={onTablistKeyDown}>
         <div className="mx-auto max-w-5xl px-4">
           <div ref={desktopRowRef} className="relative flex items-center gap-1">
             <div ref={desktopPillRef} className="nav-pill nav-pill-desktop" aria-hidden="true" />
@@ -96,8 +124,8 @@ export default function MobileNav({ active, onChange }) {
                   type="button"
                   data-desktop-tab={tab.key}
                   data-tab={tab.key}
+                  {...tabProps(tab)}
                   aria-label={tabAriaLabel(tab)}
-                  aria-pressed={isActive}
                   onClick={() => onChange(tab.key)}
                   className={`relative z-10 flex items-center gap-1.5 px-2.5 lg:px-4 py-2.5 text-[10px] lg:text-[11px] font-mono font-semibold uppercase tracking-wider whitespace-nowrap ${
                     isActive ? 'text-white' : 'text-white/70 hover:text-white'
@@ -118,6 +146,9 @@ export default function MobileNav({ active, onChange }) {
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 nav-dock"
         aria-label="Navegação no celular"
+        role="tablist"
+        aria-orientation="horizontal"
+        onKeyDown={onTablistKeyDown}
       >
         <div className="mx-auto max-w-md">
           <div ref={mobileRowRef} className="relative flex items-center justify-between px-2 pb-2 pt-1">
@@ -127,8 +158,8 @@ export default function MobileNav({ active, onChange }) {
                 key={tab.key}
                 type="button"
                 data-tab={tab.key}
+                {...tabProps(tab)}
                 aria-label={tabAriaLabel(tab)}
-                aria-pressed={active === tab.key}
                 onClick={() => onChange(tab.key)}
                 onTouchStart={() => setPressing(tab.key)}
                 onTouchEnd={() => setPressing(null)}
