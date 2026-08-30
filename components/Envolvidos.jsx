@@ -39,6 +39,8 @@ const EMPTY_ENV = () => ({
   uf: '',
   cidade: '',
   endereco: '',
+  numero: '',
+  complemento: '',
   bairro: '',
   telefone: '',
   placa: '',
@@ -548,12 +550,23 @@ export default function Envolvidos({ gpsInfo = null }) {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 sm:col-span-1">
                 <label className="ds-label">Endereço</label>
                 <input
                   value={ev.endereco}
                   onChange={(e) => update(ev.id, { endereco: e.target.value })}
+                  placeholder="Rua/Av"
+                  className="ds-input text-sm"
+                />
+              </div>
+              <div>
+                <label className="ds-label">Nº</label>
+                <input
+                  value={ev.numero}
+                  onChange={(e) => update(ev.id, { numero: e.target.value })}
+                  placeholder="Nº (opcional)"
+                  inputMode="text"
                   className="ds-input text-sm"
                 />
               </div>
@@ -562,6 +575,15 @@ export default function Envolvidos({ gpsInfo = null }) {
                 <input
                   value={ev.bairro}
                   onChange={(e) => update(ev.id, { bairro: e.target.value })}
+                  className="ds-input text-sm"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="ds-label">Complemento</label>
+                <input
+                  value={ev.complemento}
+                  onChange={(e) => update(ev.id, { complemento: e.target.value })}
+                  placeholder="Complemento (opcional) — apto, bloco, casa…"
                   className="ds-input text-sm"
                 />
               </div>
