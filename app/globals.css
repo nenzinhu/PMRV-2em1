@@ -438,8 +438,6 @@
   );
   border-bottom: 2px solid #f4c430;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
 }
 
 .brand-logo-wrap {
