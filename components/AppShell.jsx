@@ -13,7 +13,6 @@ import BrandLockup from '@/components/motion/BrandLockup';
 import PageStage from '@/components/motion/PageStage';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useInstallPWA } from '@/hooks/useInstallPWA';
-import { useIsMobile } from '@/hooks/useIsMobile';
 import { useGpsLocation } from '@/hooks/useGpsLocation';
 import { ABAS, abaFromSearchParam } from '@/lib/aba';
 import { aplicarDinamicaNoRascunho } from '@/lib/relato-draft';
@@ -32,7 +31,6 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
   const [mounted, setMounted] = useState(false);
   const { elRef, active: fsActive, toggle: toggleFs } = useFullscreen();
   const { install, supportsInstall, isInstalled, isStandalone } = useInstallPWA();
-  const isMobile = useIsMobile();
   const { gpsOn, gpsInfo, toggle: toggleGps } = useGpsLocation();
 
   const setAba = useCallback((next) => {
@@ -136,7 +134,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                       navigator.clipboard.writeText(loc).catch(() => {});
                     }
                   }}
-                  className="header-chip hidden sm:inline-flex max-w-xs cursor-pointer"
+                  className="header-chip max-w-[40vw] sm:max-w-xs cursor-pointer"
                   title="Toque para copiar a localização"
                   aria-label={`Copiar localização: ${locationLabel}`}
                 >
@@ -174,43 +172,6 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
               </button>
             </div>
           </div>
-          {mounted && isMobile && (
-            <div className="px-3 pb-2 sm:hidden">
-              {showLocation ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const loc = locationLabel || '';
-                    if (!loc) return;
-                    if (navigator.clipboard && navigator.clipboard.writeText) {
-                      navigator.clipboard.writeText(loc).catch(() => {});
-                    }
-                  }}
-                  className="gps-chip header-chip inline-flex items-center gap-1 max-w-full cursor-pointer"
-                  title="Toque para copiar a localização"
-                  aria-label={`Localização atual: ${locationLabel}. Toque para copiar.`}
-                >
-                  <span className="truncate">📍 {locationLabel}</span>
-                </button>
-              ) : gpsOn && !gpsInfo?.erro ? (
-                <span className="gps-chip header-chip inline-flex items-center gap-1 max-w-full">
-                  <span className="truncate">📍 … localizando</span>
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={toggleGps}
-                  className="gps-chip header-chip inline-flex items-center gap-1 max-w-full cursor-pointer"
-                  title="Ativar GPS"
-                  aria-label="Ativar GPS para registrar a localização"
-                >
-                  <span className="truncate">
-                    {gpsInfo?.erro ? '📍 GPS indisponível — toque para tentar de novo' : '📍 Ativar GPS'}
-                  </span>
-                </button>
-              )}
-            </div>
-          )}
           <MobileNav active={aba} onChange={setAba} />
         </header>
 
