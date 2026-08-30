@@ -174,23 +174,41 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
               </button>
             </div>
           </div>
-          {mounted && showLocation && isMobile && (
+          {mounted && isMobile && (
             <div className="px-3 pb-2 sm:hidden">
-              <button
-                type="button"
-                onClick={() => {
-                  const loc = locationLabel || '';
-                  if (!loc) return;
-                  if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(loc).catch(() => {});
-                  }
-                }}
+              {showLocation ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const loc = locationLabel || '';
+                    if (!loc) return;
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                      navigator.clipboard.writeText(loc).catch(() => {});
+                    }
+                  }}
                   className="gps-chip header-chip inline-flex items-center gap-1 max-w-full cursor-pointer"
                   title="Toque para copiar a localização"
                   aria-label={`Localização atual: ${locationLabel}. Toque para copiar.`}
                 >
                   <span className="truncate">📍 {locationLabel}</span>
                 </button>
+              ) : gpsOn && !gpsInfo?.erro ? (
+                <span className="gps-chip header-chip inline-flex items-center gap-1 max-w-full">
+                  <span className="truncate">📍 … localizando</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={toggleGps}
+                  className="gps-chip header-chip inline-flex items-center gap-1 max-w-full cursor-pointer"
+                  title="Ativar GPS"
+                  aria-label="Ativar GPS para registrar a localização"
+                >
+                  <span className="truncate">
+                    {gpsInfo?.erro ? '📍 GPS indisponível — toque para tentar de novo' : '📍 Ativar GPS'}
+                  </span>
+                </button>
+              )}
             </div>
           )}
           <MobileNav active={aba} onChange={setAba} />
