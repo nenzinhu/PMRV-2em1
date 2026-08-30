@@ -14,6 +14,7 @@ import {
   cleanIAResponse,
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
+import { MUNICIPIOS_POR_UF } from '@/lib/municipios';
 import { WhatsAppIcon } from './icons';
 import MentionInput from './MentionInput';
 import Skeleton from './Skeleton';
@@ -38,6 +39,7 @@ const EMPTY_ENV = () => ({
   uf: '',
   cidade: '',
   endereco: '',
+  bairro: '',
   telefone: '',
   placa: '',
   placa_estrangeira: false,
@@ -73,6 +75,7 @@ export default function Envolvidos({ gpsInfo = null }) {
   const [loadingPlaca, setLoadingPlaca] = useState({});
   const [placaError, setPlacaError] = useState({});
   const [placaToken, setPlacaToken] = useState('');
+  const [busca, setBusca] = useState({ q: '', resultados: [], aberto: false, carregando: false, alvoId: null });
 
   useEffect(() => {
     let cancelled = false;
@@ -148,6 +151,40 @@ export default function Envolvidos({ gpsInfo = null }) {
     const lista = envolvidos.map((e) => (e.id === id ? { ...e, ...patch } : e));
     setEnvolvidos(lista);
     salvar(lista);
+  }
+
+  const buscaTimer = useRef(null);
+
+  function buscarEndereco(id, q) {
+    clearTimeout(buscaTimer.current);
+    setBusca((b) => ({ ...b, q, aberto: !!q, alvoId: q ? id : null }));
+    if (!q || q.length < 3) {
+      setBusca((b) => ({ ...b, resultados: [], carregando: false }));
+      return;
+    }
+    setBusca((b) => ({ ...b, carregando: true }));
+    buscaTimer.current = setTimeout(async () => {
+      const ev = envolvidos.find((e) => e.id === id);
+      if (!ev) return;
+      const params = new URLSearchParams({
+        q,
+        uf: ev.uf || '',
+        cidade: ev.cidade || '',
+      });
+      try {
+        const r = await fetch(`/api/geocode/search?${params.toString()}`);
+        const data = await r.json();
+        const resultados = Array.isArray(data.results) ? data.results : [];
+        setBusca((b) => (b.alvoId === id ? { ...b, resultados, carregando: false } : b));
+      } catch {
+        setBusca((b) => ({ ...b, resultados: [], carregando: false }));
+      }
+    }, 400);
+  }
+
+  function aplicarEndereco(id, res) {
+    update(id, { endereco: res.endereco || res.label, bairro: res.bairro || '' });
+    setBusca((b) => ({ ...b, q: '', resultados: [], aberto: false, alvoId: null }));
   }
 
   function updatePlaca(id, raw, estrangeira) {
@@ -429,7 +466,13 @@ export default function Envolvidos({ gpsInfo = null }) {
                 <label className="ds-label">Estado (UF)</label>
                 <select
                   value={ev.uf}
-                  onChange={(e) => update(ev.id, { uf: e.target.value })}
+                  onChange={(e) => {
+                    const novaUf = e.target.value;
+                    const cidadesUf = MUNICIPIOS_POR_UF[novaUf] || [];
+                    const patch = { uf: novaUf };
+                    if (ev.cidade && !cidadesUf.includes(ev.cidade)) patch.cidade = '';
+                    update(ev.id, patch);
+                  }}
                   className="ds-input text-sm"
                 >
                   <option value="">—</option>
@@ -442,21 +485,86 @@ export default function Envolvidos({ gpsInfo = null }) {
               </div>
               <div>
                 <label className="ds-label">Cidade</label>
-                <input
+                <select
                   value={ev.cidade}
+                  disabled={!ev.uf}
                   onChange={(e) => update(ev.id, { cidade: e.target.value })}
-                  className="ds-input text-sm"
-                />
+                  className="ds-input text-sm disabled:opacity-50"
+                >
+                  <option value="">
+                    {ev.uf ? 'Selecione a cidade…' : 'Selecione o estado (UF) primeiro'}
+                  </option>
+                  {!ev.uf &&
+                    ev.cidade && (
+                      <option key={`keep-${ev.cidade}`} value={ev.cidade}>
+                        {ev.cidade}
+                      </option>
+                    )}
+                  {(MUNICIPIOS_POR_UF[ev.uf] || []).map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <div>
-              <label className="ds-label">Endereço</label>
-              <input
-                value={ev.endereco}
-                onChange={(e) => update(ev.id, { endereco: e.target.value })}
-                className="ds-input text-sm"
-              />
+              <label className="ds-label">Buscar Endereço (rua, número, bairro)</label>
+              <div className="relative">
+                <input
+                  value={busca.alvoId === ev.id ? busca.q : ''}
+                  onChange={(e) => buscarEndereco(ev.id, e.target.value)}
+                  placeholder="Digite rua ou bairro…"
+                  disabled={!ev.uf || !ev.cidade}
+                  className="ds-input text-sm disabled:opacity-50"
+                />
+                {busca.alvoId === ev.id && busca.aberto && (
+                  <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border-2 border-charcoal shadow-lg max-h-52 overflow-y-auto">
+                    {busca.carregando && (
+                      <li className="px-3 py-2 text-xs text-charcoal/70 font-mono">Buscando…</li>
+                    )}
+                    {!busca.carregando && busca.resultados.length === 0 && busca.q.length >= 3 && (
+                      <li className="px-3 py-2 text-xs text-charcoal/70 font-mono">Nenhum resultado.</li>
+                    )}
+                    {busca.resultados.map((res, i) => (
+                      <li key={i}>
+                        <button
+                          type="button"
+                          onClick={() => aplicarEndereco(ev.id, res)}
+                          className="block w-full text-left px-3 py-2 text-xs hover:bg-pmrv/10 transition"
+                        >
+                          <span className="block font-medium">{res.endereco || res.label}</span>
+                          {res.bairro && <span className="block text-charcoal/60">Bairro: {res.bairro}</span>}
+                          <span className="block text-charcoal/50">{res.cidade}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <span className="block text-[10px] text-charcoal/50 font-mono mt-1">
+                {!ev.uf || !ev.cidade ? 'Selecione o estado e a cidade para habilitar a busca.' : 'Preencha estado e cidade para refinar a busca.'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="ds-label">Endereço</label>
+                <input
+                  value={ev.endereco}
+                  onChange={(e) => update(ev.id, { endereco: e.target.value })}
+                  className="ds-input text-sm"
+                />
+              </div>
+              <div>
+                <label className="ds-label">Bairro</label>
+                <input
+                  value={ev.bairro}
+                  onChange={(e) => update(ev.id, { bairro: e.target.value })}
+                  className="ds-input text-sm"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

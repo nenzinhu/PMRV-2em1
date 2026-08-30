@@ -57,10 +57,10 @@ const INITIAL = {
   dataFato: '',
   horaFato: '',
   ocorrencia: DANOS,
-  subtipo: '1.2',
+  subtipo: '2.1',
   objeto: '',
   outros: '',
-  dinamica: PMRV_DINAMICAS['1.2'],
+  dinamica: PMRV_DINAMICAS['2.1'],
   qtdLeve: 0,
   qtdGrave: 0,
   qtdGravissima: 0,
@@ -190,8 +190,9 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
   }
 
   // --- Classificação / Subtipo acoplados ---
+  // Atropelamentos (pedestre/ciclista 1.1 e animal 1.2) só fazem sentido com vítima(s).
   function subtipoDisponivel(cod) {
-    if (cod === '1.1' && form.ocorrencia === DANOS) return false;
+    if ((cod === '1.1' || cod === '1.2') && form.ocorrencia === DANOS) return false;
     return true;
   }
 
@@ -206,13 +207,13 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
 
   function onOcorrenciaChange(value) {
     let subtipo = form.subtipo;
-    if (value === DANOS && subtipo === '1.1') subtipo = '1.2';
+    if (value === DANOS && (subtipo === '1.1' || subtipo === '1.2')) subtipo = '2.1';
     setForm((f) => ({ ...f, ocorrencia: value, subtipo, dinamica: templateFor({ ...f, ocorrencia: value, subtipo }) }));
   }
 
   function onSubtipoChange(value) {
-    if (value === '1.1') {
-      setForm((f) => ({ ...f, subtipo: '1.1', ocorrencia: VITIMA, dinamica: templateFor({ ...f, subtipo: '1.1', ocorrencia: VITIMA }) }));
+    if (value === '1.1' || value === '1.2') {
+      setForm((f) => ({ ...f, subtipo: value, ocorrencia: VITIMA, dinamica: templateFor({ ...f, subtipo: value, ocorrencia: VITIMA }) }));
     } else {
       setForm((f) => ({ ...f, subtipo: value, dinamica: templateFor({ ...f, subtipo: value }) }));
     }

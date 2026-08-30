@@ -24,5 +24,6 @@ Thumbs.db
 # editores
 .vscode/
 .idea/
+.cursor/
 
 .vercel
