@@ -6,6 +6,7 @@ import { ArrowRightIcon, ArrowLeftIcon, WhatsAppIcon, CopyIcon } from './icons';
 import {
   PMRV_DINAMICAS,
   PMRV_SUBTIPOS,
+  PMRV_HOSPITAIS,
   RODOVIAS,
   FLORIPA_RODOVIAS,
   rodoviaLabel,
@@ -69,6 +70,13 @@ const INITIAL = {
   ilesos: '',
   veiculosEnvolvidos: '',
   irregularidade: 'nenhuma',
+  atendimentoViatura: '',
+  atendimentoNumero: '',
+  atendimentoOutrosDescricao: '',
+  lesaoNaoEspecificada: true,
+  lesaoDescricao: '',
+  destinoVitima: '',
+  hospitalDestino: '',
 };
 
 function startRecognition(onResult) {
@@ -1037,6 +1045,135 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               <input type="number" min={0} value={form.qtdGravissima} onChange={(e) => set({ qtdGravissima: e.target.value })} className="ds-input bg-[#fde8e8] border-brick text-center font-mono font-semibold text-lg text-brick" />
             </div>
           </div>
+
+          <h3 className="font-mono font-semibold text-sm uppercase tracking-tight text-brick mt-5 mb-2 border-b border-brick/30 pb-1">
+            Atendimento Pré-Hospitalar
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <label className="ds-label">Viatura de atendimento</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  { value: 'ASU', label: 'ASU (Bombeiro)' },
+                  { value: 'BRAVO', label: 'Bravo (SAMU)' },
+                  { value: 'OUTROS', label: 'Outros' },
+                ].map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-center gap-2 text-xs font-mono px-3 py-2 rounded border cursor-pointer ${
+                      form.atendimentoViatura === opt.value
+                        ? 'border-pmrv bg-pmrv/10 text-pmrv font-semibold'
+                        : 'border-charcoal/20 text-charcoal/70'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="atendimentoViatura"
+                      value={opt.value}
+                      checked={form.atendimentoViatura === opt.value}
+                      onChange={() => set({ atendimentoViatura: opt.value })}
+                      className="cursor-pointer"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {(form.atendimentoViatura === 'ASU' || form.atendimentoViatura === 'BRAVO') && (
+              <div>
+                <label className="ds-label">
+                  Número da viatura ({form.atendimentoViatura === 'ASU' ? 'ASU-Número' : 'Bravo-Número'})
+                </label>
+                <input
+                  value={form.atendimentoNumero}
+                  onChange={(e) => set({ atendimentoNumero: e.target.value.replace(/\D/g, '') })}
+                  placeholder="Ex: 12"
+                  inputMode="numeric"
+                  className="ds-input"
+                />
+              </div>
+            )}
+
+            {form.atendimentoViatura === 'OUTROS' && (
+              <div>
+                <label className="ds-label">Descreva a viatura/serviço de atendimento</label>
+                <input
+                  value={form.atendimentoOutrosDescricao}
+                  onChange={(e) => set({ atendimentoOutrosDescricao: capitalizarFrase(e.target.value) })}
+                  placeholder="Ex: Viatura particular, Corpo de Bombeiros Voluntários..."
+                  className="ds-input"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="ds-label">Tipo de lesão</label>
+              <label className="flex items-center gap-2 text-xs font-mono mb-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.lesaoNaoEspecificada}
+                  onChange={(e) => set({ lesaoNaoEspecificada: e.target.checked })}
+                  className="cursor-pointer"
+                />
+                Não especificado
+              </label>
+              {!form.lesaoNaoEspecificada && (
+                <input
+                  value={form.lesaoDescricao}
+                  onChange={(e) => set({ lesaoDescricao: capitalizarFrase(e.target.value) })}
+                  placeholder="Descreva o tipo de lesão"
+                  className="ds-input"
+                />
+              )}
+            </div>
+
+            <div>
+              <label className="ds-label">Destino da vítima</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {[
+                  { value: 'local', label: 'Liberado no local' },
+                  { value: 'hospital', label: 'Encaminhado ao hospital' },
+                ].map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`flex items-center gap-2 text-xs font-mono px-3 py-2 rounded border cursor-pointer ${
+                      form.destinoVitima === opt.value
+                        ? 'border-pmrv bg-pmrv/10 text-pmrv font-semibold'
+                        : 'border-charcoal/20 text-charcoal/70'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="destinoVitima"
+                      value={opt.value}
+                      checked={form.destinoVitima === opt.value}
+                      onChange={() => set({ destinoVitima: opt.value })}
+                      className="cursor-pointer"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {form.destinoVitima === 'hospital' && (
+              <div>
+                <label className="ds-label">Hospital</label>
+                <select
+                  value={form.hospitalDestino}
+                  onChange={(e) => set({ hospitalDestino: e.target.value })}
+                  className="ds-input"
+                >
+                  <option value="">Selecione…</option>
+                  {PMRV_HOSPITAIS.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-3 pt-4">
             <button onClick={prevStep} className="btn-outline flex-1">Voltar</button>
             <button onClick={nextStep} className="btn-ios flex-[2]">Próximo</button>
@@ -1062,6 +1199,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                 { value: 'nenhuma', label: 'Sem irregularidade (padrão)' },
                 { value: 'sanada', label: 'Irregularidade SANADA no local' },
                 { value: 'nao_sanada', label: 'Irregularidade NÃO SANADA (com remoção)' },
+                { value: 'ocultar', label: 'Ocultar este trecho do relatório' },
               ].map((opt) => (
                 <label
                   key={opt.value}
