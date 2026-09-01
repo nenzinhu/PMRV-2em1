@@ -37,3 +37,79 @@ export function CopyIcon({ className = 'w-5 h-5' }) {
     </svg>
   );
 }
+
+export function UsersIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-1a4 4 0 00-3-3.87M9 20H4v-1a4 4 0 013-3.87m9-5.13a4 4 0 11-8 0 4 4 0 018 0zm6 1a3 3 0 10-4-4.9M4.5 11.1A3 3 0 118 6.2" />
+    </svg>
+  );
+}
+
+export function ClipboardListIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-5 8h6m-6 4h6m-6-8h2" />
+    </svg>
+  );
+}
+
+export function FileReportIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 3v4a1 1 0 001 1h4M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5zM9 13h6M9 17h6M9 9h2" />
+    </svg>
+  );
+}
+
+export function SaveIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 21v-8H7v8M7 3v5h8M5 3h12l4 4v12a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z" />
+    </svg>
+  );
+}
+
+export function MapPinIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z" />
+      <circle cx="12" cy="11" r="3" strokeWidth="2" />
+    </svg>
+  );
+}
+
+export function PaletteIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3a9 9 0 100 18c1.105 0 2-.9 2-2 0-.523-.2-1-.53-1.36-.32-.35-.52-.81-.52-1.32 0-1.1.9-2 2-2h2.36A4.68 4.68 0 0021 9.68C21 6 16.97 3 12 3z" />
+      <circle cx="7.5" cy="10.5" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="10.5" cy="7" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="15" cy="7.5" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function ExpandIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" />
+    </svg>
+  );
+}
+
+export function DownloadIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" />
+    </svg>
+  );
+}
+
+export function CollapseIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 3v3a2 2 0 01-2 2H4M20 8h-3a2 2 0 01-2-2V3M4 16h3a2 2 0 012 2v3m9-5h3a2 2 0 012 2v3" />
+    </svg>
+  );
+}

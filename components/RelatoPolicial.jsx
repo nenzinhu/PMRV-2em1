@@ -113,6 +113,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
   const [manualText, setManualText] = useState('');
   const [draftReady, setDraftReady] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [autoKmGps, setAutoKmGps] = useState(true);
 
   useSwipe({
     threshold: 70,
@@ -159,14 +160,17 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
   useEffect(() => {
+    if (!autoKmGps) return;
     if (gpsInfo?.rodovia && !gpsInfo.foraDaRodovia && typeof gpsInfo.km === 'number') {
+      // Mesmo valor exibido no chip "KM:" do GPS (Passo 1) — só troca o ponto
+      // decimal por vírgula, sem a máscara de dígitos (que corrompia o valor).
       setForm((f) => ({
         ...f,
         rodovia: gpsInfo.rodovia,
-        km: formatKM(String(Math.round(gpsInfo.km * 1000) / 1000)),
+        km: String(Math.round(gpsInfo.km * 1000) / 1000).replace('.', ','),
       }));
     }
-  }, [gpsInfo?.rodovia, gpsInfo?.km, gpsInfo?.foraDaRodovia]);
+  }, [gpsInfo?.rodovia, gpsInfo?.km, gpsInfo?.foraDaRodovia, autoKmGps]);
 
   // Recebe localização externa para o campo de dinâmica
   useEffect(() => {
@@ -761,6 +765,17 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                   ±{Math.round(gpsInfo.dist)} m
                 </span>
               </div>
+            )}
+            {gpsOn && (
+              <label className="mt-2 flex items-center gap-1.5 text-[11px] font-mono text-charcoal/70 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={autoKmGps}
+                  onChange={(e) => setAutoKmGps(e.target.checked)}
+                  className="cursor-pointer"
+                />
+                Preencher Rodovia/KM automaticamente com a leitura do GPS
+              </label>
             )}
             {gpsInfo && gpsInfo.lat != null && (
               <p className="mt-2 text-[10px] font-mono text-charcoal/60">

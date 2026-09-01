@@ -18,6 +18,7 @@ import { useGpsLocation } from '@/hooks/useGpsLocation';
 import { ABAS, abaFromSearchParam } from '@/lib/aba';
 import { aplicarDinamicaNoRascunho } from '@/lib/relato-draft';
 import { gpsLocationLabel } from '@/lib/gps-label';
+import { MapPinIcon, PaletteIcon, ExpandIcon, CollapseIcon, DownloadIcon } from '@/components/icons';
 
 function syncAbaUrl(aba) {
   if (typeof window === 'undefined') return;
@@ -117,12 +118,12 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                   title="Ativar GPS"
                   aria-label="Ativar GPS"
                 >
-                  📍 GPS
+                  <MapPinIcon className="w-3.5 h-3.5" /> GPS
                 </button>
               )}
               {mounted && gpsOn && !showLocation && !gpsInfo?.erro && (
                 <span className="header-chip">
-                  📍 …
+                  <MapPinIcon className="w-3.5 h-3.5" /> …
                 </span>
               )}
               {mounted && showLocation && (
@@ -139,7 +140,9 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                   title="Toque para copiar a localização"
                   aria-label={`Copiar localização: ${locationLabel}`}
                 >
-                  <span className="truncate">📍 {locationLabel}</span>
+                  <span className="truncate inline-flex items-center gap-1">
+                    <MapPinIcon className="w-3.5 h-3.5 shrink-0" /> {locationLabel}
+                  </span>
                 </button>
               )}
               <button
@@ -149,7 +152,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                 title="Personalizar tema"
                 aria-label="Abrir personalização de tema"
               >
-                🎨 Tema
+                <PaletteIcon className="w-3.5 h-3.5" /> Tema
               </button>
               <AIProviderPicker compact />
               {supportsInstall && !isInstalled && !isStandalone && (
@@ -160,7 +163,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                   title="Instalar o app"
                   aria-label="Instalar aplicativo"
                 >
-                  ⤓ Instalar
+                  <DownloadIcon className="w-3.5 h-3.5" /> Instalar
                 </button>
               )}
               <button
@@ -170,7 +173,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                 title={fsActive ? 'Sair da tela cheia' : 'Modo imersivo'}
                 aria-label={fsActive ? 'Sair da tela cheia' : 'Entrar em modo imersivo'}
               >
-                {fsActive ? '⛶' : '⛶'}
+                {fsActive ? <CollapseIcon className="w-3.5 h-3.5" /> : <ExpandIcon className="w-3.5 h-3.5" />}
               </button>
             </div>
           </div>

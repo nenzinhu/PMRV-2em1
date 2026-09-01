@@ -8,6 +8,8 @@ import {
   formatNome,
   formatPlacaValue,
   capitalizarFrase,
+  sugerirTipoLogradouro,
+  aplicarTipoLogradouro,
   envolvidosText,
   callGroq,
   obterChaveIA,
@@ -551,14 +553,31 @@ export default function Envolvidos({ gpsInfo = null }) {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2 sm:col-span-1">
+              <div className="col-span-2 sm:col-span-1 relative">
                 <label className="ds-label">Endereço</label>
                 <input
                   value={ev.endereco}
                   onChange={(e) => update(ev.id, { endereco: e.target.value })}
                   placeholder="Rua/Av"
                   className="ds-input text-sm"
+                  autoComplete="off"
                 />
+                {sugerirTipoLogradouro(ev.endereco).length > 0 && (
+                  <ul className="absolute z-10 mt-1 w-full rounded-md border border-charcoal/15 bg-white shadow-md overflow-hidden">
+                    {sugerirTipoLogradouro(ev.endereco).map((t) => (
+                      <li key={t.nome}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => update(ev.id, { endereco: aplicarTipoLogradouro(ev.endereco, t.nome) })}
+                          className="w-full text-left px-2 py-1.5 text-sm hover:bg-charcoal/5"
+                        >
+                          {t.nome} <span className="text-charcoal/50 text-xs">({t.abrev})</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <div>
                 <label className="ds-label">Nº</label>

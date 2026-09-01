@@ -3,18 +3,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { showToast } from '@/components/Toast';
 import { Flip, gsap, prefersReducedMotion, registerGsap, useGSAP } from '@/lib/gsap-register';
+import { UsersIcon, ClipboardListIcon, FileReportIcon, SaveIcon } from '@/components/icons';
 
 registerGsap();
 
 const TABS = [
-  { key: 'envolvidos', label: 'Envolvidos', icon: '👥' },
-  { key: 'relato', label: 'Relato', icon: '📝' },
-  { key: 'resumo', label: 'Resumo', icon: '📋' },
-  { key: 'salvar', label: 'Salvar', icon: '💾' },
+  { key: 'envolvidos', label: 'Envolvidos', desktopLabel: 'Envolvidos', Icon: UsersIcon },
+  { key: 'resumo', label: 'Resumo', desktopLabel: 'Resumo Dinâmico', Icon: ClipboardListIcon },
+  { key: 'relato', label: 'Relato', desktopLabel: 'Relato Policial', Icon: FileReportIcon },
+  { key: 'salvar', label: 'Salvar', desktopLabel: 'Salvar', Icon: SaveIcon },
 ];
 
 function tabAriaLabel(tab) {
-  return tab.key === 'resumo' ? 'Aba Resumo Dinâmico' : `Aba ${tab.label}`;
+  return `Aba ${tab.desktopLabel}`;
 }
 
 function placePill(row, pill, active) {
@@ -102,7 +103,7 @@ export default function MobileNav({ active, onChange }) {
     if (active !== lastActive) {
       setLastActive(active);
       const tab = TABS.find((t) => t.key === active);
-      if (tab) showToast(`${tab.label}`, 'info', 1200);
+      if (tab) showToast(tab.desktopLabel, 'info', 1200);
       const icon = document.querySelector(`[data-tab="${active}"] .tab-icon, [data-desktop-tab="${active}"] .tab-icon`);
       if (icon && !prefersReducedMotion()) {
         gsap.fromTo(icon, { y: 6, scale: 0.86 }, { y: 0, scale: 1, duration: 0.35, ease: 'back.out(1.5)' });
@@ -131,11 +132,10 @@ export default function MobileNav({ active, onChange }) {
                     isActive ? 'text-white font-bold' : 'text-white/85 hover:text-white'
                   }`}
                 >
-                  <span className="tab-icon" aria-hidden="true">{tab.icon}</span>
-                  <span>
-                    {tab.label}
-                    {tab.key === 'resumo' ? ' Dinâmico' : ''}
+                  <span className="tab-icon" aria-hidden="true">
+                    <tab.Icon className="w-4 h-4" />
                   </span>
+                  <span>{tab.desktopLabel}</span>
                 </button>
               );
             })}
@@ -170,7 +170,9 @@ export default function MobileNav({ active, onChange }) {
                   active === tab.key ? 'text-white font-bold' : 'text-white/75 hover:text-white/95'
                 } ${pressing === tab.key ? 'tab-press' : ''}`}
               >
-                <span className="tab-icon text-lg leading-none" aria-hidden="true">{tab.icon}</span>
+                <span className="tab-icon leading-none" aria-hidden="true">
+                  <tab.Icon className="w-5 h-5" />
+                </span>
                 {tab.label}
               </button>
             ))}
