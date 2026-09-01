@@ -7,6 +7,7 @@ import ResumoDinamica from '@/components/ResumoDinamica';
 import SalvarOcorrencia from '@/components/SalvarOcorrencia';
 import ThemeConfig from '@/components/theme/ThemeConfig';
 import MobileNav from '@/components/MobileNav';
+import AIProviderPicker from '@/components/AIProviderPicker';
 import Toast from '@/components/Toast';
 import AmbientField from '@/components/motion/AmbientField';
 import BrandLockup from '@/components/motion/BrandLockup';
@@ -150,6 +151,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
               >
                 🎨 Tema
               </button>
+              <AIProviderPicker compact />
               {supportsInstall && !isInstalled && !isStandalone && (
                 <button
                   type="button"
