@@ -1,4 +1,4 @@
-import { formatEndereco } from '@/lib/gps-label';
+import { formatEndereco, extrairCidadeUf } from '@/lib/gps-label';
 
 export const runtime = 'nodejs';
 
@@ -31,7 +31,8 @@ export async function GET(req) {
       return Response.json({ endereco: '' }, { status: 200 });
     }
     const data = await resp.json();
-    return Response.json({ endereco: formatEndereco(data) });
+    const { cidade, uf } = extrairCidadeUf(data);
+    return Response.json({ endereco: formatEndereco(data), cidade, uf });
   } catch {
     return Response.json({ endereco: '' }, { status: 200 });
   }

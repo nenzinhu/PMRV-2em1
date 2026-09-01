@@ -6,9 +6,13 @@ import { RODOVIAS_GEOJSON_URL, rodoviaLabel } from '@/lib/rodovias-list';
 
 async function fetchEndereco(lat, lon) {
   const r = await fetch(`/api/geocode/reverse?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`);
-  if (!r.ok) return '';
+  if (!r.ok) return { endereco: '', cidade: '', uf: '' };
   const data = await r.json();
-  return typeof data.endereco === 'string' ? data.endereco : '';
+  return {
+    endereco: typeof data.endereco === 'string' ? data.endereco : '',
+    cidade: typeof data.cidade === 'string' ? data.cidade : '',
+    uf: typeof data.uf === 'string' ? data.uf : '',
+  };
 }
 
 export function useGpsLocation() {
@@ -61,10 +65,12 @@ export function useGpsLocation() {
           return;
         }
 
+        const key = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+
         const m = matchRodovia(geojson, latitude, longitude, 150);
         if (m && !m.foraDaRodovia) {
-          geoKeyRef.current = '';
-          setGpsInfo({
+          setGpsInfo((prev) => ({
+            ...(prev || {}),
             ...base,
             rodovia: rodoviaLabel(m.rodovia) || m.rodovia,
             km: m.km,
@@ -72,27 +78,27 @@ export function useGpsLocation() {
             dist: m.d,
             foraDaRodovia: false,
             endereco: '',
-          });
-          return;
+          }));
+        } else {
+          const dist = m ? m.d : null;
+          setGpsInfo((prev) => ({
+            ...(prev || {}),
+            ...base,
+            foraDaRodovia: true,
+            dist,
+            rodovia: null,
+            km: null,
+          }));
         }
 
-        const dist = m ? m.d : null;
-        const key = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
-        setGpsInfo((prev) => ({
-          ...(prev || {}),
-          ...base,
-          foraDaRodovia: true,
-          dist,
-          rodovia: null,
-          km: null,
-        }));
-
+        // Busca cidade/UF (e endereço, quando fora da rodovia) sempre que a
+        // posição mudar de forma relevante — usada para preencher o Município.
         if (key === geoKeyRef.current) return;
         geoKeyRef.current = key;
         fetchEndereco(latitude, longitude)
-          .then((endereco) => {
+          .then(({ endereco, cidade, uf }) => {
             if (geoKeyRef.current !== key) return;
-            setGpsInfo((prev) => ({ ...(prev || {}), endereco }));
+            setGpsInfo((prev) => ({ ...(prev || {}), endereco, cidade, uf }));
           })
           .catch(() => {});
       },

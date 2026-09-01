@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Stepper from './Stepper';
 import { ArrowRightIcon, ArrowLeftIcon, WhatsAppIcon, CopyIcon } from './icons';
 import {
@@ -193,6 +193,20 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
   const cidadeLocked = FLORIPA_RODOVIAS.includes(form.rodovia);
   const showCidade407 = form.rodovia === 'SC-407';
   const showCidade281 = form.rodovia === 'SC-281';
+
+  // Preenche o Município automaticamente com a cidade do GPS (Nominatim),
+  // sem sobrescrever se o usuário já digitou/selecionou outra cidade.
+  const lastAutoCidadeRef = useRef('');
+  useEffect(() => {
+    if (!autoKmGps || cidadeLocked || !gpsInfo?.cidade) return;
+    const valor = gpsInfo.uf ? `${gpsInfo.cidade}/${gpsInfo.uf}` : gpsInfo.cidade;
+    setForm((f) => {
+      if (f.cidade && f.cidade !== lastAutoCidadeRef.current) return f;
+      if (f.cidade === valor) return f;
+      lastAutoCidadeRef.current = valor;
+      return { ...f, cidade: valor };
+    });
+  }, [gpsInfo?.cidade, gpsInfo?.uf, autoKmGps, cidadeLocked]);
 
   function onRodoviaChange(value) {
     let cidade = form.cidade;
@@ -774,7 +788,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                   onChange={(e) => setAutoKmGps(e.target.checked)}
                   className="cursor-pointer"
                 />
-                Preencher Rodovia/KM automaticamente com a leitura do GPS
+                Preencher Rodovia/KM/Cidade automaticamente com a leitura do GPS
               </label>
             )}
             {gpsInfo && gpsInfo.lat != null && (
