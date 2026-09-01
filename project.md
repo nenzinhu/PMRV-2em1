@@ -228,6 +228,8 @@ Variáveis esperadas (criar `.env.local`, não commitar):
 
 ```
 GROQ_API_KEY=
+OPENROUTER_API_KEY=
+GEMINI_API_KEY=
 PLACA_API_TOKEN=
 ```
 

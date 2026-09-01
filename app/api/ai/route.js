@@ -9,8 +9,6 @@ const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
 // Endpoint compatível com OpenAI do Gemini — aceita o mesmo formato de body/SSE.
 const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-// Chave padrão do Gemini (usada apenas se GEMINI_API_KEY não estiver definida no .env.local).
-const GEMINI_DEFAULT_KEY = 'AQ.Ab8RN6IotNa1oU_ZlZpE276MLqySjUNP_bQmyjGym-WHyvmv6g';
 
 export async function POST(req) {
   let payload;
@@ -29,7 +27,7 @@ export async function POST(req) {
     provider === 'openrouter'
       ? process.env.OPENROUTER_API_KEY || ''
       : provider === 'gemini'
-        ? process.env.GEMINI_API_KEY || GEMINI_DEFAULT_KEY
+        ? process.env.GEMINI_API_KEY || ''
         : process.env.GROQ_API_KEY || '';
 
   // Chave do servidor tem prioridade; o cliente pode enviar um override opcional
