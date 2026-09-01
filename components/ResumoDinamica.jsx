@@ -220,7 +220,7 @@ export default function ResumoDinamica() {
         </div>
       </div>
 
-      <p className="estilo-glass text-xs text-charcoal/70 font-mono mb-4 p-3">
+      <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono mb-4 p-3">
         Os relatos individuais entram aqui ao tocar <b>Salvar relato</b> na aba Envolvidos. Depois escolha o tipo: <b>Técnico</b> (peritos e casos judiciais), <b>Policial</b> (neutro, normas e CTB) ou <b>Leigo</b> (linguagem simples). Ao gerar ou tocar <b>Salvar</b>, o texto já vai para a dinâmica do Relato Policial.
       </p>
 

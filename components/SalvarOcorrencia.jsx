@@ -56,7 +56,7 @@ export default function SalvarOcorrencia() {
       <h2 className="text-base sm:text-lg font-mono font-semibold uppercase tracking-tight text-pmrv mb-4">
         Salvar ocorrência
       </h2>
-      <p className="estilo-glass text-xs text-charcoal/70 font-mono mb-4 p-3">
+      <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono mb-4 p-3">
         O relatório usa só o que já está no Relato Policial. O resumo da dinâmica entra no campo Dinâmica ao salvar. Data e hora vazias aparecem como --- — não são inventadas.
       </p>
 

@@ -127,8 +127,8 @@ export default function MobileNav({ active, onChange }) {
                   {...tabProps(tab)}
                   aria-label={tabAriaLabel(tab)}
                   onClick={() => onChange(tab.key)}
-                  className={`relative z-10 flex items-center gap-1.5 px-2.5 lg:px-4 py-2.5 text-[10px] lg:text-[11px] font-mono font-semibold uppercase tracking-wider whitespace-nowrap ${
-                    isActive ? 'text-white' : 'text-white/70 hover:text-white'
+                  className={`relative z-10 flex items-center gap-1.5 px-2.5 lg:px-4 py-2.5 text-[11px] lg:text-xs font-mono font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
+                    isActive ? 'text-white font-bold' : 'text-white/85 hover:text-white'
                   }`}
                 >
                   <span className="tab-icon" aria-hidden="true">{tab.icon}</span>
@@ -166,8 +166,8 @@ export default function MobileNav({ active, onChange }) {
                 onMouseDown={() => setPressing(tab.key)}
                 onMouseUp={() => setPressing(null)}
                 onMouseLeave={() => setPressing(null)}
-                className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-mono font-semibold uppercase tracking-wide ${
-                  active === tab.key ? 'text-white' : 'text-white/60 hover:text-white/80'
+                className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 text-[11px] font-mono font-semibold uppercase tracking-wide transition-colors ${
+                  active === tab.key ? 'text-white font-bold' : 'text-white/75 hover:text-white/95'
                 } ${pressing === tab.key ? 'tab-press' : ''}`}
               >
                 <span className="tab-icon text-lg leading-none" aria-hidden="true">{tab.icon}</span>

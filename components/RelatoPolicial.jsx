@@ -19,6 +19,7 @@ import {
   maskDataFatoBr,
   parseDataFatoBr,
   nowFato,
+  subtipoLabel,
   buildIAPrompt,
   reviewReportPrompt,
   callGroq,
@@ -64,6 +65,9 @@ const INITIAL = {
   qtdLeve: 0,
   qtdGrave: 0,
   qtdGravissima: 0,
+  pontoReferencia: '',
+  ilesos: '',
+  veiculosEnvolvidos: '',
 };
 
 function startRecognition(onResult) {
@@ -86,10 +90,19 @@ function startRecognition(onResult) {
   }
 }
 
+function addMinutosHora(hora, minutos) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hora || '');
+  if (!m) return '';
+  const total = (parseInt(m[1], 10) * 60 + parseInt(m[2], 10) + minutos + 1440) % 1440;
+  const h = String(Math.floor(total / 60)).padStart(2, '0');
+  const mi = String(total % 60).padStart(2, '0');
+  return `${h}:${mi}`;
+}
+
 function templateFor(form) {
   let texto = PMRV_DINAMICAS[form.subtipo] || '';
-  if (['4.9', '6.4'].includes(form.subtipo)) texto = texto.replace('[OBJETO]', form.objeto || '[OBJETO]');
-  if (form.subtipo === '7.1') texto = texto.replace('[OUTROS]', form.outros || '[OUTROS]');
+  if (form.subtipo === '4.9') texto = texto.replace('[OBJETO]', form.objeto || '[OBJETO]');
+  if (form.subtipo === '8.1') texto = texto.replace('[OUTROS]', form.outros || '[OUTROS]');
   return texto;
 }
 
@@ -99,6 +112,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
   const [manualEdit, setManualEdit] = useState(false);
   const [manualText, setManualText] = useState('');
   const [draftReady, setDraftReady] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   useSwipe({
     threshold: 70,
@@ -415,6 +429,60 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
     }
   }
 
+  function previewText() {
+    const dataFato = dataFatoFieldValue(form.dataFato);
+    const horaComunicacao = addMinutosHora(form.horaFato, 15);
+    const horaAtendimento = addMinutosHora(form.horaFato, 30);
+    return [
+      'PRÉVIA DO ACIDENTE',
+      '',
+      `Protocolo Ocorrência: ${form.sade || '---'}`,
+      '',
+      'Dados Básicos',
+      `Rodovia: ${form.rodovia || '---'}`,
+      `Km: ${form.km || '---'}`,
+      `Ponto de referência: ${form.pontoReferencia || '---'}`,
+      `Município: ${form.cidade || '---'}`,
+      '',
+      'Data e Horário da Ocorrência',
+      `Fato: ${dataFato} ${form.horaFato || '---'}`,
+      `Comunicação: ${dataFato} ${horaComunicacao || '---'}`,
+      `Atendimento: ${dataFato} ${horaAtendimento || '---'}`,
+      '',
+      'Números',
+      `Mortos: ${form.qtdGravissima || 0}`,
+      `Feridos graves: ${form.qtdGrave || 0}`,
+      `Feridos leves: ${form.qtdLeve || 0}`,
+      `Ilesos: ${form.ilesos || 0}`,
+      `Veículos envolvidos: ${form.veiculosEnvolvidos || 0}`,
+      '',
+      'Natureza e Dinâmica',
+      `Natureza: ${form.ocorrencia || '---'}`,
+      `Dinâmica do Sinistro: ${subtipoLabel(form)}`,
+    ].join('\n');
+  }
+
+  function copiarPreview() {
+    const texto = previewText();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(
+        () => showToast('Prévia copiada para a área de transferência', 'success', 2500),
+        () => alert('Erro ao copiar. Por favor, selecione o texto e copie manualmente.')
+      );
+    } else {
+      alert('Seu navegador não permite cópia automática. Selecione o texto e copie manualmente.');
+    }
+  }
+
+  function copiarEEnviarPreviewWhatsApp() {
+    const texto = previewText();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).catch(() => {});
+    }
+    window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+    showToast('Prévia copiada. Abrindo WhatsApp...', 'info', 2000);
+  }
+
   function limpar() {
     if (window.confirm('Deseja iniciar uma nova ocorrência? Todos os dados serão perdidos.')) {
       const savedVtr = localStorage.getItem('PMRV_VTR') || form.vtr || '';
@@ -430,6 +498,121 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
   return (
     <div className="max-w-xl mx-auto p-4 relative overflow-hidden">
       <Stepper currentStep={step} ehVitima={ehVitima} />
+
+      <button
+        type="button"
+        onClick={() => setShowPreview(true)}
+        className="btn-outline w-full mb-4 flex items-center justify-center gap-2"
+      >
+        📋 Prévia do Acidente
+      </button>
+
+      {showPreview && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setShowPreview(false)}
+        >
+          <div
+            className="ds-card w-full max-w-lg max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="ds-section-title">
+              <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">
+                Prévia do Acidente
+              </h2>
+              <button type="button" onClick={() => setShowPreview(false)} className="ds-icon-btn" title="Fechar" aria-label="Fechar prévia">
+                ✕
+              </button>
+            </div>
+
+            <div>
+              <label className="ds-label">Protocolo Ocorrência</label>
+              <input value={form.sade} onChange={(e) => set({ sade: formatSade(e.target.value) })} className="ds-input" />
+            </div>
+
+            <h3 className="font-mono font-semibold text-sm uppercase tracking-tight text-pmrv mt-4 mb-2 border-b border-charcoal/30 pb-1">Dados Básicos</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="ds-label">Rodovia</label>
+                <input value={form.rodovia} onChange={(e) => set({ rodovia: e.target.value })} className="ds-input" />
+              </div>
+              <div>
+                <label className="ds-label">Km</label>
+                <input value={form.km} onChange={(e) => set({ km: formatKM(e.target.value) })} className="ds-input" />
+              </div>
+              <div className="col-span-2">
+                <label className="ds-label">Ponto de referência</label>
+                <input value={form.pontoReferencia} onChange={(e) => set({ pontoReferencia: e.target.value })} className="ds-input" />
+              </div>
+              <div className="col-span-2">
+                <label className="ds-label">Município</label>
+                <input value={form.cidade} onChange={(e) => set({ cidade: e.target.value })} className="ds-input" />
+              </div>
+            </div>
+
+            <h3 className="font-mono font-semibold text-sm uppercase tracking-tight text-pmrv mt-4 mb-2 border-b border-charcoal/30 pb-1">Data e Horário da Ocorrência</h3>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center font-mono text-[10px] uppercase text-gold">Fato</div>
+              <div className="text-center font-mono text-[10px] uppercase text-gold">Comunicação</div>
+              <div className="text-center font-mono text-[10px] uppercase text-gold">Atendimento</div>
+              <input value={dataFatoFieldValue(form.dataFato)} readOnly disabled placeholder="dd/mm/aaaa" className="ds-input text-center bg-bone/60" />
+              <input value={dataFatoFieldValue(form.dataFato)} readOnly disabled placeholder="dd/mm/aaaa" className="ds-input text-center bg-bone/60" />
+              <input value={dataFatoFieldValue(form.dataFato)} readOnly disabled placeholder="dd/mm/aaaa" className="ds-input text-center bg-bone/60" />
+              <input value={form.horaFato} readOnly disabled placeholder="hh:mm" className="ds-input text-center bg-bone/60" />
+              <input value={addMinutosHora(form.horaFato, 15)} readOnly disabled placeholder="hh:mm" className="ds-input text-center bg-bone/60" />
+              <input value={addMinutosHora(form.horaFato, 30)} readOnly disabled placeholder="hh:mm" className="ds-input text-center bg-bone/60" />
+            </div>
+
+            <h3 className="font-mono font-semibold text-sm uppercase tracking-tight text-pmrv mt-4 mb-2 border-b border-charcoal/30 pb-1">Números</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="ds-label">Mortos</label>
+                <input type="number" min={0} value={form.qtdGravissima} onChange={(e) => set({ qtdGravissima: e.target.value })} className="ds-input text-center" />
+              </div>
+              <div>
+                <label className="ds-label">Feridos graves</label>
+                <input type="number" min={0} value={form.qtdGrave} onChange={(e) => set({ qtdGrave: e.target.value })} className="ds-input text-center" />
+              </div>
+              <div>
+                <label className="ds-label">Feridos leves</label>
+                <input type="number" min={0} value={form.qtdLeve} onChange={(e) => set({ qtdLeve: e.target.value })} className="ds-input text-center" />
+              </div>
+              <div>
+                <label className="ds-label">Ilesos</label>
+                <input type="number" min={0} value={form.ilesos} onChange={(e) => set({ ilesos: e.target.value })} className="ds-input text-center" />
+              </div>
+              <div className="col-span-2">
+                <label className="ds-label">Veículos envolvidos</label>
+                <input type="number" min={0} value={form.veiculosEnvolvidos} onChange={(e) => set({ veiculosEnvolvidos: e.target.value })} className="ds-input text-center" />
+              </div>
+            </div>
+
+            <h3 className="font-mono font-semibold text-sm uppercase tracking-tight text-pmrv mt-4 mb-2 border-b border-charcoal/30 pb-1">Natureza e Dinâmica</h3>
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label className="ds-label">Natureza</label>
+                <input value={form.ocorrencia} readOnly disabled className="ds-input bg-bone/60" />
+              </div>
+              <div>
+                <label className="ds-label">Dinâmica do Sinistro</label>
+                <input value={subtipoLabel(form)} readOnly disabled className="ds-input bg-bone/60" />
+              </div>
+            </div>
+
+            <div className="pt-4 flex flex-col gap-2">
+              <button onClick={copiarPreview} className="btn-outline w-full flex items-center justify-center gap-2">
+                <CopyIcon />
+                Copiar
+              </button>
+              <button onClick={copiarEEnviarPreviewWhatsApp} className="ds-btn-whatsapp w-full flex items-center justify-center gap-2">
+                <WhatsAppIcon />
+                Copiar e Enviar pelo WhatsApp
+              </button>
+              <button onClick={() => setShowPreview(false)} className="btn-ios w-full">Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* PASSO 1 — IDENTIFICAÇÃO */}
       {step === 1 && (
@@ -715,7 +898,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
           </div>
 
           <div>
-            <label className="ds-label">Tipo de Sinistro</label>
+            <label className="ds-label">Dinâmica do Sinistro</label>
             <select value={form.subtipo} onChange={(e) => onSubtipoChange(e.target.value)} className="ds-input">
               {Object.entries(grupoSubtipos).map(([grupo, opts]) => (
                 <optgroup key={grupo} label={grupo}>
@@ -729,13 +912,13 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
             </select>
           </div>
 
-          {['4.9', '6.4'].includes(form.subtipo) && (
+          {form.subtipo === '4.9' && (
             <div>
               <label className="ds-label">Qual objeto?</label>
               <input value={form.objeto} placeholder="Ex: árvore, poste..." onChange={(e) => onObjetoChange(e.target.value)} className="ds-input bg-bone border-gold" />
             </div>
           )}
-          {form.subtipo === '7.1' && (
+          {form.subtipo === '8.1' && (
             <div>
               <label className="ds-label">Especifique</label>
               <input value={form.outros} placeholder="Natureza da ocorrência..." onChange={(e) => onOutrosChange(e.target.value)} className="ds-input bg-bone border-gold" />

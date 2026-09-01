@@ -424,7 +424,7 @@ export default function Envolvidos({ gpsInfo = null }) {
         </div>
       </div>
 
-      <p className="estilo-glass text-xs text-charcoal/70 font-mono mb-4 p-3">
+      <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono mb-4 p-3">
         Cada envolvido tem dados, relato individual (com correção por IA) e fotos. <b>Salvar relato</b> envia o texto para o Resumo da Dinâmica. Use <b>📷 Tirar fotos</b> ou <b>🖼️ Galeria</b>.
       </p>
 

@@ -88,19 +88,19 @@
   }
 
   .ds-label {
-    @apply block font-mono text-xs font-semibold uppercase tracking-wider text-charcoal mb-2;
+    @apply block font-mono text-[13px] font-semibold uppercase tracking-wide text-charcoal mb-1.5;
   }
 
   .ds-input {
-    @apply w-full p-3 bg-white/90 border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition rounded-xl;
+    @apply w-full p-3 bg-white/90 border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition rounded-xl placeholder:text-slate-500;
   }
 
   .ds-input-muted {
-    @apply w-full p-3 bg-bone/80 border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition rounded-xl;
+    @apply w-full p-3 bg-bone/80 border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition rounded-xl placeholder:text-slate-500;
   }
 
   .ds-input-danger {
-    @apply w-full p-3 bg-[#F9ECE9] border-2 border-brick focus:ring-2 focus:ring-brick outline-none transition rounded-xl;
+    @apply w-full p-3 bg-[#F9ECE9] border-2 border-brick focus:ring-2 focus:ring-brick outline-none transition rounded-xl placeholder:text-slate-500;
   }
 
   .ds-icon-btn {
@@ -278,20 +278,23 @@
     @apply font-mono font-semibold uppercase tracking-wider border-2 transition-all flex items-center justify-center gap-2;
     border-radius: 14px;
     padding: 14px 20px;
-    background-color: var(--ds-ink);
+    background-color: var(--ds-primary);
     color: #fff;
-    border-color: var(--ds-ink);
+    border-color: var(--ds-primary);
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     min-height: 44px;
+    box-shadow: 3px 3px 0 color-mix(in srgb, var(--ds-text) 55%, transparent);
   }
   .btn-ios:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--ds-ink) 88%, #000);
-    border-color: color-mix(in srgb, var(--ds-ink) 88%, #000);
+    background-color: color-mix(in srgb, var(--ds-primary) 88%, #000);
+    border-color: color-mix(in srgb, var(--ds-primary) 88%, #000);
+    box-shadow: 4px 4px 0 color-mix(in srgb, var(--ds-text) 45%, transparent);
   }
   .btn-ios:active:not(:disabled) {
-    transform: scale(0.97);
-    filter: brightness(0.95);
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 color-mix(in srgb, var(--ds-text) 55%, transparent);
+    filter: brightness(0.96);
   }
   .btn-ios:disabled {
     opacity: 0.4;
@@ -303,19 +306,20 @@
     @apply font-mono font-semibold uppercase tracking-wider border-2 bg-white transition-all flex items-center justify-center gap-2;
     border-radius: 14px;
     padding: 12px 18px;
-    color: var(--ds-ink);
-    border-color: var(--ds-ink);
+    color: var(--ds-primary);
+    border-color: var(--ds-primary);
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
     min-height: 44px;
   }
   .btn-outline:hover:not(:disabled) {
-    background-color: rgba(43, 108, 176, 0.08);
-    border-color: color-mix(in srgb, var(--ds-ink) 82%, #000);
+    background-color: color-mix(in srgb, var(--ds-primary) 9%, #fff);
+    border-color: color-mix(in srgb, var(--ds-primary) 84%, #000);
+    color: color-mix(in srgb, var(--ds-primary) 84%, #000);
   }
   .btn-outline:active:not(:disabled) {
-    transform: scale(0.97);
-    background-color: rgba(43, 108, 176, 0.14);
+    transform: translate(2px, 2px);
+    background-color: color-mix(in srgb, var(--ds-primary) 15%, #fff);
   }
   .btn-outline:disabled {
     opacity: 0.4;
@@ -587,8 +591,8 @@
   top: 0.25rem;
   bottom: 0.25rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 0 22px color-mix(in srgb, var(--ds-accent) 35%, transparent);
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 0 24px color-mix(in srgb, var(--ds-accent) 45%, transparent);
   pointer-events: none;
 }
 
