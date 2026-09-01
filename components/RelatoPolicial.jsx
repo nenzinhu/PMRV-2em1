@@ -77,7 +77,21 @@ const INITIAL = {
   lesaoDescricao: '',
   destinoVitima: '',
   hospitalDestino: '',
+  vitimaEnvolvido: '',
 };
+
+const ENVOLVIDOS_STORAGE_KEY = 'PMRV_ENVOLVIDOS';
+
+function lerEnvolvidosSalvos() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = JSON.parse(localStorage.getItem(ENVOLVIDOS_STORAGE_KEY) || 'null');
+    const lista = Array.isArray(raw?.lista) ? raw.lista : [];
+    return lista.filter((e) => e && e.nome && e.nome.trim());
+  } catch {
+    return [];
+  }
+}
 
 function startRecognition(onResult) {
   if (typeof window === 'undefined') return;
@@ -123,6 +137,13 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
   const [draftReady, setDraftReady] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [autoKmGps, setAutoKmGps] = useState(true);
+  const [envolvidosSalvos, setEnvolvidosSalvos] = useState([]);
+
+  // Recarrega os envolvidos salvos sempre que o Passo 4 (Vítimas) é aberto,
+  // para permitir escolher a vítima entre quem já foi cadastrado.
+  useEffect(() => {
+    if (step === 4) setEnvolvidosSalvos(lerEnvolvidosSalvos());
+  }, [step]);
 
   useSwipe({
     threshold: 70,
@@ -1050,6 +1071,27 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
             Atendimento Pré-Hospitalar
           </h3>
           <div className="space-y-3">
+            <div>
+              <label className="ds-label">Vítima</label>
+              {envolvidosSalvos.length > 0 ? (
+                <select
+                  value={form.vitimaEnvolvido}
+                  onChange={(e) => set({ vitimaEnvolvido: e.target.value })}
+                  className="ds-input"
+                >
+                  <option value="">Não especificar</option>
+                  {envolvidosSalvos.map((ev) => (
+                    <option key={ev.id} value={ev.nome}>
+                      {ev.nome}{ev.placa ? ` — ${ev.placa}` : ''}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-[11px] text-charcoal/50 font-mono">
+                  Nenhum envolvido cadastrado ainda na aba Envolvidos.
+                </p>
+              )}
+            </div>
             <div>
               <label className="ds-label">Viatura de atendimento</label>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
