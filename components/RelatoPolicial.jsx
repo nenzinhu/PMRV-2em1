@@ -68,6 +68,7 @@ const INITIAL = {
   pontoReferencia: '',
   ilesos: '',
   veiculosEnvolvidos: '',
+  irregularidade: 'nenhuma',
 };
 
 function startRecognition(onResult) {
@@ -1053,6 +1054,35 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
             <button type="button" onClick={() => startRecognition(onVoiceAppend('pmrv_relatorio_edit'))} className="ds-icon-btn" title="Adicionar por voz" aria-label="Adicionar ao relatório por voz">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
             </button>
+          </div>
+          <div className="mb-4">
+            <label className="ds-label">Irregularidade na documentação</label>
+            <div className="grid grid-cols-1 gap-2 mb-4">
+              {[
+                { value: 'nenhuma', label: 'Sem irregularidade (padrão)' },
+                { value: 'sanada', label: 'Irregularidade SANADA no local' },
+                { value: 'nao_sanada', label: 'Irregularidade NÃO SANADA (com remoção)' },
+              ].map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-center gap-2 text-xs font-mono px-3 py-2 rounded border cursor-pointer ${
+                    form.irregularidade === opt.value
+                      ? 'border-pmrv bg-pmrv/10 text-pmrv font-semibold'
+                      : 'border-charcoal/20 text-charcoal/70'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="irregularidade"
+                    value={opt.value}
+                    checked={form.irregularidade === opt.value}
+                    onChange={() => set({ irregularidade: opt.value })}
+                    className="cursor-pointer"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
           </div>
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
