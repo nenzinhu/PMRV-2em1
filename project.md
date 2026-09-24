@@ -6,7 +6,7 @@ Sistema PWA de campo para a Polícia Militar Rodoviária de Santa Catarina (1º 
 
 - Next.js 15 (App Router) + React 19 + Tailwind CSS 3
 - PWA: `manifest.json` + service worker em `public/sw.js`
-- IA: Groq (`groq/compound-mini`) via proxy em `/api/groq`
+- IA: provedores gratuitos compatíveis com OpenAI (Groq, OpenRouter, Mistral…) via proxy em `/api/ai` — ver `lib/ai-models.js` e `.env.example`
 - Consulta de placa: wdapi2 via `/api/placa`
 - Malha viária: GeoJSON de rodovias de SC (`public/rodovias-sc.geojson`)
 - Persistência: `localStorage` no dispositivo (sem backend de dados)

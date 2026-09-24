@@ -44,10 +44,6 @@ export async function POST(req) {
     top_p: 1,
     stream: true,
   };
-  // Ferramentas só existem nos sistemas groq/compound*.
-  if (provedor.id === 'groq' && resolvedModel.startsWith('groq/compound')) {
-    body.compound_custom = { tools: { enabled_tools: ['web_search', 'code_interpreter', 'visit_website'] } };
-  }
 
   const upstream = await fetch(chatUrl, {
     method: 'POST',
