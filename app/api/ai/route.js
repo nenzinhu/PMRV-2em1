@@ -1,16 +1,12 @@
-import { PMRV_GROQ_MODEL, PMRV_OPENROUTER_MODEL, PMRV_GEMINI_MODEL } from '@/lib/pmrv';
+import { PMRV_MODELO_PADRAO, modeloValido } from '@/lib/ai-models';
 
-// Roda no servidor (Node) — as chaves ficam em process.env (GROQ_API_KEY,
-// OPENROUTER_API_KEY e GEMINI_API_KEY) e NUNCA vão ao navegador. Faz proxy
-// streaming do provedor escolhido (groq | openrouter | gemini) de volta ao cliente.
+// Roda no servidor (Node) — as chaves ficam em process.env (GROQ_API_KEY e
+// OPENROUTER_API_KEY) e NUNCA vão ao navegador. Faz proxy streaming do
+// provedor escolhido (groq | openrouter) de volta ao cliente.
 export const runtime = 'nodejs';
 
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
-// Endpoint compatível com OpenAI do Gemini — aceita o mesmo formato de body/SSE.
-const GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
-// Chave padrão do Gemini (usada apenas se GEMINI_API_KEY não estiver definida no .env.local).
-const GEMINI_DEFAULT_KEY = 'AQ.Ab8RN6IotNa1oU_ZlZpE276MLqySjUNP_bQmyjGym-WHyvmv6g';
 
 export async function POST(req) {
   let payload;
@@ -23,14 +19,9 @@ export async function POST(req) {
     });
   }
 
-  const provider =
-    payload.provider === 'openrouter' || payload.provider === 'gemini' ? payload.provider : 'groq';
+  const provider = payload.provider === 'openrouter' ? 'openrouter' : 'groq';
   const serverKey =
-    provider === 'openrouter'
-      ? process.env.OPENROUTER_API_KEY || ''
-      : provider === 'gemini'
-        ? process.env.GEMINI_API_KEY || GEMINI_DEFAULT_KEY
-        : process.env.GROQ_API_KEY || '';
+    (provider === 'openrouter' ? process.env.OPENROUTER_API_KEY : process.env.GROQ_API_KEY) || '';
 
   // Chave do servidor tem prioridade; o cliente pode enviar um override opcional
   // (botão 🔑), mas ela NÃO fica embutida no bundle.
@@ -48,16 +39,10 @@ export async function POST(req) {
   if (system) mensagens.push({ role: 'system', content: system });
   mensagens.push({ role: 'user', content: prompt });
 
-  const resolvedModel =
-    model ||
-    (provider === 'openrouter'
-      ? PMRV_OPENROUTER_MODEL
-      : provider === 'gemini'
-        ? PMRV_GEMINI_MODEL
-        : PMRV_GROQ_MODEL);
+  const resolvedModel = modeloValido(model) ? model : PMRV_MODELO_PADRAO[provider];
 
   let body;
-  if (provider === 'openrouter' || provider === 'gemini') {
+  if (provider === 'openrouter') {
     body = {
       model: resolvedModel,
       messages: mensagens,
@@ -75,12 +60,14 @@ export async function POST(req) {
       top_p: 1,
       stream: true,
       stop: null,
-      compound_custom: { tools: { enabled_tools: ['web_search', 'code_interpreter', 'visit_website'] } },
     };
+    // Ferramentas só existem nos sistemas groq/compound*.
+    if (resolvedModel.startsWith('groq/compound')) {
+      body.compound_custom = { tools: { enabled_tools: ['web_search', 'code_interpreter', 'visit_website'] } };
+    }
   }
 
-  const endpoint =
-    provider === 'openrouter' ? OPENROUTER_ENDPOINT : provider === 'gemini' ? GEMINI_ENDPOINT : GROQ_ENDPOINT;
+  const endpoint = provider === 'openrouter' ? OPENROUTER_ENDPOINT : GROQ_ENDPOINT;
 
   const upstream = await fetch(endpoint, {
     method: 'POST',

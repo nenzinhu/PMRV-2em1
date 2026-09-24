@@ -1,4 +1,4 @@
-import { PMRV_GROQ_MODEL } from '@/lib/pmrv';
+import { PMRV_GROQ_MODEL } from '@/lib/ai-models';
 
 // Roda no servidor (Node) — a chave da API fica em process.env.GROQ_API_KEY
 // e NUNCA é enviada ao navegador. Faz proxy streaming da Groq de volta ao cliente.
@@ -41,7 +41,6 @@ export async function POST(req) {
     top_p: 1,
     stream: true,
     stop: null,
-    compound_custom: { tools: { enabled_tools: ['web_search', 'code_interpreter', 'visit_website'] } },
   };
 
   const upstream = await fetch('https://api.groq.com/openai/v1/chat/completions', {

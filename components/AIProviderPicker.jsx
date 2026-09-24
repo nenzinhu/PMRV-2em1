@@ -1,46 +1,85 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PMRV_AI_PROVIDERS, obterProvedorIA, definirProvedorIA } from '@/lib/pmrv';
+import {
+  PMRV_AI_PROVIDERS,
+  obterProvedorIA,
+  definirProvedorIA,
+  obterModeloIA,
+  definirModeloIA,
+} from '@/lib/pmrv';
+import { PMRV_MODELOS_FALLBACK, PMRV_MODELO_PADRAO } from '@/lib/ai-models';
 
-// Select compacto de provedor de IA (Groq | OpenRouter) estilizado como chip de
-// header. O usuário vê o provedor atual e toca para trocar (picker nativo no
-// mobile). A escolha persiste em localStorage (PMRV_AI_PROVIDER).
+// Chip de header com dois selects: provedor de IA (Groq | OpenRouter) e modelo
+// gratuito daquele provedor. A lista de modelos vem de /api/ai/models (ao vivo,
+// com fallback fixo). As escolhas persistem em localStorage.
 export default function AIProviderPicker({ compact = false }) {
   const [provedor, setProvedor] = useState('groq');
+  const [modelo, setModelo] = useState(PMRV_MODELO_PADRAO.groq);
+  const [modelos, setModelos] = useState(PMRV_MODELOS_FALLBACK.groq);
 
   useEffect(() => {
     setProvedor(obterProvedorIA());
   }, []);
 
-  const atual = PMRV_AI_PROVIDERS.find((p) => p.id === provedor) || PMRV_AI_PROVIDERS[0];
+  useEffect(() => {
+    const salvo = obterModeloIA(provedor);
+    setModelo(salvo);
+    setModelos(PMRV_MODELOS_FALLBACK[provedor]);
 
-  function onChange(e) {
-    const valor = e.target.value;
-    setProvedor(valor);
-    definirProvedorIA(valor);
+    const ctrl = new AbortController();
+    fetch(`/api/ai/models?provider=${provedor}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((dados) => {
+        if (Array.isArray(dados?.models) && dados.models.length) setModelos(dados.models);
+      })
+      .catch(() => {
+        /* mantém o fallback */
+      });
+    return () => ctrl.abort();
+  }, [provedor]);
+
+  function onProvedor(e) {
+    setProvedor(definirProvedorIA(e.target.value));
   }
 
+  function onModelo(e) {
+    setModelo(e.target.value);
+    definirModeloIA(provedor, e.target.value);
+  }
+
+  // Garante que o modelo salvo apareça mesmo se saiu da lista atual.
+  const opcoes = modelos.some((m) => m.id === modelo) ? modelos : [{ id: modelo, label: modelo }, ...modelos];
+  const selectCls =
+    'cursor-pointer appearance-none bg-transparent font-mono font-semibold tracking-wide focus:outline-none [&>option]:text-charcoal';
+
   return (
-    <label
+    <div
       className={`inline-flex items-center gap-1 ${compact ? 'px-1.5 py-1 text-[10px]' : 'px-2 py-1.5 text-xs'}`}
-      title="Provedor do modelo de IA"
+      title="Provedor e modelo de IA"
     >
-      <span className="sr-only">Provedor do modelo de IA</span>
       <span aria-hidden="true">🤖</span>
-      <select
-        value={provedor}
-        onChange={onChange}
-        aria-label="Provedor do modelo de IA"
-        className="cursor-pointer appearance-none bg-transparent font-mono font-semibold uppercase tracking-wide focus:outline-none [&>option]:text-charcoal"
-      >
+      <select value={provedor} onChange={onProvedor} aria-label="Provedor do modelo de IA" className={`${selectCls} uppercase`}>
         {PMRV_AI_PROVIDERS.map((p) => (
           <option key={p.id} value={p.id}>
             {p.label}
           </option>
         ))}
       </select>
+      <span aria-hidden="true">/</span>
+      <select
+        value={modelo}
+        onChange={onModelo}
+        aria-label="Modelo de IA gratuito"
+        className={`${selectCls} max-w-[22vw] sm:max-w-[12rem] truncate`}
+      >
+        {opcoes.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.label}
+          </option>
+        ))}
+      </select>
       <span aria-hidden="true">▾</span>
-    </label>
+    </div>
   );
 }
