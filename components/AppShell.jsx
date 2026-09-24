@@ -154,7 +154,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
               >
                 <PaletteIcon className="w-3.5 h-3.5" /> Tema
               </button>
-              <AIProviderPicker compact />
+              <AIProviderPicker />
               {supportsInstall && !isInstalled && !isStandalone && (
                 <button
                   type="button"

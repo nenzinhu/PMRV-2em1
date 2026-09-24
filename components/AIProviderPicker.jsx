@@ -8,86 +8,94 @@ import {
   obterModeloIA,
   definirModeloIA,
 } from '@/lib/pmrv';
-import { PMRV_MODELOS_FALLBACK, PMRV_MODELO_PADRAO } from '@/lib/ai-models';
+import { PMRV_MODELOS_FALLBACK, PMRV_MODELO_PADRAO, PMRV_PROVEDOR_PADRAO } from '@/lib/ai-models';
 
-// Chip de header com dois selects: provedor de IA (todos com plano gratuito) e modelo
-// gratuito daquele provedor. A lista de modelos vem de /api/ai/models (ao vivo,
-// com fallback fixo). As escolhas persistem em localStorage.
-export default function AIProviderPicker({ compact = false }) {
-  const [provedor, setProvedor] = useState('groq');
-  const [modelo, setModelo] = useState(PMRV_MODELO_PADRAO.groq);
-  const [modelos, setModelos] = useState(PMRV_MODELOS_FALLBACK.groq);
+const SEP = '|';
+
+// Chip de header "🤖 Provedor · Modelo". Um <select> nativo invisível cobre o
+// chip: ao tocar, abre a lista de TODOS os modelos gratuitos agrupados por
+// provedor (optgroup). Listas ao vivo via /api/ai/models, com fallback fixo.
+// Provedor e modelo (por provedor) persistem em localStorage.
+export default function AIProviderPicker() {
+  const [provedor, setProvedor] = useState(PMRV_PROVEDOR_PADRAO);
+  const [modelo, setModelo] = useState(PMRV_MODELO_PADRAO[PMRV_PROVEDOR_PADRAO]);
+  const [listas, setListas] = useState(PMRV_MODELOS_FALLBACK);
   const [configurados, setConfigurados] = useState(null);
 
   useEffect(() => {
-    setProvedor(obterProvedorIA());
-    // Descobre quais provedores têm chave no servidor, para sinalizar os demais.
-    fetch('/api/ai/models')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((dados) => dados?.providers && setConfigurados(dados.providers))
-      .catch(() => {
-        /* sem sinalização */
-      });
-  }, []);
-
-  useEffect(() => {
-    const salvo = obterModeloIA(provedor);
-    setModelo(salvo);
-    setModelos(PMRV_MODELOS_FALLBACK[provedor]);
+    const atual = obterProvedorIA();
+    setProvedor(atual);
+    setModelo(obterModeloIA(atual));
 
     const ctrl = new AbortController();
-    fetch(`/api/ai/models?provider=${provedor}`, { signal: ctrl.signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((dados) => {
-        if (Array.isArray(dados?.models) && dados.models.length) setModelos(dados.models);
-      })
-      .catch(() => {
-        /* mantém o fallback */
+    const json = (url) =>
+      fetch(url, { signal: ctrl.signal })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+
+    json('/api/ai/models').then((d) => d?.providers && setConfigurados(d.providers));
+    PMRV_AI_PROVIDERS.forEach(({ id }) => {
+      json(`/api/ai/models?provider=${id}`).then((d) => {
+        if (Array.isArray(d?.models) && d.models.length) setListas((l) => ({ ...l, [id]: d.models }));
       });
+    });
     return () => ctrl.abort();
-  }, [provedor]);
+  }, []);
 
-  function onProvedor(e) {
-    setProvedor(definirProvedorIA(e.target.value));
-  }
-
-  function onModelo(e) {
-    setModelo(e.target.value);
-    definirModeloIA(provedor, e.target.value);
+  function onChange(e) {
+    const [prov, ...resto] = e.target.value.split(SEP);
+    const mod = resto.join(SEP);
+    setProvedor(definirProvedorIA(prov));
+    setModelo(mod);
+    definirModeloIA(prov, mod);
   }
 
   // Garante que o modelo salvo apareça mesmo se saiu da lista atual.
-  const opcoes = modelos.some((m) => m.id === modelo) ? modelos : [{ id: modelo, label: modelo }, ...modelos];
-  const selectCls =
-    'cursor-pointer appearance-none bg-transparent font-mono font-semibold tracking-wide focus:outline-none [&>option]:text-charcoal';
+  function modelosDe(id) {
+    const lista = listas[id] || [];
+    const salvo = id === provedor ? modelo : null;
+    return salvo && !lista.some((m) => m.id === salvo) ? [{ id: salvo, label: salvo }, ...lista] : lista;
+  }
+
+  const provAtual = PMRV_AI_PROVIDERS.find((p) => p.id === provedor) || PMRV_AI_PROVIDERS[0];
+  const modeloAtual = modelosDe(provedor).find((m) => m.id === modelo);
+  const semChave = configurados && !configurados[provedor];
 
   return (
-    <div
-      className={`inline-flex items-center gap-1 ${compact ? 'px-1.5 py-1 text-[10px]' : 'px-2 py-1.5 text-xs'}`}
-      title="Provedor e modelo de IA"
+    <label
+      className="header-chip relative max-w-[42vw] sm:max-w-[18rem] cursor-pointer focus-within:ring-2 focus-within:ring-white/80"
+      title={`IA: ${provAtual.label} · ${modeloAtual?.label || modelo}${semChave ? ' (sem chave no servidor)' : ''}`}
     >
       <span aria-hidden="true">🤖</span>
-      <select value={provedor} onChange={onProvedor} aria-label="Provedor do modelo de IA" className={`${selectCls} uppercase`}>
-        {PMRV_AI_PROVIDERS.map((p) => (
-          <option key={p.id} value={p.id} title={p.hint}>
-            {configurados && !configurados[p.id] ? `${p.label} (sem chave)` : p.label}
-          </option>
-        ))}
-      </select>
-      <span aria-hidden="true">/</span>
-      <select
-        value={modelo}
-        onChange={onModelo}
-        aria-label="Modelo de IA gratuito"
-        className={`${selectCls} max-w-[22vw] sm:max-w-[12rem] truncate`}
-      >
-        {opcoes.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.label}
-          </option>
-        ))}
-      </select>
+      <span className="truncate" aria-hidden="true">
+        <span className="hidden sm:inline">{provAtual.label} · </span>
+        <span className="normal-case">{modeloAtual?.label || modelo}</span>
+      </span>
+      {semChave && (
+        <span aria-hidden="true" title="Sem chave no servidor">
+          ⚠️
+        </span>
+      )}
       <span aria-hidden="true">▾</span>
-    </div>
+      <select
+        value={`${provedor}${SEP}${modelo}`}
+        onChange={onChange}
+        aria-label="Provedor e modelo de IA gratuito"
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+      >
+        {PMRV_AI_PROVIDERS.map((p) => (
+          <optgroup
+            key={p.id}
+            label={`${p.label}${configurados && !configurados[p.id] ? ' — sem chave' : ''} · ${p.hint}`}
+          >
+            {modelosDe(p.id).map((m) => (
+              <option key={m.id} value={`${p.id}${SEP}${m.id}`}>
+                {m.label}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </label>
   );
 }
