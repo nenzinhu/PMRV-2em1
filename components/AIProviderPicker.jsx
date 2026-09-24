@@ -9,6 +9,7 @@ import {
   definirModeloIA,
 } from '@/lib/pmrv';
 import { PMRV_MODELOS_FALLBACK, PMRV_MODELO_PADRAO, PMRV_PROVEDOR_PADRAO } from '@/lib/ai-models';
+import { showToast } from '@/components/Toast';
 
 const SEP = '|';
 
@@ -39,7 +40,16 @@ export default function AIProviderPicker() {
         if (Array.isArray(d?.models) && d.models.length) setListas((l) => ({ ...l, [id]: d.models }));
       });
     });
-    return () => ctrl.abort();
+    // Avisa quando o servidor precisou usar um provedor/modelo de reserva.
+    function onFallback(e) {
+      const p = PMRV_AI_PROVIDERS.find((x) => x.id === e.detail?.provider);
+      showToast(`IA indisponível — respondeu ${p?.label || e.detail?.provider} · ${e.detail?.model}`, 'warning', 3500);
+    }
+    window.addEventListener('pmrv-ai-fallback', onFallback);
+    return () => {
+      ctrl.abort();
+      window.removeEventListener('pmrv-ai-fallback', onFallback);
+    };
   }, []);
 
   function onChange(e) {
