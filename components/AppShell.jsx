@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import RelatoPolicial from '@/components/RelatoPolicial';
 import Envolvidos from '@/components/Envolvidos';
 import ResumoDinamica from '@/components/ResumoDinamica';
+import DinamicaPresumida from '@/components/DinamicaPresumida';
 import SalvarOcorrencia from '@/components/SalvarOcorrencia';
 import ThemeConfig from '@/components/theme/ThemeConfig';
 import MobileNav from '@/components/MobileNav';
@@ -186,6 +187,8 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
               <Envolvidos gpsInfo={gpsOn ? gpsInfo : null} />
             ) : aba === 'relato' ? (
               <RelatoPolicial gpsOn={gpsOn} gpsInfo={gpsOn ? gpsInfo : null} />
+            ) : aba === 'dinamica' ? (
+              <DinamicaPresumida />
             ) : aba === 'resumo' ? (
               <ResumoDinamica />
             ) : (

@@ -10,6 +10,7 @@ import {
 import { showToast } from '@/components/Toast';
 import { loadResumoState, persistResumoState } from '@/lib/resumo-relatos';
 import { buildResumoPrompt, estiloResumoValido, relatosParaBase } from '@/lib/resumo-prompt';
+import { aplicarAjusteFino, carregarAjusteFino } from '@/lib/ajuste-fino';
 
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
 
@@ -122,8 +123,14 @@ export default function ResumoDinamica() {
     setStatusIA(`Gerando resumo ${ESTILO_BOTOES.find((e) => e.id === modo)?.label || ''}...`);
 
     try {
-      const prompt = buildResumoPrompt(relatos, modo);
-      const res = await callGroq({ apiKey: GROQ_API_KEY, prompt, system: PMRV_AGENTE_PADRAO });
+      const ajuste = carregarAjusteFino();
+      const prompt = aplicarAjusteFino(buildResumoPrompt(relatos, modo), ajuste);
+      const res = await callGroq({
+        apiKey: GROQ_API_KEY,
+        prompt,
+        system: PMRV_AGENTE_PADRAO,
+        temperature: ajuste.temperatura,
+      });
 
       if (res.error === 'auth') {
         alert('Chave da API inválida ou sem permissão.\n\nVerifique a configuração do sistema.');

@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { showToast } from '@/components/Toast';
 import { Flip, gsap, prefersReducedMotion, registerGsap, useGSAP } from '@/lib/gsap-register';
-import { UsersIcon, ClipboardListIcon, FileReportIcon, SaveIcon } from '@/components/icons';
+import { UsersIcon, SparkIcon, ClipboardListIcon, FileReportIcon, SaveIcon } from '@/components/icons';
 
 registerGsap();
 
 const TABS = [
   { key: 'envolvidos', label: 'Envolvidos', desktopLabel: 'Envolvidos', Icon: UsersIcon },
+  { key: 'dinamica', label: 'Dinâmica', desktopLabel: 'Relato + Dinâmica', Icon: SparkIcon },
   { key: 'resumo', label: 'Resumo', desktopLabel: 'Resumo Dinâmico', Icon: ClipboardListIcon },
   { key: 'relato', label: 'Relato', desktopLabel: 'Relato Policial', Icon: FileReportIcon },
   { key: 'salvar', label: 'Salvar', desktopLabel: 'Salvar', Icon: SaveIcon },

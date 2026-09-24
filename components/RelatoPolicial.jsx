@@ -38,6 +38,8 @@ import {
 import { mapsUrl } from '@/lib/gps-label';
 import { useSwipe } from '@/hooks/useSwipe';
 import { showToast } from '@/components/Toast';
+import { ESTILOS_RELATO } from '@/lib/estilos-relato';
+import { aplicarAjusteFino, carregarAjusteFino } from '@/lib/ajuste-fino';
 
 const DANOS = 'Sinistro de trânsito com danos materiais';
 const VITIMA = 'Sinistro de trânsito com vítima(s)';
@@ -399,7 +401,13 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
     const apiKey = obterChaveIA();
     setIaLoading(estilo);
     try {
-      const res = await callGroq({ apiKey, prompt: buildIAPrompt(form, estilo), system: PMRV_AGENTE_PADRAO });
+      const ajuste = carregarAjusteFino();
+      const res = await callGroq({
+        apiKey,
+        prompt: aplicarAjusteFino(buildIAPrompt(form, estilo), ajuste),
+        system: PMRV_AGENTE_PADRAO,
+        temperature: ajuste.temperatura,
+      });
       if (res.error === 'auth') {
         if (window.confirm('Chave da API inválida ou sem permissão.\n\nDeseja informar outra chave agora?')) obterChaveIA(true);
       } else if (res.error === 'quota') {
@@ -1014,17 +1022,14 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
             </div>
             <div className="mb-2">
               <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-gold mb-1">Descrição IA</span>
-              <div className="flex gap-2">
-                {[
-                  { id: 'juridica', label: 'Jurídica' },
-                  { id: 'leiga', label: 'Leiga' },
-                  { id: 'tecnica', label: 'Técnica' },
-                ].map((estilo) => (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {ESTILOS_RELATO.map((estilo) => (
                   <button
                     key={estilo.id}
+                    type="button"
                     disabled={iaLoading !== null}
                     onClick={() => gerarDescricaoIA(estilo.id)}
-                    className="btn-outline flex-1 text-xs disabled:opacity-50"
+                    className="btn-outline text-xs disabled:opacity-50"
                   >
                     {iaLoading === estilo.id ? 'Gerando…' : estilo.label}
                   </button>
