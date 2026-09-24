@@ -188,7 +188,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
             ) : aba === 'relato' ? (
               <RelatoPolicial gpsOn={gpsOn} gpsInfo={gpsOn ? gpsInfo : null} />
             ) : aba === 'dinamica' ? (
-              <DinamicaPresumida />
+              <DinamicaPresumida gpsInfo={gpsOn ? gpsInfo : null} />
             ) : aba === 'resumo' ? (
               <ResumoDinamica />
             ) : (

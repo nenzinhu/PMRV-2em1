@@ -13,8 +13,9 @@ import { showToast } from '@/components/Toast';
 
 const SEP = '|';
 
-// Chip de header "🤖 Provedor · Modelo". Um <select> nativo invisível cobre o
-// chip: ao tocar, abre a lista de TODOS os modelos gratuitos agrupados por
+// Chip de header "🤖 Provedor · Modelo". Um <select> nativo transparente cobre o
+// chip (sem opacity:0, que em alguns navegadores deixa a lista transparente; as
+// opções têm cores próprias para não herdar o branco do header): ao tocar, abre a lista de TODOS os modelos gratuitos agrupados por
 // provedor (optgroup). Listas ao vivo via /api/ai/models, com fallback fixo.
 // Provedor e modelo (por provedor) persistem em localStorage.
 export default function AIProviderPicker() {
@@ -91,7 +92,7 @@ export default function AIProviderPicker() {
         value={`${provedor}${SEP}${modelo}`}
         onChange={onChange}
         aria-label="Provedor e modelo de IA gratuito"
-        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent text-transparent [&_optgroup]:bg-white [&_optgroup]:text-pmrv [&_option]:bg-white [&_option]:text-charcoal"
       >
         {PMRV_AI_PROVIDERS.map((p) => (
           <optgroup
