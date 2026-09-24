@@ -10,16 +10,24 @@ import {
 } from '@/lib/pmrv';
 import { PMRV_MODELOS_FALLBACK, PMRV_MODELO_PADRAO } from '@/lib/ai-models';
 
-// Chip de header com dois selects: provedor de IA (Groq | OpenRouter) e modelo
+// Chip de header com dois selects: provedor de IA (todos com plano gratuito) e modelo
 // gratuito daquele provedor. A lista de modelos vem de /api/ai/models (ao vivo,
 // com fallback fixo). As escolhas persistem em localStorage.
 export default function AIProviderPicker({ compact = false }) {
   const [provedor, setProvedor] = useState('groq');
   const [modelo, setModelo] = useState(PMRV_MODELO_PADRAO.groq);
   const [modelos, setModelos] = useState(PMRV_MODELOS_FALLBACK.groq);
+  const [configurados, setConfigurados] = useState(null);
 
   useEffect(() => {
     setProvedor(obterProvedorIA());
+    // Descobre quais provedores têm chave no servidor, para sinalizar os demais.
+    fetch('/api/ai/models')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((dados) => dados?.providers && setConfigurados(dados.providers))
+      .catch(() => {
+        /* sem sinalização */
+      });
   }, []);
 
   useEffect(() => {
@@ -61,8 +69,8 @@ export default function AIProviderPicker({ compact = false }) {
       <span aria-hidden="true">🤖</span>
       <select value={provedor} onChange={onProvedor} aria-label="Provedor do modelo de IA" className={`${selectCls} uppercase`}>
         {PMRV_AI_PROVIDERS.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.label}
+          <option key={p.id} value={p.id} title={p.hint}>
+            {configurados && !configurados[p.id] ? `${p.label} (sem chave)` : p.label}
           </option>
         ))}
       </select>

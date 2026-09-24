@@ -1,43 +1,33 @@
-import { PMRV_MODELOS_FALLBACK, filtrarModelosGratis } from '@/lib/ai-models';
+import { filtrarModelosGratis } from '@/lib/ai-models';
+import { provedoresConfigurados, resolverProvedor } from '@/lib/ai-server';
 
-// Lista os modelos GRATUITOS do provedor consultando a API dele no servidor
-// (as chaves ficam em process.env). Resultado em cache por 1h; em caso de falha
-// ou sem chave, devolve a lista fixa de fallback com `fallback: true`.
+// GET /api/ai/models                → { providers: { groq: true, ... } } (quais têm chave no servidor)
+// GET /api/ai/models?provider=<id>  → modelos GRATUITOS do provedor, consultados ao vivo
+// na API dele (cache de 1h). Em falha/sem chave devolve o fallback com `fallback: true`.
 export const runtime = 'nodejs';
-
-function requisicao(provider) {
-  if (provider === 'openrouter') {
-    // Endpoint público — não exige chave.
-    return { url: 'https://openrouter.ai/api/v1/models', headers: {} };
-  }
-  const chave = process.env.GROQ_API_KEY;
-  if (!chave) return null;
-  return {
-    url: 'https://api.groq.com/openai/v1/models',
-    headers: { Authorization: `Bearer ${chave}` },
-  };
-}
 
 export async function GET(req) {
   const param = new URL(req.url).searchParams.get('provider');
-  const provider = param === 'openrouter' ? 'openrouter' : 'groq';
-  const fallback = { provider, models: PMRV_MODELOS_FALLBACK[provider], fallback: true };
+  if (!param) return Response.json({ providers: provedoresConfigurados() });
 
-  const alvo = requisicao(provider);
-  if (!alvo) return Response.json(fallback);
+  const { provedor, chave, modelosUrl } = resolverProvedor(param);
+  const fallback = { provider: provedor.id, models: provedor.fallback, fallback: true };
+
+  const precisaChave = !provedor.modelos?.publico;
+  if (!modelosUrl || (precisaChave && !chave)) return Response.json(fallback);
 
   try {
-    const resp = await fetch(alvo.url, {
-      headers: alvo.headers,
+    const resp = await fetch(modelosUrl, {
+      headers: chave ? { Authorization: `Bearer ${chave}` } : {},
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(8000),
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const models = filtrarModelosGratis(provider, await resp.json());
+    const models = filtrarModelosGratis(provedor.id, await resp.json());
     if (!models.length) return Response.json(fallback);
-    return Response.json({ provider, models, fallback: false });
+    return Response.json({ provider: provedor.id, models, fallback: false });
   } catch (err) {
-    console.warn(`[api/ai/models] ${provider}: ${err.message}`);
+    console.warn(`[api/ai/models] ${provedor.id}: ${err.message}`);
     return Response.json(fallback);
   }
 }

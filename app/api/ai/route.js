@@ -1,37 +1,32 @@
-import { PMRV_MODELO_PADRAO, modeloValido } from '@/lib/ai-models';
+import { modeloValido } from '@/lib/ai-models';
+import { resolverProvedor } from '@/lib/ai-server';
 
-// Roda no servidor (Node) — as chaves ficam em process.env (GROQ_API_KEY e
-// OPENROUTER_API_KEY) e NUNCA vão ao navegador. Faz proxy streaming do
-// provedor escolhido (groq | openrouter) de volta ao cliente.
+// Roda no servidor (Node) — as chaves ficam em process.env (ver .env.example)
+// e NUNCA vão ao navegador. Faz proxy streaming do provedor escolhido (qualquer
+// um de PMRV_PROVEDORES_IA, todos compatíveis com OpenAI) de volta ao cliente.
 export const runtime = 'nodejs';
 
-const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-const OPENROUTER_ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions';
+function erroJson(error, status) {
+  return new Response(JSON.stringify({ error }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
 
 export async function POST(req) {
   let payload;
   try {
     payload = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: 'invalid' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return erroJson('invalid', 400);
   }
 
-  const provider = payload.provider === 'openrouter' ? 'openrouter' : 'groq';
-  const serverKey =
-    (provider === 'openrouter' ? process.env.OPENROUTER_API_KEY : process.env.GROQ_API_KEY) || '';
+  const { provedor, chave, chatUrl } = resolverProvedor(payload.provider);
 
   // Chave do servidor tem prioridade; o cliente pode enviar um override opcional
   // (botão 🔑), mas ela NÃO fica embutida no bundle.
-  const apiKey = serverKey || payload.apiKey || '';
-  if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'nokey' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  const apiKey = chave || payload.apiKey || '';
+  if (!apiKey || !chatUrl) return erroJson('nokey', 500);
 
   const { prompt, system = null, temperature = 1, maxTokens = 2048, model = null } = payload;
 
@@ -39,37 +34,22 @@ export async function POST(req) {
   if (system) mensagens.push({ role: 'system', content: system });
   mensagens.push({ role: 'user', content: prompt });
 
-  const resolvedModel = modeloValido(model) ? model : PMRV_MODELO_PADRAO[provider];
+  const resolvedModel = modeloValido(model) ? model : provedor.padrao;
 
-  let body;
-  if (provider === 'openrouter') {
-    body = {
-      model: resolvedModel,
-      messages: mensagens,
-      temperature,
-      max_tokens: maxTokens,
-      top_p: 1,
-      stream: true,
-    };
-  } else {
-    body = {
-      model: resolvedModel,
-      messages: mensagens,
-      temperature,
-      max_completion_tokens: maxTokens,
-      top_p: 1,
-      stream: true,
-      stop: null,
-    };
-    // Ferramentas só existem nos sistemas groq/compound*.
-    if (resolvedModel.startsWith('groq/compound')) {
-      body.compound_custom = { tools: { enabled_tools: ['web_search', 'code_interpreter', 'visit_website'] } };
-    }
+  const body = {
+    model: resolvedModel,
+    messages: mensagens,
+    temperature,
+    [provedor.tokensParam || 'max_tokens']: maxTokens,
+    top_p: 1,
+    stream: true,
+  };
+  // Ferramentas só existem nos sistemas groq/compound*.
+  if (provedor.id === 'groq' && resolvedModel.startsWith('groq/compound')) {
+    body.compound_custom = { tools: { enabled_tools: ['web_search', 'code_interpreter', 'visit_website'] } };
   }
 
-  const endpoint = provider === 'openrouter' ? OPENROUTER_ENDPOINT : GROQ_ENDPOINT;
-
-  const upstream = await fetch(endpoint, {
+  const upstream = await fetch(chatUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
