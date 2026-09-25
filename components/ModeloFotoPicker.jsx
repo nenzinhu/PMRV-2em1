@@ -11,10 +11,10 @@ const MODELO_KEY = 'PMRV_DANOS_MODELO';
 const SEP = '|';
 const valorDe = (m) => `${m.provedor}${SEP}${m.id}`;
 const AUTOMATICO = {
-  ...PMRV_MODELOS_VISAO[0],
+  ...(PMRV_MODELOS_VISAO.find((m) => m.id === 'mistral-small-latest') || PMRV_MODELOS_VISAO[0]),
   label: 'Automático',
   descricao:
-    'Começa pelo melhor modelo grátis com chave configurada e, se ele falhar ou estiver sem cota, passa sozinho para o próximo gratuito que lê fotos.',
+    'Começa pelo Mistral Small 4 e, se ele estiver sem chave, sem cota ou falhar, passa sozinho para o próximo modelo gratuito que lê fotos.',
   automatico: true,
 };
 const PROVEDORES_AO_VIVO = ['openrouter'];

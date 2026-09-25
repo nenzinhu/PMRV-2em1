@@ -74,7 +74,7 @@ export async function POST(req) {
     apiKeyCliente: typeof payload.apiKey === 'string' ? payload.apiKey : '',
     fallback: payload.fallback !== false,
   };
-  const tentativas = montarTentativas({ ...opcoes, visao: Boolean(imagens) });
+  const tentativas = montarTentativas({ ...opcoes, visao: Boolean(imagens), qtdImagens: imagens?.length || 0 });
   if (!tentativas.length) {
     // 422: há chave, mas nenhum provedor configurado tem modelo que lê imagem.
     const temChave = imagens && montarTentativas(opcoes).length > 0;

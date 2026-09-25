@@ -258,6 +258,11 @@ export default function DanosFotos() {
           }}
         />
 
+        {modeloFoto?.maxImagens < fotos.length && !modeloFoto.automatico && (
+          <p className="mb-2 text-[11px] font-mono text-brick" role="note">
+            ⚠️ {modeloFoto.label} lê no máximo {modeloFoto.maxImagens} fotos. Com {fotos.length}, será usado outro modelo gratuito.
+          </p>
+        )}
         {fotos.length === 0 ? (
           <div className="w-full h-32 border-2 border-dashed border-charcoal flex items-center justify-center text-[10px] font-mono text-charcoal/50 text-center px-4">
             Nenhuma foto ainda — use Câmera ou Galeria
