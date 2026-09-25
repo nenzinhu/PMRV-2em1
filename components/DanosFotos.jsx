@@ -16,6 +16,13 @@ import {
   serializeDanos,
 } from '@/lib/danos';
 import { salvarDanosNoResumo } from '@/lib/resumo-relatos';
+import { PMRV_MODELOS_VISAO } from '@/lib/ai-models';
+
+const MODELO_KEY = 'PMRV_DANOS_MODELO';
+const SEP = '|';
+const valorModelo = (m) => `${m.provedor}${SEP}${m.id}`;
+const AUTO_DESCRICAO =
+  'Usa a IA escolhida no topo. Se ela não lê imagens, troca sozinho por um modelo com visão (Groq, Mistral ou Z.ai), o primeiro que tiver chave.';
 
 const ERROS_IA = {
   nokey: 'Nenhuma chave de IA configurada no servidor.',
@@ -48,6 +55,8 @@ export default function DanosFotos() {
   const [analisando, setAnalisando] = useState(false);
   const [status, setStatus] = useState('');
   const [pronto, setPronto] = useState(false);
+  const [modeloFoto, setModeloFoto] = useState('');
+  const [configurados, setConfigurados] = useState(null);
   const galeriaRef = useRef(null);
   const cameraRef = useRef(null);
   const fotosRef = useRef(fotos);
@@ -60,6 +69,12 @@ export default function DanosFotos() {
     setEnvolvidoId(salvo.envolvidoId);
     setObservacao(salvo.observacao);
     setDescricao(salvo.descricao);
+    const modeloSalvo = localStorage.getItem(MODELO_KEY) || '';
+    if (PMRV_MODELOS_VISAO.some((m) => valorModelo(m) === modeloSalvo)) setModeloFoto(modeloSalvo);
+    fetch('/api/ai/models')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => !cancelado && d?.providers && setConfigurados(d.providers))
+      .catch(() => {});
     Promise.all(
       salvo.fotos.map(async (f) => {
         const blob = await lerFotoBlob(f.id).catch(() => null);
@@ -85,6 +100,18 @@ export default function DanosFotos() {
     localStorage.setItem(DANOS_STORAGE_KEY, serializeDanos({ fotos, envolvidoId, observacao, descricao }));
   }, [pronto, fotos, envolvidoId, observacao, descricao]);
 
+  function escolherModelo(valor) {
+    setModeloFoto(valor);
+    try {
+      if (valor) localStorage.setItem(MODELO_KEY, valor);
+      else localStorage.removeItem(MODELO_KEY);
+    } catch {
+      /* armazenamento indisponível: vale só nesta sessão */
+    }
+  }
+
+  const modeloEscolhido = PMRV_MODELOS_VISAO.find((m) => valorModelo(m) === modeloFoto) || null;
+  const semChave = (provedor) => configurados && !configurados[provedor];
   const envolvido = envolvidos.find((ev) => String(ev.id) === envolvidoId) || null;
   const veiculo = descreverVeiculo(envolvido);
   const vagas = DANOS_MAX_FOTOS - fotos.length;
@@ -149,6 +176,7 @@ export default function DanosFotos() {
         temperature: 0.3,
         maxTokens: 1024,
         images,
+        ...(modeloEscolhido ? { provider: modeloEscolhido.provedor, model: modeloEscolhido.id } : {}),
         onToken: (_, total) => setDescricao(total),
       });
       if (res.error) {
@@ -299,6 +327,48 @@ export default function DanosFotos() {
             placeholder="Ex.: impacto na dianteira; foto 3 é o lado do passageiro"
           />
         </div>
+      </section>
+
+      <section className="ds-card mt-4" aria-label="Modelo de IA para fotos">
+        <label htmlFor="danos-modelo" className="ds-label">Modelo de IA para fotos</label>
+        <select id="danos-modelo" value={modeloFoto} onChange={(e) => escolherModelo(e.target.value)} className="ds-input w-full">
+          <option value="">Automático (recomendado)</option>
+          {[...new Set(PMRV_MODELOS_VISAO.map((m) => m.provedor))].map((provedor) => {
+            const doProvedor = PMRV_MODELOS_VISAO.filter((m) => m.provedor === provedor);
+            return (
+              <optgroup key={provedor} label={`${doProvedor[0].provedorLabel}${semChave(provedor) ? ' — sem chave' : ''}`}>
+                {doProvedor.map((m) => (
+                  <option key={m.id} value={valorModelo(m)}>
+                    {m.label}
+                  </option>
+                ))}
+              </optgroup>
+            );
+          })}
+        </select>
+        <p className="mt-2 text-[12px] leading-relaxed text-charcoal/80 font-mono">
+          {modeloEscolhido ? modeloEscolhido.descricao : AUTO_DESCRICAO}
+          {modeloEscolhido && semChave(modeloEscolhido.provedor) && (
+            <span className="block mt-1 text-brick">
+              ⚠️ {modeloEscolhido.provedorLabel} sem chave no servidor: será usado outro modelo com visão.
+            </span>
+          )}
+        </p>
+        <details className="mt-2">
+          <summary className="cursor-pointer text-[11px] font-mono font-semibold uppercase tracking-wider text-pmrv">
+            Comparar os modelos
+          </summary>
+          <dl className="mt-2 space-y-2">
+            {PMRV_MODELOS_VISAO.map((m) => (
+              <div key={valorModelo(m)}>
+                <dt className="text-[12px] font-mono font-semibold">
+                  {m.label} <span className="font-normal text-charcoal/60">· {m.provedorLabel}{semChave(m.provedor) ? ' (sem chave)' : ''}</span>
+                </dt>
+                <dd className="text-[12px] leading-relaxed text-charcoal/80">{m.descricao}</dd>
+              </div>
+            ))}
+          </dl>
+        </details>
       </section>
 
       <button
