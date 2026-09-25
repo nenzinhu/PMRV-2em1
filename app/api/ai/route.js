@@ -7,18 +7,33 @@ import { conteudoUsuario, montarTentativas, validarImagens } from '@/lib/ai-serv
 export const runtime = 'nodejs';
 
 // Tempo máximo até o provedor começar a responder (o streaming não tem limite).
+// Com fotos o upload e a leitura demoram mais.
 const TIMEOUT_INICIO_MS = 25000;
+const TIMEOUT_INICIO_IMAGENS_MS = 60000;
 
-function erroJson(error, status) {
-  return new Response(JSON.stringify({ error }), {
+function erroJson(error, status, extra = {}) {
+  return new Response(JSON.stringify({ error, ...extra }), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
 }
 
-async function tentar({ provedor, modelo, apiKey, chatUrl }, mensagens, { temperature, maxTokens }) {
+// Motivo legível da falha do provedor (sem segredos: só a mensagem de erro dele).
+async function motivoDoErro(resp) {
+  const texto = await resp.text().catch(() => '');
+  let msg = texto;
+  try {
+    const obj = JSON.parse(texto);
+    msg = obj?.error?.message || obj?.message || obj?.detail || obj?.error || texto;
+  } catch {
+    /* corpo não é JSON: usa o texto */
+  }
+  return String(typeof msg === 'string' ? msg : JSON.stringify(msg)).replace(/\s+/g, ' ').trim().slice(0, 200);
+}
+
+async function tentar({ provedor, modelo, apiKey, chatUrl }, mensagens, { temperature, maxTokens, timeoutMs }) {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_INICIO_MS);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     return await fetch(chatUrl, {
       method: 'POST',
@@ -70,13 +85,18 @@ export async function POST(req) {
   if (system) mensagens.push({ role: 'system', content: system });
   mensagens.push({ role: 'user', content: conteudoUsuario(prompt, imagens) });
 
+  const timeoutMs = imagens ? TIMEOUT_INICIO_IMAGENS_MS : TIMEOUT_INICIO_MS;
+  const falhas = [];
   let ultimoStatus = 502;
   for (const t of tentativas) {
+    const falha = { provedor: t.provedor.label, modelo: t.modelo };
     let upstream;
     try {
-      upstream = await tentar(t, mensagens, { temperature, maxTokens });
+      upstream = await tentar(t, mensagens, { temperature, maxTokens, timeoutMs });
     } catch (err) {
-      console.warn(`[api/ai] ${t.provedor.id}/${t.modelo}: ${err.name === 'AbortError' ? 'timeout' : err.message}`);
+      const motivo = err.name === 'AbortError' ? `sem resposta em ${timeoutMs / 1000}s` : `falha de rede (${err.message})`;
+      console.warn(`[api/ai] ${t.provedor.id}/${t.modelo}: ${motivo}`);
+      falhas.push({ ...falha, status: 504, motivo });
       ultimoStatus = 504;
       continue;
     }
@@ -94,11 +114,12 @@ export async function POST(req) {
       });
     }
     ultimoStatus = upstream.status;
-    console.warn(`[api/ai] ${t.provedor.id}/${t.modelo}: HTTP ${upstream.status}`);
-    await upstream.body?.cancel().catch(() => {});
+    const motivo = await motivoDoErro(upstream);
+    console.warn(`[api/ai] ${t.provedor.id}/${t.modelo}: HTTP ${upstream.status} ${motivo}`);
+    falhas.push({ ...falha, status: upstream.status, motivo });
   }
 
-  // Todas falharam: devolve o status da última (401/403 → auth, 429 → cota...).
-  // 500 é reservado para "sem chave" no cliente, então vira 502.
-  return erroJson('upstream', ultimoStatus === 500 ? 502 : ultimoStatus);
+  // Todas falharam: devolve o status da última (401/403 → auth, 429 → cota...)
+  // e o motivo de cada tentativa. 500 é reservado para "sem chave" no cliente.
+  return erroJson('upstream', ultimoStatus === 500 ? 502 : ultimoStatus, { falhas });
 }

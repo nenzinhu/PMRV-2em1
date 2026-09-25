@@ -9,6 +9,7 @@ import {
   DANOS_STORAGE_KEY,
   DANOS_SYSTEM,
   buildDanosPrompt,
+  mensagemFalhaIA,
   comprimirParaIA,
   descreverVeiculo,
   parseDanos,
@@ -138,10 +139,14 @@ export default function DanosFotos() {
     setDescricao('');
     try {
       const images = await Promise.all(
-        fotos.map(async (f) => {
-          const blob = await lerFotoBlob(f.id);
-          if (!blob) throw new Error('Foto não encontrada no aparelho');
-          return comprimirParaIA(blob);
+        fotos.map(async (f, i) => {
+          const blob = await lerFotoBlob(f.id).catch(() => null);
+          if (!blob) throw new Error(`a foto ${i + 1} não está mais neste aparelho; remova e anexe de novo`);
+          try {
+            return await comprimirParaIA(blob);
+          } catch {
+            throw new Error(`a foto ${i + 1} não abriu (formato não suportado, ex.: HEIC); tire de novo pela Câmera`);
+          }
         })
       );
       setStatus('A IA está analisando as fotos…');
@@ -156,7 +161,7 @@ export default function DanosFotos() {
       });
       if (res.error) {
         setDescricao('');
-        setStatus(ERROS_IA[res.error] || 'Não foi possível analisar as fotos.');
+        setStatus(res.falhas?.length ? mensagemFalhaIA(res) : ERROS_IA[res.error] || mensagemFalhaIA(res));
         return;
       }
       if (respostaSemImagem(res.text)) {
@@ -168,7 +173,8 @@ export default function DanosFotos() {
       setStatus(`Descrição gerada por ${res.provider} · ${res.model}. Revise antes de usar.`);
     } catch (err) {
       console.error('Erro ao descrever danos:', err);
-      setStatus('Não foi possível analisar as fotos. Verifique a conexão e tente novamente.');
+      setDescricao('');
+      setStatus(mensagemFalhaIA(err));
     } finally {
       setAnalisando(false);
     }
@@ -322,7 +328,7 @@ export default function DanosFotos() {
           '🔍 Descrever danos com IA'
         )}
       </button>
-      <p className="mt-2 min-h-[1rem] text-[10px] font-mono text-pmrv text-center" role="status" aria-live="polite">
+      <p className={`mt-2 min-h-[1rem] text-[11px] leading-relaxed font-mono whitespace-pre-line ${status.includes('\n') ? 'text-left text-brick' : 'text-center text-pmrv'}`} role="status" aria-live="polite">
         {status}
       </p>
 
