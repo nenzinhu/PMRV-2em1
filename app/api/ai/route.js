@@ -1,4 +1,4 @@
-import { montarTentativas } from '@/lib/ai-server';
+import { conteudoUsuario, montarTentativas, validarImagens } from '@/lib/ai-server';
 
 // Roda no servidor (Node) — as chaves ficam em process.env (ver .env.example)
 // e NUNCA vão ao navegador. Faz proxy streaming do provedor escolhido; se ele
@@ -50,17 +50,25 @@ export async function POST(req) {
   }
 
   const { prompt, system = null, temperature = 1, maxTokens = 2048, model = null } = payload;
-  const tentativas = montarTentativas({
+  const imagens = validarImagens(payload.images);
+  if (imagens === false || typeof prompt !== 'string' || !prompt.trim()) return erroJson('invalid', 400);
+
+  const opcoes = {
     provider: payload.provider,
     model,
     apiKeyCliente: typeof payload.apiKey === 'string' ? payload.apiKey : '',
     fallback: payload.fallback !== false,
-  });
-  if (!tentativas.length) return erroJson('nokey', 500);
+  };
+  const tentativas = montarTentativas({ ...opcoes, visao: Boolean(imagens) });
+  if (!tentativas.length) {
+    // 422: há chave, mas nenhum provedor configurado tem modelo que lê imagem.
+    const temChave = imagens && montarTentativas(opcoes).length > 0;
+    return temChave ? erroJson('novisao', 422) : erroJson('nokey', 500);
+  }
 
   const mensagens = [];
   if (system) mensagens.push({ role: 'system', content: system });
-  mensagens.push({ role: 'user', content: prompt });
+  mensagens.push({ role: 'user', content: conteudoUsuario(prompt, imagens) });
 
   let ultimoStatus = 502;
   for (const t of tentativas) {

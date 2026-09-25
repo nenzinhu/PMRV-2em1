@@ -5,6 +5,7 @@ import RelatoPolicial from '@/components/RelatoPolicial';
 import Envolvidos from '@/components/Envolvidos';
 import ResumoDinamica from '@/components/ResumoDinamica';
 import DinamicaPresumida from '@/components/DinamicaPresumida';
+import DanosFotos from '@/components/DanosFotos';
 import SalvarOcorrencia from '@/components/SalvarOcorrencia';
 import ThemeConfig from '@/components/theme/ThemeConfig';
 import MobileNav from '@/components/MobileNav';
@@ -185,6 +186,8 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
           <PageStage aba={aba}>
             {aba === 'envolvidos' ? (
               <Envolvidos gpsInfo={gpsOn ? gpsInfo : null} />
+            ) : aba === 'danos' ? (
+              <DanosFotos />
             ) : aba === 'relato' ? (
               <RelatoPolicial gpsOn={gpsOn} gpsInfo={gpsOn ? gpsInfo : null} />
             ) : aba === 'dinamica' ? (

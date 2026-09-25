@@ -121,3 +121,12 @@ export function SparkIcon({ className = 'w-5 h-5' }) {
     </svg>
   );
 }
+
+export function CameraIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8a2 2 0 012-2h1.5l1.2-1.8A1 1 0 019.5 4h5a1 1 0 01.8.2L16.5 6H18a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V8z" />
+      <circle cx="12" cy="13" r="3.5" strokeWidth="2" />
+    </svg>
+  );
+}
