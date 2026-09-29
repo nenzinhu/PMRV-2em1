@@ -28,6 +28,10 @@ import {
   cleanIAResponse,
   extractJSON,
   PMRV_AGENTE_PADRAO,
+  PMRV_OCORRENCIA_DANOS,
+  PMRV_OCORRENCIA_VITIMA,
+  PMRV_OCORRENCIA_OUTRAS,
+  ehOcorrenciaNaoTransito,
 } from '@/lib/pmrv';
 import {
   RELATO_DRAFT_KEY,
@@ -41,8 +45,9 @@ import { showToast } from '@/components/Toast';
 import { ESTILOS_RELATO } from '@/lib/estilos-relato';
 import { aplicarAjusteFino, carregarAjusteFino } from '@/lib/ajuste-fino';
 
-const DANOS = 'Sinistro de trânsito com danos materiais';
-const VITIMA = 'Sinistro de trânsito com vítima(s)';
+const DANOS = PMRV_OCORRENCIA_DANOS;
+const VITIMA = PMRV_OCORRENCIA_VITIMA;
+const OUTRAS = PMRV_OCORRENCIA_OUTRAS;
 
 const CIDADES_407 = ['Biguaçu/SC', 'Antônio Carlos/SC'];
 const CIDADES_281 = ['São José/SC', 'São Pedro de Alcântara/SC'];
@@ -127,7 +132,7 @@ function addMinutosHora(hora, minutos) {
 function templateFor(form) {
   let texto = PMRV_DINAMICAS[form.subtipo] || '';
   if (form.subtipo === '4.9') texto = texto.replace('[OBJETO]', form.objeto || '[OBJETO]');
-  if (form.subtipo === '8.1') texto = texto.replace('[OUTROS]', form.outros || '[OUTROS]');
+  if (form.subtipo === '8.1' || form.subtipo === '9.7') texto = texto.replace('[OUTROS]', form.outros || '[OUTROS]');
   return texto;
 }
 
@@ -255,7 +260,9 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
 
   // --- Classificação / Subtipo acoplados ---
   // Atropelamentos (pedestre/ciclista 1.1 e animal 1.2) só fazem sentido com vítima(s).
+  // "Outras ocorrências" (9.x) não se misturam com os tipos de sinistro de trânsito.
   function subtipoDisponivel(cod) {
+    if ((form.ocorrencia === OUTRAS) !== ehOcorrenciaNaoTransito(cod)) return false;
     if ((cod === '1.1' || cod === '1.2') && form.ocorrencia === DANOS) return false;
     return true;
   }
@@ -271,12 +278,19 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
 
   function onOcorrenciaChange(value) {
     let subtipo = form.subtipo;
-    if (value === DANOS && (subtipo === '1.1' || subtipo === '1.2')) subtipo = '2.1';
-    setForm((f) => ({ ...f, ocorrencia: value, subtipo, dinamica: templateFor({ ...f, ocorrencia: value, subtipo }) }));
+    const outras = value === OUTRAS;
+    if (outras && !ehOcorrenciaNaoTransito(subtipo)) subtipo = '9.1';
+    else if (!outras && ehOcorrenciaNaoTransito(subtipo)) subtipo = '2.1';
+    else if (value === DANOS && (subtipo === '1.1' || subtipo === '1.2')) subtipo = '2.1';
+    // Texto de documentação veicular não se aplica a ocorrências fora do trânsito.
+    const irregularidade = outras ? 'ocultar' : form.ocorrencia === OUTRAS ? 'nenhuma' : form.irregularidade;
+    setForm((f) => ({ ...f, ocorrencia: value, subtipo, irregularidade, dinamica: templateFor({ ...f, ocorrencia: value, subtipo }) }));
   }
 
   function onSubtipoChange(value) {
-    if (value === '1.1' || value === '1.2') {
+    if (ehOcorrenciaNaoTransito(value)) {
+      setForm((f) => ({ ...f, subtipo: value, ocorrencia: OUTRAS, dinamica: templateFor({ ...f, subtipo: value }) }));
+    } else if (value === '1.1' || value === '1.2') {
       setForm((f) => ({ ...f, subtipo: value, ocorrencia: VITIMA, dinamica: templateFor({ ...f, subtipo: value, ocorrencia: VITIMA }) }));
     } else {
       setForm((f) => ({ ...f, subtipo: value, dinamica: templateFor({ ...f, subtipo: value }) }));
@@ -514,7 +528,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
       '',
       'Natureza e Dinâmica',
       `Natureza: ${form.ocorrencia || '---'}`,
-      `Dinâmica do Sinistro: ${subtipoLabel(form)}`,
+      `${ehOcorrenciaNaoTransito(form.subtipo) ? 'Ocorrência' : 'Dinâmica do Sinistro'}: ${subtipoLabel(form)}`,
     ].join('\n');
   }
 
@@ -961,11 +975,12 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
             >
               <option value={DANOS}>APENAS DANOS MATERIAIS</option>
               <option value={VITIMA}>COM VÍTIMA(S)</option>
+              <option value={OUTRAS}>OUTRAS OCORRÊNCIAS (NÃO TRÂNSITO)</option>
             </select>
           </div>
 
           <div>
-            <label className="ds-label">Dinâmica do Sinistro</label>
+            <label className="ds-label">{form.ocorrencia === OUTRAS ? 'Natureza da Ocorrência' : 'Dinâmica do Sinistro'}</label>
             <select value={form.subtipo} onChange={(e) => onSubtipoChange(e.target.value)} className="ds-input">
               {Object.entries(grupoSubtipos).map(([grupo, opts]) => (
                 <optgroup key={grupo} label={grupo}>
@@ -985,7 +1000,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               <input value={form.objeto} placeholder="Ex: árvore, poste..." onChange={(e) => onObjetoChange(e.target.value)} className="ds-input bg-bone border-gold" />
             </div>
           )}
-          {form.subtipo === '8.1' && (
+          {(form.subtipo === '8.1' || form.subtipo === '9.7') && (
             <div>
               <label className="ds-label">Especifique</label>
               <input value={form.outros} placeholder="Natureza da ocorrência..." onChange={(e) => onOutrosChange(e.target.value)} className="ds-input bg-bone border-gold" />
