@@ -43,7 +43,8 @@ import { mapsUrl } from '@/lib/gps-label';
 import { useSwipe } from '@/hooks/useSwipe';
 import { showToast } from '@/components/Toast';
 import { ESTILOS_RELATO } from '@/lib/estilos-relato';
-import { aplicarAjusteFino, carregarAjusteFino } from '@/lib/ajuste-fino';
+import { aplicarAjusteFino, carregarAjusteFino, salvarModeloDaOcorrencia } from '@/lib/ajuste-fino';
+import AjusteFino from '@/components/AjusteFino';
 
 const DANOS = PMRV_OCORRENCIA_DANOS;
 const VITIMA = PMRV_OCORRENCIA_VITIMA;
@@ -418,7 +419,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
       const ajuste = carregarAjusteFino();
       const res = await callGroq({
         apiKey,
-        prompt: aplicarAjusteFino(buildIAPrompt(form, estilo), ajuste),
+        prompt: aplicarAjusteFino(buildIAPrompt(form, estilo), ajuste, form.subtipo),
         system: PMRV_AGENTE_PADRAO,
         temperature: ajuste.temperatura,
       });
@@ -435,6 +436,11 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
     } finally {
       setIaLoading(null);
     }
+  }
+
+  function salvarComoModelo() {
+    salvarModeloDaOcorrencia(form.subtipo, form.dinamica.trim());
+    showToast(`Modelo salvo para “${subtipoLabel(form)}”`, 'success', 2000);
   }
 
   async function revisarOrtografia() {
@@ -1058,7 +1064,17 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               onChange={(e) => set({ dinamica: capitalizarFrase(e.target.value) })}
               className="w-full p-3 bg-white border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition leading-relaxed"
             />
+            <button
+              type="button"
+              onClick={salvarComoModelo}
+              disabled={!form.dinamica.trim() || form.dinamica.includes('@@')}
+              className="btn-outline w-full text-xs mt-2 disabled:opacity-50"
+              title="A IA passa a imitar este texto ao gerar este tipo de ocorrência"
+            >
+              ⭐ Usar este texto como modelo de “{subtipoLabel(form)}”
+            </button>
           </div>
+          <AjusteFino codigoInicial={form.subtipo} />
           <div className="flex gap-3 pt-4">
             <button onClick={prevStep} className="btn-outline flex-1">Voltar</button>
             <button onClick={nextStep} className="btn-ios flex-[2]">Próximo</button>

@@ -1,24 +1,55 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { AJUSTE_FINO_PADRAO, TAMANHOS, carregarAjusteFino, salvarAjusteFino } from '@/lib/ajuste-fino';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  AJUSTE_FINO_EVENTO,
+  AJUSTE_FINO_PADRAO,
+  TAMANHOS,
+  ajusteDaOcorrencia,
+  carregarAjusteFino,
+  salvarAjusteFino,
+} from '@/lib/ajuste-fino';
+import { PMRV_SUBTIPOS } from '@/lib/pmrv';
 
 // Painel recolhível de "ajuste fino" da geração de relatos. As preferências
-// valem para todas as gerações por IA (Dinâmica, Resumo e Relato Policial).
-export default function AjusteFino() {
+// gerais valem para todas as gerações por IA (Dinâmica, Resumo e Relato
+// Policial); as "por tipo de ocorrência" somam-se a elas no Relato Policial.
+export default function AjusteFino({ codigoInicial = '' }) {
   const [ajuste, setAjuste] = useState(AJUSTE_FINO_PADRAO);
+  const [codigo, setCodigo] = useState(codigoInicial || PMRV_SUBTIPOS[0].code);
 
   useEffect(() => {
-    setAjuste(carregarAjusteFino());
+    const recarregar = () => setAjuste(carregarAjusteFino());
+    recarregar();
+    window.addEventListener(AJUSTE_FINO_EVENTO, recarregar);
+    return () => window.removeEventListener(AJUSTE_FINO_EVENTO, recarregar);
   }, []);
+
+  // Acompanha o tipo escolhido no Relato Policial.
+  useEffect(() => {
+    if (codigoInicial) setCodigo(codigoInicial);
+  }, [codigoInicial]);
 
   function alterar(patch) {
     setAjuste(salvarAjusteFino({ ...ajuste, ...patch }));
   }
 
+  function alterarTipo(patch) {
+    const atual = ajusteDaOcorrencia(ajuste, codigo);
+    alterar({ porOcorrencia: { ...ajuste.porOcorrencia, [codigo]: { ...atual, ...patch } } });
+  }
+
+  const grupos = useMemo(() => {
+    const g = {};
+    PMRV_SUBTIPOS.forEach((s) => (g[s.group] ||= []).push(s));
+    return g;
+  }, []);
+
+  const tipo = ajusteDaOcorrencia(ajuste, codigo);
+  const qtdTipos = Object.keys(ajuste.porOcorrencia).length;
   const personalizado =
     ajuste.instrucoes.trim() || ajuste.exemplo.trim() || ajuste.tamanho !== AJUSTE_FINO_PADRAO.tamanho ||
-    ajuste.temperatura !== AJUSTE_FINO_PADRAO.temperatura;
+    ajuste.temperatura !== AJUSTE_FINO_PADRAO.temperatura || qtdTipos > 0;
 
   return (
     <details className="ds-card group">
@@ -99,8 +130,65 @@ export default function AjusteFino() {
         />
       </div>
 
+      <fieldset className="border-t-2 border-charcoal/20 pt-3 space-y-3">
+        <legend className="ds-label">
+          Por tipo de ocorrência{' '}
+          {qtdTipos > 0 && <span className="normal-case font-normal text-gold">({qtdTipos} ajustado{qtdTipos > 1 ? 's' : ''})</span>}
+        </legend>
+        <p className="text-[12px] leading-relaxed text-charcoal/75 font-mono">
+          Instruções e relato-modelo próprios de cada natureza (ex.: suicídio, colisão traseira). Somam-se ao ajuste
+          geral; o modelo do tipo substitui o geral.
+        </p>
+        <div>
+          <label htmlFor="af-tipo" className="ds-label">Tipo</label>
+          <select id="af-tipo" value={codigo} onChange={(e) => setCodigo(e.target.value)} className="ds-input text-sm">
+            {Object.entries(grupos).map(([grupo, opts]) => (
+              <optgroup key={grupo} label={grupo}>
+                {opts.map((s) => (
+                  <option key={s.code} value={s.code}>
+                    {ajuste.porOcorrencia[s.code] ? '● ' : ''}
+                    {s.code} {s.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="af-tipo-instrucoes" className="ds-label">Instruções deste tipo</label>
+          <textarea
+            id="af-tipo-instrucoes"
+            rows={3}
+            value={tipo.instrucoes}
+            onChange={(e) => alterarTipo({ instrucoes: e.target.value })}
+            placeholder="Ex.: Citar o isolamento do local e o acionamento do IGP. Não descrever o meio empregado em detalhes."
+            className="ds-input text-sm"
+          />
+        </div>
+        <div>
+          <label htmlFor="af-tipo-exemplo" className="ds-label">Relato-modelo deste tipo</label>
+          <textarea
+            id="af-tipo-exemplo"
+            rows={4}
+            value={tipo.exemplo}
+            onChange={(e) => alterarTipo({ exemplo: e.target.value })}
+            placeholder="Cole um relato bem escrito desta natureza. No Relato Policial, o botão ⭐ salva o texto atual aqui."
+            className="ds-input text-sm"
+          />
+        </div>
+        {(tipo.instrucoes.trim() || tipo.exemplo.trim()) && (
+          <button type="button" onClick={() => alterarTipo({ instrucoes: '', exemplo: '' })} className="btn-outline text-xs w-full">
+            Limpar ajuste deste tipo
+          </button>
+        )}
+      </fieldset>
+
       {personalizado && (
-        <button type="button" onClick={() => setAjuste(salvarAjusteFino(AJUSTE_FINO_PADRAO))} className="btn-outline text-xs w-full">
+        <button
+          type="button"
+          onClick={() => window.confirm('Restaurar o padrão? Apaga também os ajustes de todos os tipos de ocorrência.') && setAjuste(salvarAjusteFino(AJUSTE_FINO_PADRAO))}
+          className="btn-outline text-xs w-full"
+        >
           Restaurar padrão
         </button>
       )}
