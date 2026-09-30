@@ -6,7 +6,9 @@ export default defineConfig({
     alias: { '@': fileURLToPath(new URL('./', import.meta.url)) },
   },
   test: {
-    environment: 'node',
-    include: ['lib/**/*.test.js'],
+    // jsdom para os testes de componente; as libs puras rodam igual em node.
+    environment: 'jsdom',
+    setupFiles: ['./components/test-setup.js'],
+    include: ['lib/**/*.test.js', 'components/**/*.test.jsx'],
   },
 });

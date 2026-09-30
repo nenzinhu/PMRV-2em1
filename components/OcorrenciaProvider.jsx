@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { migrarLegado, normalizarOcorrencia, novaOcorrencia, OCORRENCIA_VERSION } from '@/lib/ocorrencia';
-import { gravarOcorrenciaIDB, lerOcorrenciaIDB, OCORRENCIA_ID } from '@/lib/idb';
+import { gravarOcorrenciaIDB, lerOcorrenciaIDB, arquivarOcorrenciaIDB, OCORRENCIA_ID } from '@/lib/idb';
 import { parseRelatoDraft } from '@/lib/relato-draft';
 import { parseDanos } from '@/lib/danos';
 
@@ -68,14 +68,31 @@ export function OcorrenciaProvider({ children }) {
     return () => clearTimeout(saveTimer.current);
   }, [doc]);
 
+  // "Nova ocorrência": arquiva a atual no histórico (IndexedDB) e cria outra.
+  // O arquivamento é best-effort: se falhar, a ocorrência nova abre do mesmo jeito.
   const novaOcorrenciaAtual = useCallback(() => {
-    const proxima = normalizarOcorrencia(novaOcorrencia());
-    proxima.version = OCORRENCIA_VERSION;
-    setDoc(proxima);
-    return proxima;
+    setDoc((atual) => {
+      if (atual) {
+        arquivarOcorrenciaIDB(typeof indexedDB !== 'undefined' ? indexedDB : null, atual).catch(() => {});
+      }
+      const proxima = normalizarOcorrencia(novaOcorrencia());
+      proxima.version = OCORRENCIA_VERSION;
+      return proxima;
+    });
   }, []);
 
-  return <OcorrenciaContext.Provider value={{ doc, pronto: Boolean(doc), atualizar, novaOcorrencia: novaOcorrenciaAtual }}>{children}</OcorrenciaContext.Provider>;
+  // Restauração do histórico: arquiva a atual (nada se perde) e troca pelo alvo.
+  const restaurarOcorrencia = useCallback((alvo) => {
+    if (!alvo) return;
+    setDoc((atual) => {
+      if (atual) {
+        arquivarOcorrenciaIDB(typeof indexedDB !== 'undefined' ? indexedDB : null, atual).catch(() => {});
+      }
+      return normalizarOcorrencia(alvo);
+    });
+  }, []);
+
+  return <OcorrenciaContext.Provider value={{ doc, pronto: Boolean(doc), atualizar, novaOcorrencia: novaOcorrenciaAtual, restaurarOcorrencia }}>{children}</OcorrenciaContext.Provider>;
 }
 
 export function useOcorrencia() {

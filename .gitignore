@@ -27,4 +27,7 @@ Thumbs.db
 .cursor/
 
 .vercel
+
+# auditorias locais (orquestrador de agentes)
+.analise-4-agentes/
 .freebuff/

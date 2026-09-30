@@ -10,7 +10,7 @@ Sistema PWA de campo para a Polícia Militar Rodoviária de Santa Catarina (1º 
 - Consulta de placa: wdapi2 via `/api/placa`
 - Malha viária: GeoJSON de rodovias de SC (`public/rodovias-sc.geojson`)
 - Persistência: IndexedDB + `localStorage` no dispositivo (sem backend de dados)
-- Qualidade: ESLint no build + Vitest (129 testes em `lib/*.test.js`); sem TypeScript
+- Qualidade: ESLint no build + Vitest (139 testes: libs em `lib/*.test.js` + componentes em `components/*.test.jsx`, jsdom); sem TypeScript
 
 ## Estrutura
 
@@ -31,8 +31,10 @@ components/
   SalvarOcorrencia.jsx      DOSSIÊ (relatório+envolvidos+resumo+danos) + backup JSON
   MentionInput.jsx          @menções (nome, placa, GPS)
 lib/
-  ocorrencia.js             modelo do documento único + migração + dossiê
-  idb.js                    IndexedDB do documento (registro "atual")
+  ocorrencia.js             modelo do documento único + migração + dossiê + hash
+  idb.js                    IndexedDB do documento ("atual") + histórico
+  unidade.js                perfil BPMRv/CIA/Posto configurável (não código)
+  versao.js                 versão do app + rodapé do dossiê
   municipios.js             SC síncrono + UFs sob demanda (cache)
   municipios-sc.js          gerado (scripts/gen-municipios.mjs — API IBGE)
   gps.js                    UTM 22S + match de rodovia com ÍNDICE ESPACIAL
@@ -74,8 +76,10 @@ documento inteiro; `LimparDados` apaga os dois bancos. Rascunhos legados
 - GeoJSON da malha pré-cacheado no service worker — match de rodovia funciona OFFLINE
 - Instalar na tela inicial, fullscreen, tema customizável
 - Swipe entre abas no celular; Viatura lembrada no dispositivo
-- "Nova ocorrência" troca o documento inteiro — nada fica pela metade
+- "Nova ocorrência" arquiva no HISTÓRICO (aba Salvar): restaurar/excluir — nada se perde
 - Dossiê em um só texto (relatório + envolvidos + resumo + danos) + backup JSON
+- Unidade (BPMRv/CIA/Posto) configurável no aparelho — qualquer posto usa o app
+- Backup com hash SHA-256 exibido + rodapé de versão do app/modelo no dossiê
 
 ## Fluxo típico
 
@@ -136,9 +140,9 @@ BLOCO — NOVAS FEATURES (backlog de produto)
    backup JSON na aba Salvar; "Nova" troca o documento inteiro.
    (Arquivar histórico de rascunhos antigos segue no item 2.)
 
-2. Histórico de ocorrências
-   Lista local por data, SADE, rodovia/KM. Abrir, duplicar, exportar ou
-   excluir. Busca por placa, nome ou protocolo.
+2. ✅ PARCIAL — Histórico de ocorrências
+   Arquivamento automático no "Nova" + lista (restaurar/excluir) na aba
+   Salvar. Falta busca por placa/nome, duplicar e exportar direto do histórico.
 
 3. Pacote único de envio
    Um botão “Enviar ocorrência”: relatório + envolvidos + resumo + fotos
@@ -149,9 +153,9 @@ BLOCO — NOVAS FEATURES (backlog de produto)
    Relatório ofício com brasão, campos em negrito e fotos dos veículos
    para protocolar ou anexar no SADE/PMSC sem depender de copiar texto.
 
-5. Data, hora e unidade configuráveis
-   Data/hora do fato (não do clique em “gerar”). Posto, CIA, BPMRv e
-   prefixo da viatura no tema/config — o app deixa de ser só Posto 19.
+5. ✅ IMPLEMENTADO — Data, hora e unidade configuráveis
+   Data/hora do fato persistidas no documento; BPMRv/CIA/Posto editáveis no
+   aparelho (PMRV_UNIDADE), com default do Posto 19.
 
 6. Mapa no local
    Mostrar posição no trecho da rodovia, KM interpolado, precisão do GPS

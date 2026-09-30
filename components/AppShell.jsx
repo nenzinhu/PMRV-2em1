@@ -10,7 +10,7 @@ import SalvarOcorrencia from '@/components/SalvarOcorrencia';
 import ThemeConfig from '@/components/theme/ThemeConfig';
 import MobileNav from '@/components/MobileNav';
 import AIProviderPicker from '@/components/AIProviderPicker';
-import Toast from '@/components/Toast';
+import Toast, { showToast } from '@/components/Toast';
 import AmbientField from '@/components/motion/AmbientField';
 import BrandLockup from '@/components/motion/BrandLockup';
 import PageStage from '@/components/motion/PageStage';
@@ -30,7 +30,7 @@ function NovaOcorrenciaButton() {
       onClick={() => {
         if (
           window.confirm(
-            'Começar uma NOVA ocorrência?\n\nO relatório, envolvidos, danos, resumo e fotos atuais serão descartados deste aparelho.'
+            'Começar uma NOVA ocorrência?\n\nA ocorrência atual será arquivada no histórico deste aparelho (aba Salvar → Histórico).'
           )
         ) {
           novaOcorrencia();
