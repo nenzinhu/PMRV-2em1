@@ -29,12 +29,24 @@ const ERROS_IA = {
 };
 
 function carregarEnvolvidos() {
+  const fontes = [];
+  try {
+    const raw = localStorage.getItem('PMRV_OCORRENCIA');
+    if (raw) fontes.push(JSON.parse(raw));
+  } catch {
+    /* cópia inválida */
+  }
   try {
     const obj = JSON.parse(localStorage.getItem('PMRV_ENVOLVIDOS') || '{}');
-    return (Array.isArray(obj.lista) ? obj.lista : []).filter((ev) => descreverVeiculo(ev));
+    if (obj) fontes.push({ envolvidos: Array.isArray(obj.lista) ? obj.lista : [] });
   } catch {
-    return [];
+    /* legado inválido */
   }
+  for (const fonte of fontes) {
+    const lista = Array.isArray(fonte?.envolvidos) ? fonte.envolvidos : [];
+    if (lista.length) return lista.filter((ev) => descreverVeiculo(ev));
+  }
+  return [];
 }
 
 function soltarUrl(src) {
@@ -54,11 +66,21 @@ export default function DanosFotos() {
   const galeriaRef = useRef(null);
   const cameraRef = useRef(null);
   const fotosRef = useRef(fotos);
-  fotosRef.current = fotos;
+  useEffect(() => {
+    fotosRef.current = fotos;
+  }, [fotos]);
 
   useEffect(() => {
     let cancelado = false;
-    const salvo = parseDanos(localStorage.getItem(DANOS_STORAGE_KEY));
+    // Documento único primeiro; legado só durante a transição.
+    let rawDanos = null;
+    try {
+      const rawDoc = localStorage.getItem('PMRV_OCORRENCIA');
+      rawDanos = rawDoc ? JSON.stringify(JSON.parse(rawDoc)?.danos || null) : null;
+    } catch {
+      rawDanos = null;
+    }
+    const salvo = parseDanos(rawDanos && rawDanos !== 'null' ? rawDanos : localStorage.getItem(DANOS_STORAGE_KEY));
     setEnvolvidos(carregarEnvolvidos());
     setEnvolvidoId(salvo.envolvidoId);
     setObservacao(salvo.observacao);
@@ -85,7 +107,20 @@ export default function DanosFotos() {
 
   useEffect(() => {
     if (!pronto) return;
-    localStorage.setItem(DANOS_STORAGE_KEY, serializeDanos({ fotos, envolvidoId, observacao, descricao }));
+    const payload = serializeDanos({ fotos, envolvidoId, observacao, descricao });
+    localStorage.setItem(DANOS_STORAGE_KEY, payload);
+    // Reflete no documento único (o provider persiste em IDB).
+    try {
+      const rawDoc = localStorage.getItem('PMRV_OCORRENCIA');
+      const doc = rawDoc ? JSON.parse(rawDoc) : null;
+      if (doc) {
+        const proximo = { ...doc, danos: { ...doc.danos, fotos, envolvidoId, observacao, descricao } };
+        localStorage.setItem('PMRV_OCORRENCIA', JSON.stringify(proximo));
+        window.dispatchEvent(new CustomEvent('pmrv-ocorrencia-changed'));
+      }
+    } catch {
+      /* documento ainda não carregado */
+    }
   }, [pronto, fotos, envolvidoId, observacao, descricao]);
 
   const envolvido = envolvidos.find((ev) => String(ev.id) === envolvidoId) || null;

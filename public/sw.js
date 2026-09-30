@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pmrv-sc-relatos-v5';
+const CACHE_NAME = 'pmrv-sc-relatos-v6';
 const ASSETS = [
   '/',
   '/manifest.json',
@@ -7,6 +7,8 @@ const ASSETS = [
   '/apple-touch-icon.png',
   '/favicon-32.png',
   '/logo-pmrv-sc.png',
+  // Malha viária pré-cacheada: o match de rodovia/KM precisa funcionar offline.
+  '/rodovias-sc.geojson',
 ];
 
 function shouldCache(request, res) {

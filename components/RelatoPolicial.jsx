@@ -29,14 +29,10 @@ import {
   extractJSON,
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
-import {
-  RELATO_DRAFT_KEY,
-  parseRelatoDraft,
-  serializeRelatoDraft,
-  mergeRelatoDraft,
-} from '@/lib/relato-draft';
+import { mergeRelatoDraft } from '@/lib/relato-draft';
 import { mapsUrl } from '@/lib/gps-label';
 import { useSwipe } from '@/hooks/useSwipe';
+import { useOcorrencia } from '@/components/OcorrenciaProvider';
 import { showToast } from '@/components/Toast';
 import { ESTILOS_RELATO } from '@/lib/estilos-relato';
 import { aplicarAjusteFino, carregarAjusteFino } from '@/lib/ajuste-fino';
@@ -82,17 +78,26 @@ const INITIAL = {
   vitimaEnvolvido: '',
 };
 
-const ENVOLVIDOS_STORAGE_KEY = 'PMRV_ENVOLVIDOS';
-
 function lerEnvolvidosSalvos() {
   if (typeof window === 'undefined') return [];
+  const fontes = [];
   try {
-    const raw = JSON.parse(localStorage.getItem(ENVOLVIDOS_STORAGE_KEY) || 'null');
-    const lista = Array.isArray(raw?.lista) ? raw.lista : [];
-    return lista.filter((e) => e && e.nome && e.nome.trim());
+    const raw = localStorage.getItem('PMRV_OCORRENCIA');
+    if (raw) fontes.push(JSON.parse(raw));
   } catch {
-    return [];
+    /* cópia inválida */
   }
+  try {
+    const raw = JSON.parse(localStorage.getItem('PMRV_ENVOLVIDOS') || 'null');
+    if (raw) fontes.push({ envolvidos: Array.isArray(raw?.lista) ? raw.lista : [] });
+  } catch {
+    /* legado inválido */
+  }
+  for (const fonte of fontes) {
+    const lista = Array.isArray(fonte?.envolvidos) ? fonte.envolvidos : [];
+    if (lista.length) return lista.filter((e) => e && e.nome && e.nome.trim());
+  }
+  return [];
 }
 
 function startRecognition(onResult) {
@@ -160,9 +165,13 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
     return generateReport(form, true);
   }, [form, manualEdit, manualText]);
 
-  // Rascunho do relato: restaura fatos gravados. Sem rascunho, congela data/hora atuais uma vez (não no gerar).
+  // Documento único: restaura os fatos gravados quando o documento carrega/troca.
+  // Sem documento (ocorrência nova), congela data/hora atuais uma vez (não no gerar).
+  const { doc, pronto: docPronto, atualizar: atualizarDoc, novaOcorrencia } = useOcorrencia();
+  const relatoDoc = doc?.relato;
   useEffect(() => {
-    const parsed = parseRelatoDraft(localStorage.getItem(RELATO_DRAFT_KEY));
+    if (!docPronto || !relatoDoc) return;
+    const parsed = relatoDoc.form && Object.keys(relatoDoc.form).length ? relatoDoc : null;
     if (parsed) {
       const merged = mergeRelatoDraft(parsed, INITIAL);
       if (merged.form.rodovia) {
@@ -178,16 +187,20 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
       setForm((f) => ({ ...f, vtr: savedVtr || f.vtr, ...stamp }));
     }
     setDraftReady(true);
-  }, []);
+    // relatoDoc.form é objeto novo a cada update do documento; sem incluí-lo,
+    // o efeito dispararia em cada tecla. Roda só quando o documento troca de identidade.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docPronto, doc?.id]);
 
+  // Estado local → documento único (o provider persiste em IDB + localStorage).
   useEffect(() => {
-    if (!draftReady) return;
-    localStorage.setItem(
-      RELATO_DRAFT_KEY,
-      serializeRelatoDraft({ form, step, manualEdit, manualText })
-    );
+    if (!draftReady || !docPronto) return;
+    atualizarDoc((prev) => ({
+      ...prev,
+      relato: { form, step, manualEdit, manualText },
+    }));
     if (form.vtr) localStorage.setItem('PMRV_VTR', form.vtr);
-  }, [draftReady, form, step, manualEdit, manualText]);
+  }, [draftReady, docPronto, form, step, manualEdit, manualText, atualizarDoc]);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
@@ -542,6 +555,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
   function limpar() {
     if (window.confirm('Deseja iniciar uma nova ocorrência? Todos os dados serão perdidos.')) {
       const savedVtr = localStorage.getItem('PMRV_VTR') || form.vtr || '';
+      novaOcorrencia();
       const stamp = nowFato();
       setForm({ ...INITIAL, vtr: savedVtr, ...stamp });
       setManualEdit(false);
@@ -999,8 +1013,13 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                 type="button"
                 onClick={() => {
                   try {
-                    const raw = localStorage.getItem('PMRV_RESUMO_DINAMICA');
-                    const data = raw ? JSON.parse(raw) : null;
+                    let data = null;
+                    const rawDoc = localStorage.getItem('PMRV_OCORRENCIA');
+                    if (rawDoc) data = JSON.parse(rawDoc)?.resumo || null;
+                    if (!data) {
+                      const raw = localStorage.getItem('PMRV_RESUMO_DINAMICA');
+                      data = raw ? JSON.parse(raw) : null;
+                    }
                     const texto = (data && typeof data.resumo === 'string' ? data.resumo : '').trim();
                     if (!texto) {
                       alert('Nenhum resumo da dinâmica disponível.');

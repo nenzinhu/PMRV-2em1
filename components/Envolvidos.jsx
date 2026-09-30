@@ -16,7 +16,7 @@ import {
   cleanIAResponse,
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
-import { MUNICIPIOS_POR_UF } from '@/lib/municipios';
+import { MUNICIPIOS_POR_UF, garantirMunicipios } from '@/lib/municipios';
 import { WhatsAppIcon } from './icons';
 import MentionInput from './MentionInput';
 import Skeleton from './Skeleton';
@@ -31,8 +31,7 @@ import {
   hidratarFotos,
 } from '@/lib/foto-store';
 import { salvarRelatoNoResumo, retirarRelatoDoResumo } from '@/lib/resumo-relatos';
-
-const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
+import { useOcorrencia } from '@/components/OcorrenciaProvider';
 
 const EMPTY_ENV = () => ({
   id: 0,
@@ -53,39 +52,31 @@ const EMPTY_ENV = () => ({
   fotos: [],
 });
 
-const STORAGE_KEY = 'PMRV_ENVOLVIDOS';
 const PLACA_TOKEN_KEY = 'PMRV_PLACA_TOKEN';
-
-function loadEnvolvidos() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const obj = JSON.parse(raw);
-      return { lista: Array.isArray(obj.lista) ? obj.lista : [], seq: obj.seq || 0 };
-    }
-  } catch (e) {
-    /* ignore */
-  }
-  return { lista: [], seq: 0 };
-}
 
 function novoEnvolvido(seq) {
   return { ...EMPTY_ENV(), id: seq };
 }
 
 export default function Envolvidos({ gpsInfo = null }) {
+  // Fonte da verdade: o documento único da ocorrência (OcorrenciaProvider).
+  const { doc, pronto: docPronto, atualizar: atualizarDoc } = useOcorrencia();
   const [envolvidos, setEnvolvidos] = useState([]);
   const [seq, setSeq] = useState(0);
   const [loadingPlaca, setLoadingPlaca] = useState({});
   const [placaError, setPlacaError] = useState({});
   const [placaToken, setPlacaToken] = useState('');
   const [busca, setBusca] = useState({ q: '', resultados: [], aberto: false, carregando: false, alvoId: null });
+  const [municipios, setMunicipios] = useState(MUNICIPIOS_POR_UF);
 
+  // Carrega do documento único quando ele fica pronto / troca de ocorrência.
   useEffect(() => {
+    if (!docPronto) return;
     let cancelled = false;
     async function boot() {
-      const { lista, seq: s } = loadEnvolvidos();
-      const migrada = (lista || []).map((ev) => ({
+      const lista = Array.isArray(doc?.envolvidos) ? doc.envolvidos : [];
+      const s = lista.reduce((m, e) => Math.max(m, Number(e.id) || 0), 0);
+      const migrada = lista.map((ev) => ({
         ...ev,
         placa_estrangeira: ev.placa_estrangeira === true,
         placa_tipo: ev.placa_tipo || 'br',
@@ -96,7 +87,6 @@ export default function Envolvidos({ gpsInfo = null }) {
           next = await migrarFotosLegadas(next);
         }
         next = await hidratarFotos(next);
-        persist(next, s);
       } catch (e) {
         console.error('Falha ao hidratar fotos:', e);
       }
@@ -104,32 +94,39 @@ export default function Envolvidos({ gpsInfo = null }) {
       setEnvolvidos(next);
       setSeq(s);
       setPlacaToken(localStorage.getItem(PLACA_TOKEN_KEY) || '');
+      // Municípios de outros UFs chegam sob demanda.
+      const ufsEmUso = [...new Set(next.map((ev) => ev.uf).filter(Boolean))];
+      await Promise.all(
+        ufsEmUso.map(async (uf) => {
+          if (municipios[uf]) return;
+          const listaUf = await garantirMunicipios(uf);
+          setMunicipios((m) => ({ ...m, [uf]: listaUf }));
+        })
+      );
     }
     boot();
     return () => {
       cancelled = true;
     };
-  }, []);
+    // doc?.envolvidos muda a cada update; sincroniza só na troca de documento.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [docPronto, doc?.id]);
 
-  function persist(lista, s) {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ lista: envolvidosParaStorage(lista), seq: s })
-    );
-  }
-
-  function salvar(lista) {
-    persist(lista, seq);
-  }
+  // Estado local → documento único (o provider persiste).
+  useEffect(() => {
+    if (!docPronto) return;
+    atualizarDoc((prev) => ({
+      ...prev,
+      envolvidos: envolvidosParaStorage(envolvidos),
+    }));
+  }, [docPronto, envolvidos, atualizarDoc]);
 
   function adicionar() {
     setEnvolvidos((prev) => {
       const maxId = prev.reduce((m, e) => Math.max(m, Number(e.id) || 0), seq);
       const nextSeq = maxId + 1;
-      const lista = [...prev, novoEnvolvido(nextSeq)];
       setSeq(nextSeq);
-      persist(lista, nextSeq);
-      return lista;
+      return [...prev, novoEnvolvido(nextSeq)];
     });
   }
 
@@ -251,14 +248,12 @@ export default function Envolvidos({ gpsInfo = null }) {
       return;
     }
     const src = URL.createObjectURL(file);
-    setEnvolvidos((prev) => {
-      const lista = prev.map((e) => {
+    setEnvolvidos((prev) =>
+      prev.map((e) => {
         if (e.id !== id) return e;
         return { ...e, fotos: [...(e.fotos || []), { id: fotoId, src }] };
-      });
-      persist(lista, seq);
-      return lista;
-    });
+      })
+    );
   }
 
   function removerFoto(id, index) {
@@ -365,7 +360,7 @@ export default function Envolvidos({ gpsInfo = null }) {
       ev.relato;
 
     try {
-      const res = await callGroq({ apiKey: GROQ_API_KEY, prompt, system: PMRV_AGENTE_PADRAO });
+      const res = await callGroq({ apiKey: obterChaveIA(), prompt, system: PMRV_AGENTE_PADRAO });
       if (res.error === 'auth') {
         alert('Chave da API inválida ou sem permissão.\n\nVerifique a configuração do sistema.');
       } else if (res.error === 'quota') {
@@ -472,9 +467,14 @@ export default function Envolvidos({ gpsInfo = null }) {
                   value={ev.uf}
                   onChange={(e) => {
                     const novaUf = e.target.value;
-                    const cidadesUf = MUNICIPIOS_POR_UF[novaUf] || [];
                     const patch = { uf: novaUf };
-                    if (ev.cidade && !cidadesUf.includes(ev.cidade)) patch.cidade = '';
+                    if (novaUf && !municipios[novaUf]) {
+                      garantirMunicipios(novaUf).then((lista) => {
+                        setMunicipios((m) => ({ ...m, [novaUf]: lista }));
+                      });
+                    }
+                    const cidadesUf = municipios[novaUf] || [];
+                    if (ev.cidade && cidadesUf.length && !cidadesUf.includes(ev.cidade)) patch.cidade = '';
                     update(ev.id, patch);
                   }}
                   className="ds-input text-sm"
@@ -504,7 +504,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                         {ev.cidade}
                       </option>
                     )}
-                  {(MUNICIPIOS_POR_UF[ev.uf] || []).map((c) => (
+                  {(municipios[ev.uf] || []).map((c) => (
                     <option key={c} value={c}>
                       {c}
                     </option>

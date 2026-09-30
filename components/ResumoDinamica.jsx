@@ -8,11 +8,11 @@ import {
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
 import { showToast } from '@/components/Toast';
-import { loadResumoState, persistResumoState } from '@/lib/resumo-relatos';
+import { loadResumoState } from '@/lib/resumo-relatos';
+import { useOcorrencia } from '@/components/OcorrenciaProvider';
 import { buildResumoPrompt, estiloResumoValido, relatosParaBase } from '@/lib/resumo-prompt';
 import { aplicarAjusteFino, carregarAjusteFino } from '@/lib/ajuste-fino';
 
-const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || '';
 
 const ESTILO_BOTOES = [
   { id: 'tecnico', label: 'Técnico' },
@@ -26,6 +26,11 @@ const ESTILO_TITULO = {
   leigo: 'Leigo',
 };
 
+// Id do novo card: fora do render (Date.now é impuro durante o render).
+function novoIdRelato() {
+  return Date.now();
+}
+
 export default function ResumoDinamica() {
   const [relatos, setRelatos] = useState([]);
   const [resumo, setResumo] = useState('');
@@ -35,10 +40,27 @@ export default function ResumoDinamica() {
   const [statusIA, setStatusIA] = useState('');
   const init = useRef(false);
   const [transferindoId, setTransferindoId] = useState(null);
+  const { pronto: docPronto, atualizar: atualizarDoc } = useOcorrencia();
 
   useEffect(() => {
     function reload() {
-      const s = loadResumoState();
+      // Documento único primeiro; legado só durante a transição.
+      let s = null;
+      try {
+        const raw = localStorage.getItem('PMRV_OCORRENCIA');
+        const doc = raw ? JSON.parse(raw) : null;
+        if (doc?.resumo) {
+          s = {
+            relatos: Array.isArray(doc.resumo.relatos) ? doc.resumo.relatos : [],
+            resumo: typeof doc.resumo.resumo === 'string' ? doc.resumo.resumo : '',
+            resumos: doc.resumo.resumos || { tecnico: '', policial: '', leigo: '' },
+            estiloResumo: doc.resumo.estiloResumo,
+          };
+        }
+      } catch {
+        /* cópia inválida */
+      }
+      if (!s) s = loadResumoState();
       setRelatos(s.relatos);
       setResumo(s.resumo);
       setResumos(s.resumos || { tecnico: '', policial: '', leigo: '' });
@@ -47,7 +69,11 @@ export default function ResumoDinamica() {
     reload();
     init.current = true;
     window.addEventListener('pmrv-resumo-changed', reload);
-    return () => window.removeEventListener('pmrv-resumo-changed', reload);
+    window.addEventListener('pmrv-ocorrencia-changed', reload);
+    return () => {
+      window.removeEventListener('pmrv-resumo-changed', reload);
+      window.removeEventListener('pmrv-ocorrencia-changed', reload);
+    };
   }, []);
 
   function transferirParaRelatoPolicial(id) {
@@ -67,7 +93,6 @@ export default function ResumoDinamica() {
       alert('Não há resumo para salvar.');
       return;
     }
-    localStorage.setItem('PMRV_RESUMO_CLIPBOARD', texto);
     window.dispatchEvent(new CustomEvent('set-dinamica', { detail: texto }));
     showToast('Resumo gravado no Relato Policial', 'success', 2000);
     if (irParaSalvar) {
@@ -86,11 +111,11 @@ export default function ResumoDinamica() {
     setResumo(state.resumo);
     setResumos(state.resumos);
     setEstiloResumo(state.estiloResumo);
-    if (init.current) persistResumoState(state);
+    if (init.current && docPronto) atualizarDoc((prev) => ({ ...prev, resumo: state }));
   }
 
   function adicionarRelato() {
-    const novo = { id: Date.now(), texto: '' };
+    const novo = { id: novoIdRelato(), texto: '' };
     save({ relatos: [...relatos, novo] });
   }
 
@@ -126,7 +151,7 @@ export default function ResumoDinamica() {
       const ajuste = carregarAjusteFino();
       const prompt = aplicarAjusteFino(buildResumoPrompt(relatos, modo), ajuste);
       const res = await callGroq({
-        apiKey: GROQ_API_KEY,
+        apiKey: obterChaveIA(),
         prompt,
         system: PMRV_AGENTE_PADRAO,
         temperature: ajuste.temperatura,
@@ -174,7 +199,7 @@ export default function ResumoDinamica() {
         'Melhore o resumo abaixo de um sinistro de trânsito: corrija ortografia, acentuação, concordância e pontuação, mantenha os fatos e a norma culta do português do Brasil. Não invente fatos. Responda APENAS com o texto corrigido, sem comentários.\n\n' +
         resumo;
 
-      const res = await callGroq({ apiKey: GROQ_API_KEY, prompt, system: PMRV_AGENTE_PADRAO });
+      const res = await callGroq({ apiKey: obterChaveIA(), prompt, system: PMRV_AGENTE_PADRAO });
 
       if (res.error === 'auth') {
         alert('Chave da API inválida ou sem permissão.\n\nVerifique a configuração do sistema.');

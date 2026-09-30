@@ -18,9 +18,33 @@ import { useFullscreen } from '@/hooks/useFullscreen';
 import { useInstallPWA } from '@/hooks/useInstallPWA';
 import { useGpsLocation } from '@/hooks/useGpsLocation';
 import { ABAS, abaFromSearchParam } from '@/lib/aba';
-import { aplicarDinamicaNoRascunho } from '@/lib/relato-draft';
 import { gpsLocationLabel } from '@/lib/gps-label';
-import { MapPinIcon, PaletteIcon, ExpandIcon, CollapseIcon, DownloadIcon } from '@/components/icons';
+import { MapPinIcon, PaletteIcon, ExpandIcon, CollapseIcon, DownloadIcon, FilePlusIcon } from '@/components/icons';
+import { OcorrenciaProvider, useOcorrencia } from '@/components/OcorrenciaProvider';
+
+function NovaOcorrenciaButton() {
+  const { novaOcorrencia } = useOcorrencia();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        if (
+          window.confirm(
+            'Começar uma NOVA ocorrência?\n\nO relatório, envolvidos, danos, resumo e fotos atuais serão descartados deste aparelho.'
+          )
+        ) {
+          novaOcorrencia();
+          showToast('Nova ocorrência iniciada', 'success', 2000);
+        }
+      }}
+      className="header-chip"
+      title="Nova ocorrência"
+      aria-label="Iniciar nova ocorrência"
+    >
+      <FilePlusIcon className="w-3.5 h-3.5" /> Nova
+    </button>
+  );
+}
 
 function syncAbaUrl(aba) {
   if (typeof window === 'undefined') return;
@@ -33,7 +57,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
   const [aba, setAbaState] = useState(() => abaFromSearchParam(initialAba));
   const [themeOpen, setThemeOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { elRef, active: fsActive, toggle: toggleFs } = useFullscreen();
+  const { active: fsActive, toggle: toggleFs } = useFullscreen();
   const { install, supportsInstall, isInstalled, isStandalone } = useInstallPWA();
   const { gpsOn, gpsInfo, toggle: toggleGps } = useGpsLocation();
 
@@ -42,6 +66,32 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
     setAbaState(resolved);
     syncAbaUrl(resolved);
   }, []);
+
+  return (
+    <OcorrenciaProvider>
+      <AppShellInner
+        aba={aba}
+        themeOpen={themeOpen}
+        setThemeOpen={setThemeOpen}
+        mounted={mounted}
+        setMounted={setMounted}
+        fsActive={fsActive}
+        toggleFs={toggleFs}
+        install={install}
+        supportsInstall={supportsInstall}
+        isInstalled={isInstalled}
+        isStandalone={isStandalone}
+        gpsOn={gpsOn}
+        gpsInfo={gpsInfo}
+        toggleGps={toggleGps}
+        setAba={setAba}
+      />
+    </OcorrenciaProvider>
+  );
+}
+
+function AppShellInner({ aba, themeOpen, setThemeOpen, mounted, setMounted, fsActive, toggleFs, install, supportsInstall, isInstalled, isStandalone, gpsOn, gpsInfo, toggleGps, setAba }) {
+  const { elRef } = useFullscreen();
 
   useEffect(() => {
     setMounted(true);
@@ -72,7 +122,6 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
     function onSetDinamica(e) {
       const texto = e.detail;
       if (typeof texto === 'string') {
-        aplicarDinamicaNoRascunho(texto);
         window.dispatchEvent(new CustomEvent('pmrv-relato-dinamica'));
         const el = document.getElementById('pmrv_dinamica_texto');
         if (el) {
@@ -147,6 +196,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
                   </span>
                 </button>
               )}
+              <NovaOcorrenciaButton />
               <button
                 type="button"
                 onClick={() => setThemeOpen(true)}

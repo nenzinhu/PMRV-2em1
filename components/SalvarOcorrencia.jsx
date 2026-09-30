@@ -2,34 +2,28 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { WhatsAppIcon } from './icons';
-import { generateReport } from '@/lib/pmrv';
-import { RELATO_DRAFT_KEY, parseRelatoDraft } from '@/lib/relato-draft';
-import { showToast } from '@/components/Toast';
-import LimparDados from '@/components/LimparDados';
-
-function relatorioDoRascunho() {
-  if (typeof window === 'undefined') return '';
-  const parsed = parseRelatoDraft(localStorage.getItem(RELATO_DRAFT_KEY));
-  if (!parsed) return '';
-  if (parsed.manualEdit) return parsed.manualText || '';
-  return generateReport(parsed.form || {}, true);
-}
+import { generateReport, envolvidosText } from '@/lib/pmrv';
+import { montarDossie, baixarJSON } from '@/lib/ocorrencia';
+import { useOcorrencia } from './OcorrenciaProvider';
+import { showToast } from './Toast';
+import LimparDados from './LimparDados';
 
 export default function SalvarOcorrencia() {
+  const { doc, pronto } = useOcorrencia();
   const [report, setReport] = useState('');
 
   const recarregar = useCallback(() => {
-    setReport(relatorioDoRascunho());
-  }, []);
+    if (!doc) {
+      setReport('');
+      return;
+    }
+    setReport(montarDossie({ generateReport, envolvidosText }, doc));
+  }, [doc]);
 
   useEffect(() => {
     recarregar();
-    window.addEventListener('pmrv-relato-dinamica', recarregar);
-    window.addEventListener('storage', recarregar);
-    return () => {
-      window.removeEventListener('pmrv-relato-dinamica', recarregar);
-      window.removeEventListener('storage', recarregar);
-    };
+    window.addEventListener('pmrv-ocorrencia-changed', recarregar);
+    return () => window.removeEventListener('pmrv-ocorrencia-changed', recarregar);
   }, [recarregar]);
 
   function enviarWhatsApp() {
@@ -43,12 +37,18 @@ export default function SalvarOcorrencia() {
     const cleanText = report.replace(/\*/g, '');
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(cleanText).then(
-        () => showToast('Relatório copiado para a área de transferência', 'success', 2500),
+        () => showToast('Dossiê copiado para a área de transferência', 'success', 2500),
         () => alert('Erro ao copiar. Por favor, selecione o texto e copie manualmente.')
       );
     } else {
       alert('Seu navegador não permite cópia automática. Selecione o texto e copie manualmente.');
     }
+  }
+
+  function exportarJSON() {
+    if (!doc) return;
+    baixarJSON(doc, `ocorrencia-${doc.id}.json`);
+    showToast('Backup JSON exportado', 'success', 2000);
   }
 
   return (
@@ -57,18 +57,22 @@ export default function SalvarOcorrencia() {
         Salvar ocorrência
       </h2>
       <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono mb-4 p-3">
-        O relatório usa só o que já está no Relato Policial. O resumo da dinâmica entra no campo Dinâmica ao salvar. Data e hora vazias aparecem como --- — não são inventadas.
+        O dossiê junta num texto só: relatório + envolvidos + resumo da dinâmica + danos. Data e hora vazias aparecem como --- — não são inventadas.
       </p>
 
-      {!report.trim() ? (
+      {!pronto ? (
+        <div className="bg-white border-2 border-dashed border-charcoal p-6 text-center font-mono text-xs text-charcoal/60">
+          Carregando ocorrência…
+        </div>
+      ) : !report.trim() ? (
         <div className="bg-white border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal/60">
           <div className="text-3xl mb-2" aria-hidden="true">💾</div>
-          Ainda não há rascunho. Preencha o Relato e/ou salve o resumo da dinâmica.
+          Ainda não há conteúdo. Preencha o Relato, os Envolvidos ou o Resumo.
         </div>
       ) : (
         <section className="ds-card">
           <div className="flex justify-between items-center mb-2">
-            <label className="ds-label mb-0">Relatório completo</label>
+            <label className="ds-label mb-0">Dossiê completo</label>
             <span className="text-[10px] text-charcoal font-mono font-semibold uppercase tracking-wider bg-bone border border-charcoal px-2 py-1">
               Pronto para enviar
             </span>
@@ -78,7 +82,7 @@ export default function SalvarOcorrencia() {
             rows={14}
             value={report}
             className="w-full bg-charcoal text-bone p-4 font-mono text-xs leading-relaxed outline-none border-2 border-charcoal"
-            aria-label="Relatório completo da ocorrência"
+            aria-label="Dossiê completo da ocorrência"
           />
           <div className="space-y-3 mt-3">
             <button type="button" onClick={enviarWhatsApp} className="ds-btn-whatsapp w-full">
@@ -87,7 +91,10 @@ export default function SalvarOcorrencia() {
             </button>
             <button type="button" onClick={copiarPMSC} className="ds-btn-gold w-full">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-              Copiar Relatório p/ Mobile (Limpo)
+              Copiar Dossiê p/ Mobile (Limpo)
+            </button>
+            <button type="button" onClick={exportarJSON} className="btn-outline w-full text-xs py-3 active:scale-95">
+              ⬇️ Exportar backup (.json)
             </button>
           </div>
         </section>

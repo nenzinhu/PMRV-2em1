@@ -1,11 +1,20 @@
 // API para consulta de placa de veículo via wdapi2
 // Formato: https://wdapi2.com.br/consulta/{placa}/{token}
+// O token fica SOMENTE no servidor (PLACA_API_TOKEN em .env.local) e nunca
+// vai ao navegador nem aos logs. Sem a variável, a rota devolve 500 'nokey'.
 export const runtime = 'nodejs';
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const placa = searchParams.get('placa');
-  const token = searchParams.get('token') || '622283d1f02d343efd13800a14dd0ab8';
+  const token = process.env.PLACA_API_TOKEN || searchParams.get('token') || '';
+
+  if (!token) {
+    return new Response(JSON.stringify({ error: 'nokey' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   if (!placa || placa.length < 7) {
     return new Response(JSON.stringify({ error: 'Placa inválida. Informe uma placa com pelo menos 7 caracteres.' }), {
@@ -16,7 +25,6 @@ export async function GET(req) {
 
   try {
     const url = `https://wdapi2.com.br/consulta/${encodeURIComponent(placa.toUpperCase())}/${encodeURIComponent(token)}`;
-    console.log('[API PLACA] URL:', url);
 
     const resp = await fetch(url, {
       headers: {
@@ -26,8 +34,6 @@ export async function GET(req) {
     });
 
     const text = await resp.text();
-    console.log('[API PLACA] Status:', resp.status);
-    console.log('[API PLACA] Body:', text.slice(0, 500));
 
     let data;
     try {

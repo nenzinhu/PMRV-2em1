@@ -9,29 +9,44 @@ Sistema PWA de campo para a Polícia Militar Rodoviária de Santa Catarina (1º 
 - IA: provedores gratuitos compatíveis com OpenAI (Groq, OpenRouter, Mistral…) via proxy em `/api/ai` — ver `lib/ai-models.js` e `.env.example`
 - Consulta de placa: wdapi2 via `/api/placa`
 - Malha viária: GeoJSON de rodovias de SC (`public/rodovias-sc.geojson`)
-- Persistência: `localStorage` no dispositivo (sem backend de dados)
-- Sem autenticação, banco, testes ou TypeScript
+- Persistência: IndexedDB + `localStorage` no dispositivo (sem backend de dados)
+- Qualidade: ESLint no build + Vitest (129 testes em `lib/*.test.js`); sem TypeScript
 
 ## Estrutura
 
 ```
 app/
-  layout.jsx          UI inteira (abas, header, PWA) — client component
-  page.jsx            retorna null (não é a tela do app)
-  api/groq/route.js   proxy streaming Groq
-  api/placa/route.js  consulta de veículo
+  layout.jsx                metadata + PWA (server component)
+  page.jsx                  rotas ?aba= para AppShell
+  api/ai/route.js           proxy streaming multi-provedor (fallback)
+  api/ai/models/route.js    modelos gratuitos consultados ao vivo
+  api/placa/route.js        consulta de veículo (token em PLACA_API_TOKEN)
+  api/geocode/*             Nominatim (reverse + search)
 components/
-  RelatoPolicial.jsx  wizard de 5 passos + relatório final
-  Envolvidos.jsx      cadastro de pessoas/veículos/fotos
-  ResumoDinamica.jsx  relatos individuais → resumo unificado (IA)
-  MentionInput.jsx    @menções (nome, placa, GPS)
+  OcorrenciaProvider.jsx    DOCUMENTO ÚNICO: Context + IndexedDB + autosave
+  AppShell.jsx              header, abas, botão "Nova" ocorrência
+  RelatoPolicial.jsx        wizard de 5 passos + relatório final
+  Envolvidos.jsx            cadastro de pessoas/veículos/fotos
+  ResumoDinamica.jsx        relatos individuais → resumo unificado (IA)
+  SalvarOcorrencia.jsx      DOSSIÊ (relatório+envolvidos+resumo+danos) + backup JSON
+  MentionInput.jsx          @menções (nome, placa, GPS)
 lib/
-  pmrv.js             templates, formatadores, relatório, prompts IA
-  gps.js              lat/lon → UTM 22S + match de rodovia/KM
-  rodovias-list.js    lista oficial de rodovias
+  ocorrencia.js             modelo do documento único + migração + dossiê
+  idb.js                    IndexedDB do documento (registro "atual")
+  municipios.js             SC síncrono + UFs sob demanda (cache)
+  municipios-sc.js          gerado (scripts/gen-municipios.mjs — API IBGE)
+  gps.js                    UTM 22S + match de rodovia com ÍNDICE ESPACIAL
+  foto-store.js             fotos em IndexedDB (blob), referências no documento
+  pmrv.js                   templates, formatadores, relatório, prompts IA
+  rodovias-list.js          lista oficial de rodovias
 ```
 
-Comunicação entre abas: `localStorage` + eventos de janela (`gps-change`, `navigate-to`, `set-dinamica`). Não há Context/estado global React.
+**Ocorrência como documento único**: relato, envolvidos, danos, resumo e
+referências de fotos vivem em UM registro (`PMRV_OCORRENCIA` no localStorage,
+fonte da verdade em IndexedDB `pmrv-ocorrencias`). "Nova ocorrência" troca o
+documento inteiro; `LimparDados` apaga os dois bancos. Rascunhos legados
+(`PMRV_RELATO_RASCUNHO`, `PMRV_ENVOLVIDOS`, `PMRV_DANOS`,
+`PMRV_RESUMO_DINAMICA`) são migrados automaticamente no primeiro boot.
 
 ## O que já funciona
 
@@ -45,7 +60,7 @@ Comunicação entre abas: `localStorage` + eventos de janela (`gps-change`, `nav
 **Envolvidos**
 - Nome, CPF, UF, cidade, endereço, telefone, placa (BR / Mercosul / estrangeira), modelo, cor, relato
 - Consulta automática de placa → marca/modelo/cor
-- Fotos (câmera ou galeria) em Data URL no `localStorage`
+- Fotos (câmera ou galeria) em IndexedDB (blob), referência no documento
 - @menções no relato (pessoa, veículo, GPS)
 - Exportação WhatsApp do bloco de envolvidos
 
@@ -55,10 +70,12 @@ Comunicação entre abas: `localStorage` + eventos de janela (`gps-change`, `nav
 - Transfere o texto para o campo de dinâmica do Relato
 
 **Campo / PWA**
-- GPS: casa lat/lon com a malha e preenche rodovia + KM
+- GPS: casa lat/lon com a malha via índice espacial (rápido na CPU do celular) e preenche rodovia + KM
+- GeoJSON da malha pré-cacheado no service worker — match de rodovia funciona OFFLINE
 - Instalar na tela inicial, fullscreen, tema customizável
-- Swipe entre abas no celular
-- Viatura lembrada no dispositivo
+- Swipe entre abas no celular; Viatura lembrada no dispositivo
+- "Nova ocorrência" troca o documento inteiro — nada fica pela metade
+- Dossiê em um só texto (relatório + envolvidos + resumo + danos) + backup JSON
 
 ## Fluxo típico
 
@@ -73,30 +90,30 @@ Comunicação entre abas: `localStorage` + eventos de janela (`gps-change`, `nav
 
 ### Crítico
 
-- **Token de placa hardcoded** em `app/api/placa/route.js` (e log da URL completa no servidor). Mover para variável de ambiente; nunca logar token.
+- ✅ **RESOLVIDO** — Token de placa via `PLACA_API_TOKEN` (`process.env`) em `app/api/placa/route.js`; sem logs de URL/body. `?token=` aceito como override manual.
 - **`app/page.jsx` retorna `null`**. Toda a UI vive no `layout.jsx`, que é `'use client'`. Perde Metadata API, SSR e atalhos PWA (`/?aba=envolvidos` não muda de aba).
-- **Fotos em `localStorage`**. Data URLs estouram cota (~5 MB) com poucas fotos. IndexedDB ou arquivos no dispositivo.
-- **Formulário do Relato não persiste**. Só a VTR é salva. Recarregar a página no meio do atendimento perde SADE, local, dinâmica e vítimas.
-- **Data do relatório = “agora”**. `generateReport` usa a data/hora do dispositivo na geração, não a do fato. Recriar o texto muda a data.
+- ✅ **RESOLVIDO** — Fotos em IndexedDB (`pmrv-fotos`, blobs); o documento guarda só referências.
+- ✅ **RESOLVIDO** — Ocorrência como documento único (Context + IndexedDB `pmrv-ocorrencias` + `PMRV_OCORRENCIA`) com autosave; recarregar restaura tudo.
+- ✅ **RESOLVIDO (em grande parte)** — Data/hora do fato (`dataFato`/`horaFato`) persistidas no documento e usadas pelo relatório; rascunho não inventa data.
 
 ### Alto
 
 - Estado espalhado em eventos + `localStorage` em vez de um store único (rascunho da ocorrência).
 - Unidade fixa: “1º BPMRv / 1ª CIA / Posto 19”. Outros postos não conseguem usar sem editar código.
-- GPS percorre o GeoJSON inteiro a cada ponto do `watchPosition` (pesado no celular).
+- ✅ **RESOLVIDO** — Índice espacial (grade UTM) montado uma vez no boot; busca só nas células vizinhas. GeoJSON pré-cacheado no service worker (v6) — match offline.
 - Groq com `web_search`, `code_interpreter` e `visit_website` ligados — desnecessários e arriscados para reescrita de relatório.
-- ESLint desligado no build (`ignoreDuringBuilds: true`). Sem testes.
-- `NEXT_PUBLIC_GROQ_API_KEY` ainda referenciado em componentes (chave não deve ir ao bundle).
+- ✅ **RESOLVIDO** — ESLint roda no build (`eslint.config.mjs` flat + `next.config.mjs` sem `ignoreDuringBuilds`) e Vitest cobre `lib` (129 testes).
+- ✅ **RESOLVIDO** — Chave pública removida dos componentes; IA só pelo proxy `/api/ai`.
 - Atalhos do manifesto (`?aba=`) e deep link não são lidos.
 
 ### Médio
 
 - Sem data/hora editável da ocorrência (só hora auto vs manual).
-- `limpar()` do Relato não limpa envolvidos nem resumo — “nova ocorrência” fica pela metade.
+- ✅ **RESOLVIDO** — "Nova ocorrência" troca o documento inteiro (relato, envolvidos, resumo, danos) de uma vez.
 - Validação só por `alert()`; campos obrigatórios da cidade/sentido/dinâmica frouxos.
 - Reconhecimento de voz só Chrome/WebKit; sem feedback visual de gravação.
-- Relatório WhatsApp não junta envolvidos + fotos + resumo num pacote único.
-- Service worker não versiona o GeoJSON grande; match GPS offline falha se o arquivo não estiver em cache.
+- ✅ **RESOLVIDO (texto)** — Dossiê na aba Salvar junta relatório + envolvidos + resumo + danos + backup JSON; fotos anexas ficam para o item 3 (pacote único de envio).
+- ✅ **RESOLVIDO** — `/rodovias-sc.geojson` no cache v6 do service worker.
 - Header GPS duplicado no mobile (chip + ícone).
 
 ### Baixo
@@ -113,10 +130,11 @@ Comunicação entre abas: `localStorage` + eventos de janela (`gps-change`, `nav
 ```
 BLOCO — NOVAS FEATURES (backlog de produto)
 
-1. Rascunho automático da ocorrência
-   Salvar Relato + Envolvidos + Resumo como um único dossiê (IndexedDB).
-   Recuperar ao reabrir o app. “Nova ocorrência” arquiva o rascunho atual
-   em vez de apagar. Evita perda de atendimento se o celular travar.
+1. ✅ IMPLEMENTADO — Rascunho automático da ocorrência
+   Relato + Envolvidos + Resumo + Danos vivem em um documento único
+   (IndexedDB + Context) com autosave; migra rascunhos legados; dossiê e
+   backup JSON na aba Salvar; "Nova" troca o documento inteiro.
+   (Arquivar histórico de rascunhos antigos segue no item 2.)
 
 2. Histórico de ocorrências
    Lista local por data, SADE, rodovia/KM. Abrir, duplicar, exportar ou
@@ -201,7 +219,7 @@ BLOCO — NOVAS FEATURES (backlog de produto)
     houver sync. Fora do escopo do PWA atual; não bloquear o app de campo.
 
 PRIORIDADE SUGERIDA
-  P0  Rascunho automático + pacote único de envio + data/unidade
+  P0  ✅ rascunho automático feito; falta pacote único de envio c/ fotos + data/unidade configuráveis
   P1  Histórico + PDF + mapa GPS + checklist
   P2  Croqui, papéis do envolvido, áudio, assinatura
   P3  QR, consulta CPF, painel do posto
@@ -231,4 +249,4 @@ GROQ_API_KEY=
 PLACA_API_TOKEN=
 ```
 
-Hoje o token de placa ainda está no código; a correção é o primeiro item de “Crítico”.
+O token de placa vem de `PLACA_API_TOKEN` (ver `.env.example`); crie `.env.local` antes de usar `/api/placa`.

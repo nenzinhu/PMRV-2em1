@@ -130,3 +130,11 @@ export function CameraIcon({ className = 'w-5 h-5' }) {
     </svg>
   );
 }
+
+export function FilePlusIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 3v4a1 1 0 001 1h4M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5zM12 11v6m-3-3h6" />
+    </svg>
+  );
+}

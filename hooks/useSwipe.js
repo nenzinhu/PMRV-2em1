@@ -16,8 +16,10 @@ export function useSwipe({
   const moving = useRef(false);
   const leftRef = useRef(onSwipeLeft);
   const rightRef = useRef(onSwipeRight);
-  leftRef.current = onSwipeLeft;
-  rightRef.current = onSwipeRight;
+  useEffect(() => {
+    leftRef.current = onSwipeLeft;
+    rightRef.current = onSwipeRight;
+  }, [onSwipeLeft, onSwipeRight]);
 
   useEffect(() => {
     if (!enabled) return;

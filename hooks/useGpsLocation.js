@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { matchRodovia } from '@/lib/gps';
+import { construirIndiceMalha, matchRodoviaNoIndice } from '@/lib/gps';
 import { RODOVIAS_GEOJSON_URL, rodoviaLabel } from '@/lib/rodovias-list';
 
 async function fetchEndereco(lat, lon) {
@@ -18,19 +18,27 @@ async function fetchEndereco(lat, lon) {
 export function useGpsLocation() {
   const [gpsOn, setGpsOn] = useState(false);
   const [gpsInfo, setGpsInfo] = useState(null);
-  const [geojson, setGeojson] = useState(null);
+  const [indice, setIndice] = useState(null);
+  const [geojsonPronto, setGeojsonPronto] = useState(false);
   const watchRef = useRef(null);
   const geoKeyRef = useRef('');
 
   const toggle = useCallback(() => setGpsOn((v) => !v), []);
 
+  // Monta o índice espacial UMA VEZ (mesmo com GPS desligado) e marca a malha
+  // como disponível (vem do cache do service worker quando offline).
   useEffect(() => {
-    if (!gpsOn || geojson) return;
     let cancelled = false;
     fetch(RODOVIAS_GEOJSON_URL)
       .then((r) => r.json())
       .then((g) => {
-        if (!cancelled) setGeojson(g);
+        if (cancelled) return;
+        try {
+          setIndice(construirIndiceMalha(g));
+        } catch {
+          setIndice(null);
+        }
+        setGeojsonPronto(true);
       })
       .catch(() => {
         if (!cancelled) setGpsInfo({ erro: 'Falha ao carregar malha viária.' });
@@ -38,7 +46,7 @@ export function useGpsLocation() {
     return () => {
       cancelled = true;
     };
-  }, [gpsOn, geojson]);
+  }, []);
 
   useEffect(() => {
     if (!gpsOn) {
@@ -60,14 +68,14 @@ export function useGpsLocation() {
         const { latitude, longitude } = pos.coords;
         const base = { lat: latitude, lon: longitude, erro: null };
 
-        if (!geojson) {
-          setGpsInfo((prev) => ({ ...(prev || {}), ...base }));
+        if (!indice) {
+          setGpsInfo((prev) => ({ ...(prev || {}), ...base, ...(geojsonPronto ? {} : { malha: 'carregando' }) }));
           return;
         }
 
         const key = `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
 
-        const m = matchRodovia(geojson, latitude, longitude, 150);
+        const m = matchRodoviaNoIndice(indice, latitude, longitude, 150);
         if (m && !m.foraDaRodovia) {
           setGpsInfo((prev) => ({
             ...(prev || {}),
@@ -112,7 +120,7 @@ export function useGpsLocation() {
         watchRef.current = null;
       }
     };
-  }, [gpsOn, geojson]);
+  }, [gpsOn, indice, geojsonPronto]);
 
   return { gpsOn, gpsInfo, toggle, setGpsOn };
 }

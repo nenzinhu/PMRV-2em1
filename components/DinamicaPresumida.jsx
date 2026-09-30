@@ -21,18 +21,31 @@ import {
   novoEnvolvidoDinamica,
 } from '@/lib/dinamica-presumida';
 
-// Envolvidos já cadastrados na aba Envolvidos (para importar nome/placa/veículo).
+// Envolvidos já cadastrados (documento único; cai no legado só durante a migração).
 function envolvidosCadastrados() {
+  const fontes = [];
+  try {
+    const raw = localStorage.getItem('PMRV_OCORRENCIA');
+    if (raw) fontes.push(JSON.parse(raw));
+  } catch {
+    /* cópia inválida */
+  }
   try {
     const obj = JSON.parse(localStorage.getItem('PMRV_ENVOLVIDOS') || 'null');
-    const lista = Array.isArray(obj?.lista) ? obj.lista : [];
-    const txt = (v) => (typeof v === 'string' ? v : '');
-    return lista
-      .map((e) => ({ nome: txt(e.nome), placa: txt(e.placa), modelo: txt(e.modelo), cor: txt(e.cor) }))
-      .filter((e) => e.nome.trim() || e.placa.trim());
+    if (obj) fontes.push({ envolvidos: Array.isArray(obj?.lista) ? obj.lista : [] });
   } catch {
-    return [];
+    /* legado inválido */
   }
+  const txt = (v) => (typeof v === 'string' ? v : '');
+  for (const fonte of fontes) {
+    const lista = Array.isArray(fonte?.envolvidos) ? fonte.envolvidos : [];
+    if (lista.length) {
+      return lista
+        .map((e) => ({ nome: txt(e.nome), placa: txt(e.placa), modelo: txt(e.modelo), cor: txt(e.cor) }))
+        .filter((e) => e.nome.trim() || e.placa.trim());
+    }
+  }
+  return [];
 }
 
 // Local da ocorrência: GPS (se ligado e na rodovia) ou o preenchido no Relato Policial.
@@ -44,7 +57,15 @@ function localOcorrencia(gpsInfo) {
     };
   }
   try {
-    const form = parseRelatoDraft(localStorage.getItem(RELATO_DRAFT_KEY))?.form;
+    // Documento único primeiro; rascunho legado só durante a transição.
+    let form = null;
+    try {
+      const raw = localStorage.getItem('PMRV_OCORRENCIA');
+      form = raw ? JSON.parse(raw)?.relato?.form || null : null;
+    } catch {
+      form = null;
+    }
+    if (!form) form = parseRelatoDraft(localStorage.getItem(RELATO_DRAFT_KEY))?.form || null;
     // Rodovia do rascunho só conta com km preenchido (a rodovia tem valor padrão).
     if (form?.rodovia && typeof form.km === 'string' && form.km.trim()) {
       return { rodovia: rodoviaLabel(form.rodovia) || form.rodovia, km: form.km.trim() };
