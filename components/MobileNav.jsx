@@ -1,184 +1,147 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { showToast } from '@/components/Toast';
-import { Flip, gsap, prefersReducedMotion, registerGsap, useGSAP } from '@/lib/gsap-register';
-import { UsersIcon, CameraIcon, SparkIcon, ClipboardListIcon, FileReportIcon, SaveIcon } from '@/components/icons';
+import { useCallback, useState } from 'react';
+import { UsersIcon, ClipboardListIcon, FileReportIcon, SaveIcon } from '@/components/icons';
+import { abaInicialDaArea, areaFromAba } from '@/lib/aba';
 
-registerGsap();
-
-const TABS = [
-  { key: 'envolvidos', label: 'Envolvidos', desktopLabel: 'Envolvidos', Icon: UsersIcon },
-  { key: 'danos', label: 'Danos', desktopLabel: 'Danos (Fotos)', Icon: CameraIcon },
-  { key: 'dinamica', label: 'Dinâmica', desktopLabel: 'Relato + Dinâmica', Icon: SparkIcon },
-  { key: 'resumo', label: 'Resumo', desktopLabel: 'Resumo Dinâmico', Icon: ClipboardListIcon },
-  { key: 'relato', label: 'Relato', desktopLabel: 'Relato Policial', Icon: FileReportIcon },
-  { key: 'salvar', label: 'Salvar', desktopLabel: 'Salvar', Icon: SaveIcon },
+const AREAS = [
+  { key: 'pessoas', label: 'Pessoas', Icon: UsersIcon },
+  { key: 'ocorrencia', label: 'Ocorrência', Icon: ClipboardListIcon },
+  { key: 'relato', label: 'Relato', Icon: FileReportIcon },
+  { key: 'finalizar', label: 'Finalizar', Icon: SaveIcon },
 ];
 
-function tabAriaLabel(tab) {
-  return `Aba ${tab.desktopLabel}`;
-}
-
-function placePill(row, pill, active) {
-  if (!row || !pill) return;
-  const el = row.querySelector(`[data-tab="${active}"]`);
-  if (!el || !el.offsetWidth) return;
-  pill.style.left = `${el.offsetLeft}px`;
-  pill.style.width = `${el.offsetWidth}px`;
-}
+const ETAPAS_OCORRENCIA = [
+  { key: 'danos', label: 'Danos' },
+  { key: 'dinamica', label: 'Dinâmica' },
+  { key: 'resumo', label: 'Resumo' },
+];
 
 export default function MobileNav({ active, onChange }) {
   const [pressing, setPressing] = useState(null);
-  const [lastActive, setLastActive] = useState(active);
-  const mobileRowRef = useRef(null);
-  const mobilePillRef = useRef(null);
-  const desktopRowRef = useRef(null);
-  const desktopPillRef = useRef(null);
-  const firstFlip = useRef(true);
+  const activeArea = areaFromAba(active);
 
-  // Navegação por teclado (setas direita/esquerda, Home, End) — heurística de acessibilidade
-  const onTablistKeyDown = useCallback(
-    (e) => {
-      const idx = TABS.findIndex((t) => t.key === active);
+  const changeArea = useCallback((area) => onChange(abaInicialDaArea(area)), [onChange]);
+
+  const onAreaKeyDown = useCallback(
+    (event) => {
+      const index = AREAS.findIndex((area) => area.key === activeArea);
       let next = null;
-      if (e.key === 'ArrowRight') next = TABS[(idx + 1) % TABS.length].key;
-      else if (e.key === 'ArrowLeft') next = TABS[(idx - 1 + TABS.length) % TABS.length].key;
-      else if (e.key === 'Home') next = TABS[0].key;
-      else if (e.key === 'End') next = TABS[TABS.length - 1].key;
-      else return;
-      e.preventDefault();
-      onChange(next);
-      document.querySelector(`[data-tab="${next}"]`)?.focus();
+      if (event.key === 'ArrowRight') next = AREAS[(index + 1) % AREAS.length];
+      else if (event.key === 'ArrowLeft') next = AREAS[(index - 1 + AREAS.length) % AREAS.length];
+      else if (event.key === 'Home') next = AREAS[0];
+      else if (event.key === 'End') next = AREAS[AREAS.length - 1];
+      if (!next) return;
+      event.preventDefault();
+      changeArea(next.key);
+      event.currentTarget.querySelector(`[data-area="${next.key}"]`)?.focus();
+    },
+    [activeArea, changeArea]
+  );
+
+  const onEtapaKeyDown = useCallback(
+    (event) => {
+      const index = ETAPAS_OCORRENCIA.findIndex((etapa) => etapa.key === active);
+      let next = null;
+      if (event.key === 'ArrowRight') next = ETAPAS_OCORRENCIA[(index + 1) % ETAPAS_OCORRENCIA.length];
+      else if (event.key === 'ArrowLeft') {
+        next = ETAPAS_OCORRENCIA[(index - 1 + ETAPAS_OCORRENCIA.length) % ETAPAS_OCORRENCIA.length];
+      } else if (event.key === 'Home') next = ETAPAS_OCORRENCIA[0];
+      else if (event.key === 'End') next = ETAPAS_OCORRENCIA[ETAPAS_OCORRENCIA.length - 1];
+      if (!next) return;
+      event.preventDefault();
+      onChange(next.key);
+      event.currentTarget.querySelector(`[data-etapa="${next.key}"]`)?.focus();
     },
     [active, onChange]
   );
 
-  const tabProps = (tab) => {
-    const isActive = active === tab.key;
-    return {
-      role: 'tab',
-      id: `pmrv-tab-${tab.key}`,
-      'aria-selected': isActive,
-      'aria-controls': 'pmrv-tabpanel',
-      tabIndex: isActive ? 0 : -1,
-    };
+  const areaProps = (area, mobile) => ({
+    role: 'tab',
+    id: `pmrv-area-${mobile ? 'mobile' : 'desktop'}-${area.key}`,
+    'aria-label': `Aba ${area.label}`,
+    'aria-selected': activeArea === area.key,
+    'aria-controls': 'pmrv-tabpanel',
+    tabIndex: activeArea === area.key ? 0 : -1,
+    'data-area': area.key,
+  });
+
+  const renderArea = (area, mobile = false) => {
+    const selected = activeArea === area.key;
+    return (
+      <button
+        key={area.key}
+        type="button"
+        {...areaProps(area, mobile)}
+        onClick={() => changeArea(area.key)}
+        onTouchStart={() => setPressing(area.key)}
+        onTouchEnd={() => setPressing(null)}
+        onMouseDown={() => setPressing(area.key)}
+        onMouseUp={() => setPressing(null)}
+        onMouseLeave={() => setPressing(null)}
+        className={`${mobile ? 'primary-tab-mobile' : 'primary-tab-desktop'} ${
+          selected ? 'primary-tab-active' : ''
+        } ${pressing === area.key ? 'tab-press' : ''}`}
+      >
+        <span className="tab-icon" aria-hidden="true">
+          <area.Icon className={mobile ? 'w-5 h-5' : 'w-4 h-4'} />
+        </span>
+        <span>{area.label}</span>
+      </button>
+    );
   };
-
-  const measure = useCallback(() => {
-    placePill(mobileRowRef.current, mobilePillRef.current, active);
-    placePill(desktopRowRef.current, desktopPillRef.current, active);
-  }, [active]);
-
-  useGSAP(
-    () => {
-      const skipMotion = prefersReducedMotion() || firstFlip.current;
-      const mobileState = mobilePillRef.current ? Flip.getState(mobilePillRef.current) : null;
-      const desktopState = desktopPillRef.current ? Flip.getState(desktopPillRef.current) : null;
-      measure();
-      if (firstFlip.current) {
-        firstFlip.current = false;
-        return;
-      }
-      if (skipMotion) return;
-      if (mobileState && mobilePillRef.current) {
-        Flip.from(mobileState, { duration: 0.42, ease: 'pmrv' });
-      }
-      if (desktopState && desktopPillRef.current) {
-        Flip.from(desktopState, { duration: 0.42, ease: 'pmrv' });
-      }
-    },
-    { dependencies: [active, measure] }
-  );
-
-  useEffect(() => {
-    const onResize = () => measure();
-    window.addEventListener('resize', onResize);
-    window.addEventListener('orientationchange', onResize);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      window.removeEventListener('orientationchange', onResize);
-    };
-  }, [measure]);
-
-  useEffect(() => {
-    if (active !== lastActive) {
-      setLastActive(active);
-      const tab = TABS.find((t) => t.key === active);
-      if (tab) showToast(tab.desktopLabel, 'info', 1200);
-      const icon = document.querySelector(`[data-tab="${active}"] .tab-icon, [data-desktop-tab="${active}"] .tab-icon`);
-      if (icon && !prefersReducedMotion()) {
-        gsap.fromTo(icon, { y: 6, scale: 0.86 }, { y: 0, scale: 1, duration: 0.35, ease: 'back.out(1.5)' });
-      }
-    }
-  }, [active, lastActive]);
 
   return (
     <div id="pmrv-tabs">
-      <nav className="hidden md:block border-t border-white/15" aria-label="Navegação principal" role="tablist" aria-orientation="horizontal" onKeyDown={onTablistKeyDown}>
-        <div className="mx-auto max-w-5xl px-4">
-          <div ref={desktopRowRef} className="relative flex items-center gap-1">
-            <div ref={desktopPillRef} className="nav-pill nav-pill-desktop" aria-hidden="true" />
-            {TABS.map((tab) => {
-              const isActive = active === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  data-desktop-tab={tab.key}
-                  data-tab={tab.key}
-                  {...tabProps(tab)}
-                  aria-label={tabAriaLabel(tab)}
-                  onClick={() => onChange(tab.key)}
-                  className={`relative z-10 flex items-center gap-1.5 px-2.5 lg:px-4 py-2.5 text-[11px] lg:text-xs font-mono font-semibold uppercase tracking-wider whitespace-nowrap transition-colors ${
-                    isActive ? 'text-white font-bold' : 'text-white/85 hover:text-white'
-                  }`}
-                >
-                  <span className="tab-icon" aria-hidden="true">
-                    <tab.Icon className="w-4 h-4" />
-                  </span>
-                  <span>{tab.desktopLabel}</span>
-                </button>
-              );
-            })}
-          </div>
+      <nav
+        className="hidden md:block border-t border-white/10"
+        aria-label="Navegação principal"
+        role="tablist"
+        aria-orientation="horizontal"
+        onKeyDown={onAreaKeyDown}
+      >
+        <div className="mx-auto max-w-5xl px-4 flex items-center gap-1">
+          {AREAS.map((area) => renderArea(area))}
         </div>
       </nav>
+
+      {activeArea === 'ocorrencia' && (
+        <nav
+          className="workflow-subnav"
+          aria-label="Etapas da ocorrência"
+          role="tablist"
+          onKeyDown={onEtapaKeyDown}
+        >
+          <div className="mx-auto max-w-xl grid grid-cols-3 gap-1 p-1">
+            {ETAPAS_OCORRENCIA.map((etapa) => (
+              <button
+                key={etapa.key}
+                type="button"
+                role="tab"
+                id={`pmrv-etapa-${etapa.key}`}
+                data-etapa={etapa.key}
+                aria-selected={active === etapa.key}
+                aria-controls="pmrv-tabpanel"
+                tabIndex={active === etapa.key ? 0 : -1}
+                onClick={() => onChange(etapa.key)}
+                className={`workflow-subtab ${active === etapa.key ? 'workflow-subtab-active' : ''}`}
+              >
+                {etapa.label}
+              </button>
+            ))}
+          </div>
+        </nav>
+      )}
 
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 nav-dock"
         aria-label="Navegação no celular"
         role="tablist"
         aria-orientation="horizontal"
-        onKeyDown={onTablistKeyDown}
+        onKeyDown={onAreaKeyDown}
       >
-        <div className="mx-auto max-w-md">
-          <div ref={mobileRowRef} className="relative flex items-center justify-between px-2 pb-2 pt-1">
-            <div ref={mobilePillRef} className="nav-pill" aria-hidden="true" />
-            {TABS.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                data-tab={tab.key}
-                {...tabProps(tab)}
-                aria-label={tabAriaLabel(tab)}
-                onClick={() => onChange(tab.key)}
-                onTouchStart={() => setPressing(tab.key)}
-                onTouchEnd={() => setPressing(null)}
-                onMouseDown={() => setPressing(tab.key)}
-                onMouseUp={() => setPressing(null)}
-                onMouseLeave={() => setPressing(null)}
-                className={`relative z-10 flex-1 flex flex-col items-center gap-0.5 py-2 text-[11px] font-mono font-semibold uppercase tracking-wide transition-colors ${
-                  active === tab.key ? 'text-white font-bold' : 'text-white/75 hover:text-white/95'
-                } ${pressing === tab.key ? 'tab-press' : ''}`}
-              >
-                <span className="tab-icon leading-none" aria-hidden="true">
-                  <tab.Icon className="w-5 h-5" />
-                </span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
+        <div className="mx-auto max-w-md grid grid-cols-4 px-2 pb-2 pt-1">
+          {AREAS.map((area) => renderArea(area, true))}
         </div>
       </nav>
     </div>

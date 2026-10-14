@@ -18,7 +18,7 @@ const SEP = '|';
 // opções têm cores próprias para não herdar o branco do header): ao tocar, abre a lista de TODOS os modelos gratuitos agrupados por
 // provedor (optgroup). Listas ao vivo via /api/ai/models, com fallback fixo.
 // Provedor e modelo (por provedor) persistem em localStorage.
-export default function AIProviderPicker() {
+export default function AIProviderPicker({ variant = 'header' }) {
   const [provedor, setProvedor] = useState(PMRV_PROVEDOR_PADRAO);
   const [modelo, setModelo] = useState(PMRV_MODELO_PADRAO[PMRV_PROVEDOR_PADRAO]);
   const [listas, setListas] = useState(PMRV_MODELOS_FALLBACK);
@@ -74,7 +74,7 @@ export default function AIProviderPicker() {
 
   return (
     <label
-      className="header-chip relative max-w-[42vw] sm:max-w-[18rem] cursor-pointer focus-within:ring-2 focus-within:ring-white/80"
+      className={`${variant === 'menu' ? 'menu-ai-picker' : 'header-chip max-w-[42vw] sm:max-w-[18rem]'} relative cursor-pointer focus-within:ring-2`}
       title={`IA: ${provAtual.label} · ${modeloAtual?.label || modelo}${semChave ? ' (sem chave no servidor)' : ''}`}
     >
       <span aria-hidden="true">🤖</span>

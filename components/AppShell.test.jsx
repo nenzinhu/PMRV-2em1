@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import AppShell from './AppShell';
 
 // Isola a hidratação de fotos (IndexedDB de blobs não faz parte do escopo
@@ -48,6 +48,28 @@ function rascunhoLegado() {
 }
 
 describe('AppShell — migração legada, botão Nova e toasts', () => {
+  it('mantem o cabecalho focado e concentra ajustes ocasionais no menu Mais', async () => {
+    render(<AppShell initialAba="envolvidos" />);
+
+    const header = screen.getByRole('banner');
+    expect(within(header).getByRole('button', { name: 'Abrir menu Mais' })).toBeTruthy();
+    expect(within(header).queryByRole('button', { name: 'Iniciar nova ocorrência' })).toBeNull();
+    expect(within(header).queryByRole('button', { name: 'Abrir personalização de tema' })).toBeNull();
+
+    fireEvent.click(within(header).getByRole('button', { name: 'Abrir menu Mais' }));
+
+    expect(within(header).getByRole('menu', { name: 'Mais opções' })).toBeTruthy();
+    expect(within(header).getByRole('button', { name: 'Iniciar nova ocorrência' })).toBeTruthy();
+    expect(within(header).getByRole('button', { name: 'Abrir personalização de tema' })).toBeTruthy();
+  });
+
+  it('da ao painel um rotulo proprio que funciona em desktop e celular', () => {
+    const { container } = render(<AppShell initialAba="danos" />);
+    const painel = container.querySelector('[role="tabpanel"]');
+    expect(painel.getAttribute('aria-label')).toBe('Danos da ocorrência');
+    expect(painel.hasAttribute('aria-labelledby')).toBe(false);
+  });
+
   it('migra rascunhos legados para o documento único no boot', async () => {
     rascunhoLegado();
     render(<AppShell initialAba="salvar" />);
@@ -69,6 +91,7 @@ describe('AppShell — migração legada, botão Nova e toasts', () => {
     render(<AppShell initialAba="salvar" />);
     await screen.findByLabelText('Dossiê completo da ocorrência');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Abrir menu Mais' }));
     fireEvent.click(screen.getByRole('button', { name: 'Iniciar nova ocorrência' }));
 
     await waitFor(() => {

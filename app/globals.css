@@ -37,10 +37,7 @@
     font-family: var(--ds-font-sans);
     color: var(--ds-text);
     background-color: var(--ds-bg);
-    background-image:
-      radial-gradient(1200px 600px at 12% -10%, color-mix(in srgb, var(--ds-primary) 22%, transparent), transparent 60%),
-      radial-gradient(900px 500px at 110% 8%, color-mix(in srgb, var(--ds-accent) 18%, transparent), transparent 55%),
-      linear-gradient(180deg, color-mix(in srgb, var(--ds-bg) 88%, #000) 0%, var(--ds-bg) 28%, var(--ds-bg) 100%);
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--ds-bg) 94%, #fff) 0%, var(--ds-bg) 100%);
     background-attachment: fixed;
     overflow-x: hidden;
     /* iPhone (notch e barra inferior): respeita áreas seguras quando instalado como app */
@@ -50,7 +47,7 @@
   }
 
   header {
-    padding-top: calc(1rem + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
   }
 
   /* Toque mais confortável em telas pequenas + evita zoom automático no iOS */
@@ -68,13 +65,11 @@
 
 @layer components {
   .ds-card {
-    @apply p-5 sm:p-6 space-y-4;
-    background: color-mix(in srgb, var(--ds-surface) 86%, transparent);
-    border: 2px solid var(--ds-text);
-    border-radius: 18px;
-    box-shadow: 4px 4px 0 var(--ds-text), 0 18px 40px rgba(0, 0, 0, 0.08);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    @apply p-4 sm:p-5 space-y-4;
+    background: var(--ds-surface);
+    border: 1px solid color-mix(in srgb, var(--ds-text) 18%, transparent);
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.07);
   }
 
   .ds-card-danger {
@@ -92,7 +87,8 @@
   }
 
   .ds-input {
-    @apply w-full p-3 bg-white/90 border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition rounded-xl placeholder:text-slate-500;
+    @apply w-full p-3 bg-white/90 border focus:ring-2 focus:ring-gold outline-none transition rounded-xl placeholder:text-slate-500;
+    border-color: color-mix(in srgb, var(--ds-text) 30%, transparent);
   }
 
   .ds-input-muted {
@@ -366,12 +362,10 @@
 
   /* alterar-estilo-interface: ios_glassmorphism (banner/info) */
   .estilo-glass {
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 2px solid color-mix(in srgb, var(--ds-primary) 28%, transparent);
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    background: color-mix(in srgb, var(--ds-surface) 94%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ds-primary) 22%, transparent);
+    border-radius: 12px;
+    box-shadow: none;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -434,34 +428,27 @@
 }
 
 .app-header {
-  background: linear-gradient(
-    165deg,
-    color-mix(in srgb, var(--ds-primary) 78%, #052e16) 0%,
-    var(--ds-primary) 58%,
-    color-mix(in srgb, var(--ds-primary) 88%, #f4c430) 100%
-  );
-  border-bottom: 2px solid #f4c430;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.22);
+  background: color-mix(in srgb, var(--ds-primary) 92%, #052e16);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.18);
 }
 
 .brand-logo-wrap {
   transform-style: preserve-3d;
-  filter:
-    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.38))
-    drop-shadow(0 0 12px rgba(244, 196, 48, 0.28));
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.28));
 }
 
 .brand-logo {
-  width: 5.4rem;
-  height: 4.1rem;
+  width: 3.6rem;
+  height: 3.4rem;
   object-fit: contain;
   background: transparent;
 }
 
 @media (min-width: 640px) {
   .brand-logo {
-    width: 6.4rem;
-    height: 4.85rem;
+    width: 4.2rem;
+    height: 3.8rem;
   }
 }
 
@@ -473,21 +460,11 @@
   display: block;
   font-family: var(--ds-font-mono);
   font-weight: 700;
-  font-size: 0.62rem;
+  font-size: 0.72rem;
   line-height: 1.18;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  background-image: linear-gradient(
-    90deg,
-    #ffe27a 0%,
-    #f5a623 18%,
-    #e53935 42%,
-    #f4c430 68%,
-    #43a047 100%
-  );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #fff;
 }
 
 @media (min-width: 640px) {
@@ -503,11 +480,7 @@
 }
 
 .brand-shine {
-  position: absolute;
-  inset: -20% auto -20% 0;
-  width: 42%;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  display: none;
 }
 
 .ambient-field {
@@ -578,12 +551,117 @@
 }
 
 .nav-dock {
-  background: color-mix(in srgb, #1a1a1a 82%, transparent);
+  background: color-mix(in srgb, #0f2f25 94%, transparent);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   border-top: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.2);
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+.primary-tab-desktop {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.65rem 0.65rem 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--ds-font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.primary-tab-mobile {
+  display: flex;
+  min-height: 3.5rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  border-radius: 0.75rem;
+  color: rgba(255, 255, 255, 0.68);
+  font-family: var(--ds-font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.primary-tab-active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.workflow-subnav {
+  background: color-mix(in srgb, var(--ds-surface) 97%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--ds-text) 14%, transparent);
+  color: var(--ds-text);
+}
+
+.workflow-subtab {
+  min-height: 2.25rem;
+  border-radius: 0.55rem;
+  color: color-mix(in srgb, var(--ds-text) 65%, transparent);
+  font-family: var(--ds-font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.workflow-subtab-active {
+  background: color-mix(in srgb, var(--ds-primary) 12%, var(--ds-surface));
+  color: var(--ds-primary);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ds-primary) 28%, transparent);
+}
+
+.more-menu {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  width: min(19rem, calc(100vw - 1.5rem));
+  padding: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--ds-text) 16%, transparent);
+  border-radius: 0.9rem;
+  background: var(--ds-surface);
+  color: var(--ds-text);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.2);
+}
+
+.more-menu-action,
+.menu-ai-picker {
+  display: flex;
+  width: 100%;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  font-family: var(--ds-font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.more-menu-action:hover,
+.menu-ai-picker:hover {
+  background: color-mix(in srgb, var(--ds-primary) 8%, var(--ds-surface));
+}
+
+.more-menu-divider {
+  height: 1px;
+  margin: 0.35rem 0;
+  background: color-mix(in srgb, var(--ds-text) 12%, transparent);
+}
+
+.more-menu-label {
+  padding: 0.35rem 0.75rem 0;
+  color: color-mix(in srgb, var(--ds-text) 55%, transparent);
+  font-family: var(--ds-font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .nav-pill {

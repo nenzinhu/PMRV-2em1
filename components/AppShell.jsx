@@ -11,7 +11,6 @@ import ThemeConfig from '@/components/theme/ThemeConfig';
 import MobileNav from '@/components/MobileNav';
 import AIProviderPicker from '@/components/AIProviderPicker';
 import Toast, { showToast } from '@/components/Toast';
-import AmbientField from '@/components/motion/AmbientField';
 import BrandLockup from '@/components/motion/BrandLockup';
 import PageStage from '@/components/motion/PageStage';
 import { useFullscreen } from '@/hooks/useFullscreen';
@@ -22,7 +21,7 @@ import { gpsLocationLabel } from '@/lib/gps-label';
 import { MapPinIcon, PaletteIcon, ExpandIcon, CollapseIcon, DownloadIcon, FilePlusIcon } from '@/components/icons';
 import { OcorrenciaProvider, useOcorrencia } from '@/components/OcorrenciaProvider';
 
-function NovaOcorrenciaButton() {
+function NovaOcorrenciaButton({ onDone }) {
   const { novaOcorrencia } = useOcorrencia();
   return (
     <button
@@ -35,9 +34,10 @@ function NovaOcorrenciaButton() {
         ) {
           novaOcorrencia();
           showToast('Nova ocorrência iniciada', 'success', 2000);
+          onDone?.();
         }
       }}
-      className="header-chip"
+      className="more-menu-action text-brick"
       title="Nova ocorrência"
       aria-label="Iniciar nova ocorrência"
     >
@@ -92,6 +92,7 @@ export default function AppShell({ initialAba = 'envolvidos' }) {
 
 function AppShellInner({ aba, themeOpen, setThemeOpen, mounted, setMounted, fsActive, toggleFs, install, supportsInstall, isInstalled, isStandalone, gpsOn, gpsInfo, toggleGps, setAba }) {
   const { elRef } = useFullscreen();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -156,9 +157,8 @@ function AppShellInner({ aba, themeOpen, setThemeOpen, mounted, setMounted, fsAc
   return (
     <>
       <div ref={elRef} className="relative min-h-screen flex flex-col">
-        <AmbientField />
         <header className="app-header text-white sticky top-0 z-50">
-          <div className="relative mx-auto max-w-5xl flex justify-between items-center px-3 sm:px-4">
+          <div className="relative mx-auto max-w-5xl flex justify-between items-center px-3 sm:px-4 min-h-[4.5rem]">
             <BrandLockup />
             <div className="flex items-center gap-1 sm:gap-2">
               {mounted && !gpsOn && (
@@ -196,37 +196,52 @@ function AppShellInner({ aba, themeOpen, setThemeOpen, mounted, setMounted, fsAc
                   </span>
                 </button>
               )}
-              <NovaOcorrenciaButton />
-              <button
-                type="button"
-                onClick={() => setThemeOpen(true)}
-                className="header-chip"
-                title="Personalizar tema"
-                aria-label="Abrir personalização de tema"
-              >
-                <PaletteIcon className="w-3.5 h-3.5" /> Tema
-              </button>
-              <AIProviderPicker />
-              {supportsInstall && !isInstalled && !isStandalone && (
+              <div className="relative">
                 <button
                   type="button"
-                  onClick={install}
+                  onClick={() => setMoreOpen((open) => !open)}
                   className="header-chip"
-                  title="Instalar o app"
-                  aria-label="Instalar aplicativo"
+                  aria-label="Abrir menu Mais"
+                  aria-expanded={moreOpen}
+                  aria-haspopup="menu"
                 >
-                  <DownloadIcon className="w-3.5 h-3.5" /> Instalar
+                  <span className="text-base leading-none" aria-hidden="true">•••</span>
+                  <span className="hidden sm:inline">Mais</span>
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={toggleFs}
-                className="header-chip hidden sm:inline-flex"
-                title={fsActive ? 'Sair da tela cheia' : 'Modo imersivo'}
-                aria-label={fsActive ? 'Sair da tela cheia' : 'Entrar em modo imersivo'}
-              >
-                {fsActive ? <CollapseIcon className="w-3.5 h-3.5" /> : <ExpandIcon className="w-3.5 h-3.5" />}
-              </button>
+                {moreOpen && (
+                  <div className="more-menu" role="menu" aria-label="Mais opções">
+                    <NovaOcorrenciaButton onDone={() => setMoreOpen(false)} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        setThemeOpen(true);
+                      }}
+                      className="more-menu-action"
+                      aria-label="Abrir personalização de tema"
+                    >
+                      <PaletteIcon className="w-4 h-4" /> Aparência
+                    </button>
+                    <div className="more-menu-divider" />
+                    <p className="more-menu-label">Modelo de inteligência artificial</p>
+                    <AIProviderPicker variant="menu" />
+                    {supportsInstall && !isInstalled && !isStandalone && (
+                      <button type="button" onClick={install} className="more-menu-action" aria-label="Instalar aplicativo">
+                        <DownloadIcon className="w-4 h-4" /> Instalar aplicativo
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={toggleFs}
+                      className="more-menu-action"
+                      aria-label={fsActive ? 'Sair da tela cheia' : 'Entrar em modo imersivo'}
+                    >
+                      {fsActive ? <CollapseIcon className="w-4 h-4" /> : <ExpandIcon className="w-4 h-4" />}
+                      {fsActive ? 'Sair da tela cheia' : 'Tela cheia'}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <MobileNav active={aba} onChange={setAba} />

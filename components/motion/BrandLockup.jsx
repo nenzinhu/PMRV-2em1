@@ -81,7 +81,7 @@ export default function BrandLockup() {
       <div className="relative min-w-0">
         <div ref={shineRef} className="brand-shine" aria-hidden="true" />
         <h1 ref={titleRef} className="brand-title">
-          <span className="brand-title-text">POLICIA MILITAR RODOVIARIA ESTADUAL DE SC</span>
+          <span className="brand-title-text">PMRV · Santa Catarina</span>
         </h1>
       </div>
     </div>

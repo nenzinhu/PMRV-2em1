@@ -5,6 +5,15 @@ import { gsap, prefersReducedMotion, registerGsap, useGSAP } from '@/lib/gsap-re
 
 registerGsap();
 
+const ROTULOS = {
+  envolvidos: 'Pessoas envolvidas',
+  danos: 'Danos da ocorrência',
+  dinamica: 'Dinâmica da ocorrência',
+  resumo: 'Resumo da ocorrência',
+  relato: 'Relato policial',
+  salvar: 'Finalizar ocorrência',
+};
+
 export default function PageStage({ aba, children }) {
   const stageRef = useRef(null);
 
@@ -39,7 +48,13 @@ export default function PageStage({ aba, children }) {
   );
 
   return (
-    <div ref={stageRef} className="page-stage" role="tabpanel" id="pmrv-tabpanel" aria-labelledby={`pmrv-tab-${aba}`}>
+    <div
+      ref={stageRef}
+      className="page-stage"
+      role="tabpanel"
+      id="pmrv-tabpanel"
+      aria-label={ROTULOS[aba] || 'Conteúdo da ocorrência'}
+    >
       {children}
     </div>
   );

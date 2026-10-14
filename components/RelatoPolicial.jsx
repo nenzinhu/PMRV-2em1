@@ -12,6 +12,7 @@ import {
   rodoviaLabel,
   rodoviasDoSeletor,
   formatKM,
+  formatKMNumero,
   formatSade,
   formatVtr,
   capitalizarFrase,
@@ -177,6 +178,9 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
       if (merged.form.rodovia) {
         merged.form.rodovia = rodoviaLabel(merged.form.rodovia) || merged.form.rodovia;
       }
+      if (merged.form.km) {
+        merged.form.km = formatKMNumero(merged.form.km);
+      }
       setForm(merged.form);
       setStep(merged.step);
       setManualEdit(merged.manualEdit);
@@ -207,12 +211,11 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
   useEffect(() => {
     if (!autoKmGps) return;
     if (gpsInfo?.rodovia && !gpsInfo.foraDaRodovia && typeof gpsInfo.km === 'number') {
-      // Mesmo valor exibido no chip "KM:" do GPS (Passo 1) — só troca o ponto
-      // decimal por vírgula, sem a máscara de dígitos (que corrompia o valor).
+      // Mantém a leitura automática na mesma máscara de três casas do formulário.
       setForm((f) => ({
         ...f,
         rodovia: gpsInfo.rodovia,
-        km: String(Math.round(gpsInfo.km * 1000) / 1000).replace('.', ','),
+        km: formatKMNumero(gpsInfo.km),
       }));
     }
   }, [gpsInfo?.rodovia, gpsInfo?.km, gpsInfo?.foraDaRodovia, autoKmGps]);
@@ -375,11 +378,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
     }
     const kmMatch = t.match(/(?:quilômetro|km)\s*(\d+)/);
     if (kmMatch) {
-      let num = kmMatch[1];
-      if (num.length === 2) num = num + '000';
-      let value = num.substring(0, 5);
-      if (value.length > 2) value = value.substring(0, 2) + ',' + value.substring(2);
-      set({ km: value });
+      set({ km: formatKM(kmMatch[1]) });
     }
     if (t.includes('crescente')) set({ sentido: 'Crescente' });
     else if (t.includes('decrescente') || t.includes('descrencente')) set({ sentido: 'Decrescente' });
@@ -608,7 +607,13 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               </div>
               <div>
                 <label className="ds-label">Km</label>
-                <input value={form.km} onChange={(e) => set({ km: formatKM(e.target.value) })} className="ds-input" />
+                <input
+                  value={form.km}
+                  inputMode="numeric"
+                  maxLength={6}
+                  onChange={(e) => set({ km: formatKM(e.target.value) })}
+                  className="ds-input"
+                />
               </div>
               <div className="col-span-2">
                 <label className="ds-label">Ponto de referência</label>
@@ -825,7 +830,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                   Rodovia: <b>{rodoviaLabel(gpsInfo.rodovia) || gpsInfo.rodovia}</b>
                 </span>
                 <span className="bg-gold/15 text-charcoal border border-gold/50 px-2 py-1 rounded">
-                  KM: <b>{Math.round(gpsInfo.km * 1000) / 1000}</b>
+                  KM: <b>{formatKMNumero(gpsInfo.km)}</b>
                 </span>
                 <span className="bg-gray-100 text-charcoal/70 px-2 py-1 rounded">
                   ±{Math.round(gpsInfo.dist)} m
@@ -899,8 +904,10 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               <label className="ds-label">KM</label>
               <input
                 value={form.km}
-                placeholder="Informe o KM"
-                onChange={(e) => set({ km: e.target.value })}
+                placeholder="Ex.: 0,900"
+                inputMode="numeric"
+                maxLength={6}
+                onChange={(e) => set({ km: formatKM(e.target.value) })}
                 className="ds-input text-center font-mono font-semibold text-sm sm:text-base"
               />
             </div>
