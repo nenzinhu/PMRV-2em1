@@ -10,21 +10,25 @@ import {
 import { showToast } from '@/components/Toast';
 import { loadResumoState } from '@/lib/resumo-relatos';
 import { useOcorrencia } from '@/components/OcorrenciaProvider';
-import { buildResumoPrompt, estiloResumoValido, relatosParaBase } from '@/lib/resumo-prompt';
+import {
+  RESUMO_ESTILO_PADRAO,
+  RESUMO_OPCOES,
+  buildResumoPrompt,
+  estiloResumoValido,
+  normalizarResumoEstilos,
+  relatosParaBase,
+} from '@/lib/resumo-prompt';
 import { aplicarAjusteFino, carregarAjusteFino } from '@/lib/ajuste-fino';
 
 
-const ESTILO_BOTOES = [
-  { id: 'tecnico', label: 'Técnico' },
-  { id: 'policial', label: 'Policial' },
-  { id: 'leigo', label: 'Leigo' },
-];
+const ESTILO_BOTOES = RESUMO_OPCOES;
 
 const ESTILO_TITULO = {
-  tecnico: 'Técnico (perícia / judicial)',
-  policial: 'Policial (neutro + CTB)',
-  leigo: 'Leigo',
+  narrativo: 'Relato Narrativo Direto',
+  tecnico_policial: 'Relato Técnico/Policial',
 };
+
+const RESUMOS_VAZIOS = { narrativo: '', tecnico_policial: '' };
 
 // Id do novo card: fora do render (Date.now é impuro durante o render).
 function novoIdRelato() {
@@ -34,8 +38,8 @@ function novoIdRelato() {
 export default function ResumoDinamica() {
   const [relatos, setRelatos] = useState([]);
   const [resumo, setResumo] = useState('');
-  const [resumos, setResumos] = useState({ tecnico: '', policial: '', leigo: '' });
-  const [estiloResumo, setEstiloResumo] = useState('policial');
+  const [resumos, setResumos] = useState(RESUMOS_VAZIOS);
+  const [estiloResumo, setEstiloResumo] = useState(RESUMO_ESTILO_PADRAO);
   const [loadingIA, setLoadingIA] = useState(null);
   const [statusIA, setStatusIA] = useState('');
   const init = useRef(false);
@@ -53,7 +57,7 @@ export default function ResumoDinamica() {
           s = {
             relatos: Array.isArray(doc.resumo.relatos) ? doc.resumo.relatos : [],
             resumo: typeof doc.resumo.resumo === 'string' ? doc.resumo.resumo : '',
-            resumos: doc.resumo.resumos || { tecnico: '', policial: '', leigo: '' },
+            resumos: doc.resumo.resumos || RESUMOS_VAZIOS,
             estiloResumo: doc.resumo.estiloResumo,
           };
         }
@@ -63,8 +67,9 @@ export default function ResumoDinamica() {
       if (!s) s = loadResumoState();
       setRelatos(s.relatos);
       setResumo(s.resumo);
-      setResumos(s.resumos || { tecnico: '', policial: '', leigo: '' });
-      setEstiloResumo(estiloResumoValido(s.estiloResumo));
+      const estilos = normalizarResumoEstilos(s);
+      setResumos(estilos.resumos);
+      setEstiloResumo(estilos.estiloResumo);
     }
     reload();
     init.current = true;
@@ -231,8 +236,8 @@ export default function ResumoDinamica() {
     save({
       relatos: [],
       resumo: '',
-      resumos: { tecnico: '', policial: '', leigo: '' },
-      estiloResumo: 'policial',
+      resumos: RESUMOS_VAZIOS,
+      estiloResumo: RESUMO_ESTILO_PADRAO,
     });
     setStatusIA('');
     showToast('Tudo limpo', 'warning', 1500);
@@ -253,7 +258,7 @@ export default function ResumoDinamica() {
       </div>
 
       <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono mb-4 p-3">
-        Os relatos individuais entram aqui ao tocar <b>Salvar relato</b> na aba Envolvidos. Depois escolha o tipo: <b>Técnico</b> (peritos e casos judiciais), <b>Policial</b> (neutro, normas e CTB) ou <b>Leigo</b> (linguagem simples). Ao gerar ou tocar <b>Salvar</b>, o texto já vai para a dinâmica do Relato Policial.
+        Os relatos individuais entram aqui ao tocar <b>Salvar relato</b> na aba Envolvidos. Depois escolha entre <b>Relato Narrativo Direto</b> (formal, objetivo e neutro) e <b>Relato Técnico/Policial</b> (impessoal, técnico e sem atribuir culpa). Ao gerar ou tocar <b>Salvar</b>, o texto já vai para a dinâmica do Relato Policial.
       </p>
 
       <div className="space-y-4">
@@ -346,7 +351,7 @@ export default function ResumoDinamica() {
           <div className="border-b-2 border-charcoal pb-2 mb-3 flex flex-col gap-2">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm sm:text-base">
-                Resumo Gerado — {ESTILO_TITULO[estiloResumo] || 'Policial'}
+                Resumo Gerado — {ESTILO_TITULO[estiloResumo] || ESTILO_TITULO[RESUMO_ESTILO_PADRAO]}
               </h3>
               <button
                 type="button"
