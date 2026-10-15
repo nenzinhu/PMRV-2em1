@@ -15,13 +15,12 @@ const SEP = '|';
 
 // Chip de header "🤖 Provedor · Modelo". Um <select> nativo transparente cobre o
 // chip (sem opacity:0, que em alguns navegadores deixa a lista transparente; as
-// opções têm cores próprias para não herdar o branco do header): ao tocar, abre a lista de TODOS os modelos gratuitos agrupados por
-// provedor (optgroup). Listas ao vivo via /api/ai/models, com fallback fixo.
+// opções têm cores próprias para não herdar o branco do header): ao tocar, abre a lista fixa de modelos permitidos agrupados por
+// provedor (optgroup). O servidor informa apenas quais provedores têm chave configurada.
 // Provedor e modelo (por provedor) persistem em localStorage.
 export default function AIProviderPicker({ variant = 'header' }) {
   const [provedor, setProvedor] = useState(PMRV_PROVEDOR_PADRAO);
   const [modelo, setModelo] = useState(PMRV_MODELO_PADRAO[PMRV_PROVEDOR_PADRAO]);
-  const [listas, setListas] = useState(PMRV_MODELOS_FALLBACK);
   const [configurados, setConfigurados] = useState(null);
 
   useEffect(() => {
@@ -36,11 +35,6 @@ export default function AIProviderPicker({ variant = 'header' }) {
         .catch(() => null);
 
     json('/api/ai/models').then((d) => d?.providers && setConfigurados(d.providers));
-    PMRV_AI_PROVIDERS.forEach(({ id }) => {
-      json(`/api/ai/models?provider=${id}`).then((d) => {
-        if (Array.isArray(d?.models) && d.models.length) setListas((l) => ({ ...l, [id]: d.models }));
-      });
-    });
     // Avisa quando o servidor precisou usar um provedor/modelo de reserva.
     function onFallback(e) {
       const p = PMRV_AI_PROVIDERS.find((x) => x.id === e.detail?.provider);
@@ -61,11 +55,8 @@ export default function AIProviderPicker({ variant = 'header' }) {
     definirModeloIA(prov, mod);
   }
 
-  // Garante que o modelo salvo apareça mesmo se saiu da lista atual.
   function modelosDe(id) {
-    const lista = listas[id] || [];
-    const salvo = id === provedor ? modelo : null;
-    return salvo && !lista.some((m) => m.id === salvo) ? [{ id: salvo, label: salvo }, ...lista] : lista;
+    return PMRV_MODELOS_FALLBACK[id] || [];
   }
 
   const provAtual = PMRV_AI_PROVIDERS.find((p) => p.id === provedor) || PMRV_AI_PROVIDERS[0];

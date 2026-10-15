@@ -81,13 +81,29 @@ export default function ResumoDinamica() {
     };
   }, []);
 
+  function gravarDinamicaNoRelato(texto) {
+    if (typeof texto !== 'string' || !texto.trim() || !docPronto) return false;
+    atualizarDoc((prev) => {
+      if (!prev) return prev;
+      const relato = prev.relato || {};
+      return {
+        ...prev,
+        relato: {
+          ...relato,
+          form: { ...(relato.form || {}), dinamica: texto },
+        },
+      };
+    });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('set-dinamica', { detail: texto }));
+    }
+    return true;
+  }
+
   function transferirParaRelatoPolicial(id) {
     const relato = relatos.find((r) => r.id === id);
     if (!relato) return;
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('set-dinamica', { detail: relato.texto }));
-      window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'relato' }));
-    }
+    gravarDinamicaNoRelato(relato.texto);
     setTransferindoId(id);
     setTimeout(() => setTransferindoId(null), 2000);
   }
@@ -98,7 +114,7 @@ export default function ResumoDinamica() {
       alert('Não há resumo para salvar.');
       return;
     }
-    window.dispatchEvent(new CustomEvent('set-dinamica', { detail: texto }));
+    gravarDinamicaNoRelato(texto);
     showToast('Resumo gravado no Relato Policial', 'success', 2000);
     if (irParaSalvar) {
       window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'salvar' }));
@@ -176,7 +192,7 @@ export default function ResumoDinamica() {
           resumos: nextResumos,
           estiloResumo: modo,
         });
-        window.dispatchEvent(new CustomEvent('set-dinamica', { detail: texto }));
+        gravarDinamicaNoRelato(texto);
         setStatusIA('Resumo gerado e gravado no Relato Policial.');
         showToast(`Resumo ${ESTILO_BOTOES.find((e) => e.id === modo)?.label} gravado no Relato`, 'success', 2000);
       }
@@ -218,7 +234,7 @@ export default function ResumoDinamica() {
           resumo: texto,
           resumos: { ...resumos, [modo]: texto },
         });
-        window.dispatchEvent(new CustomEvent('set-dinamica', { detail: texto }));
+        gravarDinamicaNoRelato(texto);
         setStatusIA('Resumo melhorado e gravado no Relato Policial.');
         showToast('Resumo melhorado e gravado no Relato', 'success', 2000);
       }

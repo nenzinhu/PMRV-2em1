@@ -3,42 +3,25 @@
 import { useEffect, useState } from 'react';
 import { PMRV_MODELOS_VISAO } from '@/lib/ai-models';
 
-// Seletor da aba Danos: só modelos GRATUITOS que leem fotos. Fixos do registro
-// (Groq, Mistral, Z.ai) + gratuitos com visão do OpenRouter, consultados ao vivo.
-// Escolha persiste em localStorage; "Automático" = Mistral Small com reserva.
+// Seletor da aba Danos: somente os modelos permitidos que leem fotos.
+// A escolha persiste em localStorage; "Automático" percorre a lista fixa.
 
 const MODELO_KEY = 'PMRV_DANOS_MODELO';
 const SEP = '|';
 const valorDe = (m) => `${m.provedor}${SEP}${m.id}`;
 const AUTOMATICO = {
-  ...(PMRV_MODELOS_VISAO.find((m) => m.id === 'mistral-small-latest') || PMRV_MODELOS_VISAO[0]),
+  ...PMRV_MODELOS_VISAO[0],
   label: 'Automático',
   descricao:
-    'Começa pelo Mistral Small 4 e, se ele estiver sem chave, sem cota ou falhar, passa sozinho para o próximo modelo gratuito que lê fotos.',
+    'Começa pelo Qwen 3.8 27B e, se ele estiver sem chave, sem cota ou falhar, passa para o próximo modelo permitido que lê fotos.',
   automatico: true,
 };
-const PROVEDORES_AO_VIVO = ['openrouter'];
 
 export default function ModeloFotoPicker({ onChange }) {
   const [valor, setValor] = useState('');
-  const [aoVivo, setAoVivo] = useState([]);
   const [configurados, setConfigurados] = useState(null);
 
-  const modelos = [...PMRV_MODELOS_VISAO, ...aoVivo];
-  // Modelo salvo que (ainda) não está na lista ao vivo continua valendo e visível.
-  const [provSalvo, ...idSalvo] = valor.split(SEP);
-  const salvoForaDaLista =
-    valor && PROVEDORES_AO_VIVO.includes(provSalvo) && !modelos.some((m) => valorDe(m) === valor)
-      ? {
-          provedor: provSalvo,
-          id: idSalvo.join(SEP),
-          label: idSalvo.join(SEP),
-          provedorLabel: 'OpenRouter',
-          gratis: 'Modelos :free',
-          descricao: 'Modelo escolhido antes; a lista ao vivo ainda não o confirmou.',
-        }
-      : null;
-  if (salvoForaDaLista) modelos.push(salvoForaDaLista);
+  const modelos = PMRV_MODELOS_VISAO;
   const escolhido = modelos.find((m) => valorDe(m) === valor) || AUTOMATICO;
   const semChave = (provedor) => configurados && !configurados[provedor];
 
@@ -49,7 +32,7 @@ export default function ModeloFotoPicker({ onChange }) {
     } catch {
       /* armazenamento indisponível */
     }
-    setValor(salvo);
+    setValor(modelos.some((modelo) => valorDe(modelo) === salvo) ? salvo : '');
 
     const ctrl = new AbortController();
     const json = (url) =>
@@ -57,15 +40,10 @@ export default function ModeloFotoPicker({ onChange }) {
         .then((r) => (r.ok ? r.json() : null))
         .catch(() => null);
     json('/api/ai/models').then((d) => d?.providers && setConfigurados(d.providers));
-    PROVEDORES_AO_VIVO.forEach((id) =>
-      json(`/api/ai/models?provider=${id}&visao=1`).then((d) => {
-        if (Array.isArray(d?.models) && d.models.length) setAoVivo((l) => [...l, ...d.models]);
-      })
-    );
     return () => ctrl.abort();
   }, []);
 
-  // O pai sempre recebe o modelo efetivo (inclusive o salvo, ao carregar a lista ao vivo).
+  // O pai sempre recebe o modelo efetivo.
   useEffect(() => {
     onChange(escolhido);
   }, [escolhido.provedor, escolhido.id, escolhido.automatico]); // eslint-disable-line react-hooks/exhaustive-deps

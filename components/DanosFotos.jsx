@@ -24,7 +24,7 @@ const ERROS_IA = {
   auth: 'Chave da API inválida ou sem permissão.',
   quota: 'Cota da API excedida no momento. Aguarde alguns minutos e tente novamente.',
   novisao:
-    'Nenhum provedor configurado lê imagens. Configure a chave do Mistral (MISTRAL_API_KEY) ou escolha um modelo com visão.',
+    'Nenhum provedor configurado lê imagens. Configure Groq, OpenRouter ou Cohere e escolha um modelo com visão.',
   invalid: 'Fotos inválidas ou grandes demais. Remova alguma e tente de novo.',
 };
 
@@ -201,7 +201,7 @@ export default function DanosFotos() {
       }
       if (respostaSemImagem(res.text)) {
         setDescricao('');
-        setStatus('O modelo escolhido não leu as imagens. Escolha um modelo com visão (ex.: Mistral Small).');
+        setStatus('O modelo escolhido não leu as imagens. Escolha uma das opções indicadas para leitura de fotos.');
         return;
       }
       setDescricao(res.text);
