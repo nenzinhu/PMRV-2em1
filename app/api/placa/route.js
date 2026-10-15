@@ -3,7 +3,8 @@ import { normalizarDadosPlaca, normalizarPlaca, placaConsultavel } from '@/lib/p
 // API para consulta de placa de veículo via wdapi2
 // Formato: https://wdapi2.com.br/consulta/{placa}/{token}
 // O token fica SOMENTE no servidor (PLACA_API_TOKEN em .env.local) e nunca
-// vai ao navegador nem aos logs. Sem a variável, a rota devolve 500 'nokey'.
+// vai ao navegador nem aos logs. Sem a variável, a rota explica que a consulta
+// ainda não foi configurada no servidor.
 export const runtime = 'nodejs';
 
 export async function GET(req) {
@@ -12,7 +13,7 @@ export async function GET(req) {
   const token = (process.env.PLACA_API_TOKEN || '').trim();
 
   if (!token) {
-    return new Response(JSON.stringify({ error: 'nokey' }), {
+    return new Response(JSON.stringify({ error: 'Consulta de placa não configurada no servidor.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
