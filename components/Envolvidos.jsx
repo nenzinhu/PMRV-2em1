@@ -33,6 +33,7 @@ import {
 import { salvarRelatoNoResumo, retirarRelatoDoResumo } from '@/lib/resumo-relatos';
 import { useOcorrencia } from '@/components/OcorrenciaProvider';
 import { aplicarDadosConsultados, consultarPlaca as consultarPlacaApi, normalizarPlaca, placaConsultavel } from '@/lib/placa';
+import { ACOES_RELATO, promptRevisaoRelato } from '@/lib/revisao-relato';
 
 const EMPTY_ENV = () => ({
   id: 0,
@@ -52,19 +53,6 @@ const EMPTY_ENV = () => ({
   relato: '',
   fotos: [],
 });
-
-const ACOES_RELATO = {
-  ortografia: {
-    carregando: 'Corrigindo…',
-    instrucao:
-      'Corrija somente ortografia, acentuação, concordância e pontuação do relato individual abaixo. Preserve as palavras, a ordem das informações e todos os fatos; não reescreva, não resuma e não acrescente nada. Responda APENAS com o texto corrigido, sem comentários.',
-  },
-  melhorar: {
-    carregando: 'Melhorando…',
-    instrucao:
-      'Reescreva o relato individual abaixo para deixá-lo claro, direto e objetivo, com linguagem simples e fácil de entender. Preserve todos os fatos e a sequência dos acontecimentos. Não invente, não presuma, não omita informações e não faça juízo de valor. Responda APENAS com o relato melhorado, sem comentários.',
-  },
-};
 
 function novoEnvolvido(seq) {
   return { ...EMPTY_ENV(), id: seq };
@@ -336,7 +324,7 @@ export default function Envolvidos({ gpsInfo = null }) {
 
     setRelatoIA((anterior) => ({ ...anterior, [id]: acao }));
     const relatoOriginal = ev.relato;
-    const prompt = `${configuracao.instrucao}\n\n${relatoOriginal}`;
+    const prompt = promptRevisaoRelato(acao, relatoOriginal);
 
     try {
       const res = await callGroq({ apiKey: obterChaveIA(), prompt, system: PMRV_AGENTE_PADRAO });

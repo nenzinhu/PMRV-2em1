@@ -10,6 +10,7 @@ import { rodoviaLabel } from '@/lib/rodovias-list';
 import EstiloPicker from '@/components/EstiloPicker';
 import AjusteFino from '@/components/AjusteFino';
 import { aplicarAjusteFino, carregarAjusteFino } from '@/lib/ajuste-fino';
+import { ACOES_RELATO, promptRevisaoRelato } from '@/lib/revisao-relato';
 import {
   DINAMICA_PRESUMIDA_KEY,
   apresentacaoEnvolvido,
@@ -94,6 +95,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
   const [cadastrados, setCadastrados] = useState([]);
   const [local, setLocal] = useState(null);
   const [placaStatus, setPlacaStatus] = useState({});
+  const [relatoIA, setRelatoIA] = useState({});
   const carregado = useRef(false);
 
   useEffect(() => {
@@ -177,6 +179,50 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
       presumido: false,
     });
     document.getElementById(`dp-relato-${env.id}`)?.focus();
+  }
+
+  async function revisarRelato(env, acao) {
+    const configuracao = ACOES_RELATO[acao];
+    if (!configuracao) return;
+    if (!env.relato.trim()) {
+      alert('Escreva o relato antes de usar a revisão com IA.');
+      return;
+    }
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert('Sem conexão com a internet.\n\nA revisão com IA precisa de internet.');
+      return;
+    }
+
+    const relatoOriginal = env.relato;
+    setRelatoIA((anterior) => ({ ...anterior, [env.id]: acao }));
+    try {
+      const res = await callGroq({
+        apiKey: obterChaveIA(),
+        prompt: promptRevisaoRelato(acao, relatoOriginal),
+      });
+      if (res.error === 'auth') {
+        alert('Chave da API inválida ou sem permissão.\n\nVerifique a configuração do sistema.');
+      } else if (res.error === 'quota') {
+        alert('Cota da API excedida no momento.\n\nAguarde alguns minutos e tente novamente.');
+      } else if (res.error === 'nokey') {
+        alert('Este provedor de IA não tem chave configurada.\n\nEscolha outro no botão 🤖 do topo.');
+      } else if (res.text) {
+        const texto = capitalizarFrase(cleanIAResponse(res.text));
+        setEstado((atual) => ({
+          ...atual,
+          envolvidos: atual.envolvidos.map((envolvido) =>
+            envolvido.id === env.id && envolvido.relato === relatoOriginal
+              ? { ...envolvido, relato: texto, presumido: false }
+              : envolvido
+          ),
+        }));
+      }
+    } catch (err) {
+      console.error('Erro ao revisar relato da ocorrência:', err);
+      alert('Não foi possível revisar com IA.\n\nVerifique sua conexão e tente novamente.');
+    } finally {
+      setRelatoIA((anterior) => ({ ...anterior, [env.id]: null }));
+    }
   }
 
   async function gerar() {
@@ -362,12 +408,40 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
               <label htmlFor={`dp-relato-${env.id}`} className="ds-label mb-0">
                 {i === 0 ? 'Relato do envolvido 1 *' : 'Relato (em branco = a IA presume)'}
               </label>
-              {apresentacaoEnvolvido(env) && (
-                <button type="button" onClick={() => inserirApresentacao(env)} className="btn-outline text-[10px] active:scale-95">
-                  📝 Inserir dados no relato
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => revisarRelato(env, 'ortografia')}
+                  disabled={!!relatoIA[env.id]}
+                  className="btn-outline text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Corrigir ortografia"
+                  title="Corrige somente a escrita, sem reescrever o relato"
+                >
+                  {relatoIA[env.id] === 'ortografia' ? ACOES_RELATO.ortografia.carregando : '✓ Corrigir ortografia'}
                 </button>
-              )}
+                <button
+                  type="button"
+                  onClick={() => revisarRelato(env, 'melhorar')}
+                  disabled={!!relatoIA[env.id]}
+                  className="btn-outline text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Melhorar relato"
+                  title="Deixa o relato claro e objetivo, sem alterar os fatos"
+                >
+                  {relatoIA[env.id] === 'melhorar' ? ACOES_RELATO.melhorar.carregando : '✨ Melhorar relato'}
+                </button>
+                <span role="status" className="sr-only">
+                  {relatoIA[env.id] ? ACOES_RELATO[relatoIA[env.id]].carregando : ''}
+                </span>
+                {apresentacaoEnvolvido(env) && (
+                  <button type="button" onClick={() => inserirApresentacao(env)} className="btn-outline text-[10px] active:scale-95">
+                    📝 Inserir dados no relato
+                  </button>
+                )}
+              </div>
             </div>
+            <p className="text-[10px] font-mono text-charcoal/70 mb-2">
+              Ortografia corrige a escrita. Melhorar deixa o texto claro e objetivo sem alterar os fatos.
+            </p>
             <MentionInput
               id={`dp-relato-${env.id}`}
               rows={4}
