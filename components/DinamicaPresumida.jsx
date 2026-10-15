@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { callGroq, capitalizarFrase, cleanIAResponse, obterChaveIA } from '@/lib/pmrv';
 import { showToast } from '@/components/Toast';
 import MentionInput from '@/components/MentionInput';
-import { consultarPlaca, normalizarPlaca, placaConsultavel } from '@/lib/placa';
+import { aplicarDadosConsultados, consultarPlaca, normalizarPlaca, placaConsultavel } from '@/lib/placa';
 import { RELATO_DRAFT_KEY, parseRelatoDraft } from '@/lib/relato-draft';
 import { rodoviaLabel } from '@/lib/rodovias-list';
 import EstiloPicker from '@/components/EstiloPicker';
@@ -155,8 +155,12 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
   async function buscarPlaca(env) {
     setPlacaStatus((st) => ({ ...st, [env.id]: { carregando: true } }));
     try {
+      const placaConsultada = normalizarPlaca(env.placa);
       const { modelo, cor } = await consultarPlaca(env.placa);
-      alterarEnvolvido(env.id, { ...(modelo && { modelo }), ...(cor && { cor }) });
+      setEstado((s) => ({
+        ...s,
+        envolvidos: aplicarDadosConsultados(s.envolvidos, env.id, placaConsultada, { modelo, cor }),
+      }));
       setPlacaStatus((st) => ({ ...st, [env.id]: {} }));
     } catch (err) {
       setPlacaStatus((st) => ({ ...st, [env.id]: { erro: err.message } }));

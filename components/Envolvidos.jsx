@@ -32,6 +32,7 @@ import {
 } from '@/lib/foto-store';
 import { salvarRelatoNoResumo, retirarRelatoDoResumo } from '@/lib/resumo-relatos';
 import { useOcorrencia } from '@/components/OcorrenciaProvider';
+import { aplicarDadosConsultados, consultarPlaca as consultarPlacaApi, normalizarPlaca, placaConsultavel } from '@/lib/placa';
 
 const EMPTY_ENV = () => ({
   id: 0,
@@ -52,8 +53,6 @@ const EMPTY_ENV = () => ({
   fotos: [],
 });
 
-const PLACA_TOKEN_KEY = 'PMRV_PLACA_TOKEN';
-
 function novoEnvolvido(seq) {
   return { ...EMPTY_ENV(), id: seq };
 }
@@ -65,7 +64,6 @@ export default function Envolvidos({ gpsInfo = null }) {
   const [seq, setSeq] = useState(0);
   const [loadingPlaca, setLoadingPlaca] = useState({});
   const [placaError, setPlacaError] = useState({});
-  const [placaToken, setPlacaToken] = useState('');
   const [busca, setBusca] = useState({ q: '', resultados: [], aberto: false, carregando: false, alvoId: null });
   const [municipios, setMunicipios] = useState(MUNICIPIOS_POR_UF);
 
@@ -93,7 +91,8 @@ export default function Envolvidos({ gpsInfo = null }) {
       if (cancelled) return;
       setEnvolvidos(next);
       setSeq(s);
-      setPlacaToken(localStorage.getItem(PLACA_TOKEN_KEY) || '');
+      // Versões antigas aceitavam o token no navegador; ele agora existe só no servidor.
+      localStorage.removeItem('PMRV_PLACA_TOKEN');
       // Municípios de outros UFs chegam sob demanda.
       const ufsEmUso = [...new Set(next.map((ev) => ev.uf).filter(Boolean))];
       await Promise.all(
@@ -139,7 +138,6 @@ export default function Envolvidos({ gpsInfo = null }) {
     retirarRelatoDoResumo(id);
     const lista = envolvidos.filter((e) => e.id !== id);
     setEnvolvidos(lista);
-    salvar(lista);
   }
 
   function update(id, patch) {
@@ -149,9 +147,7 @@ export default function Envolvidos({ gpsInfo = null }) {
     if (patch.cidade !== undefined) patch.cidade = capitalizarFrase(patch.cidade);
     if (patch.endereco !== undefined) patch.endereco = capitalizarFrase(patch.endereco);
     if (patch.relato !== undefined) patch.relato = capitalizarFrase(patch.relato);
-    const lista = envolvidos.map((e) => (e.id === id ? { ...e, ...patch } : e));
-    setEnvolvidos(lista);
-    salvar(lista);
+    setEnvolvidos((listaAtual) => listaAtual.map((e) => (e.id === id ? { ...e, ...patch } : e)));
   }
 
   const buscaTimer = useRef(null);
@@ -193,9 +189,9 @@ export default function Envolvidos({ gpsInfo = null }) {
     update(id, { placa, placa_estrangeira: !!estrangeira });
   }
 
-  async function consultarPlaca(id, placa, estrangeira) {
-    if (!placa || placa.length < 7) {
-      alert('Informe uma placa válida (mínimo 7 caracteres) para consultar.');
+  async function consultarPlaca(id, placa) {
+    if (!placaConsultavel(placa)) {
+      alert('Informe uma placa válida no formato AAA0X00 ou AAA9999.');
       return;
     }
 
@@ -203,37 +199,13 @@ export default function Envolvidos({ gpsInfo = null }) {
     setPlacaError((prev) => ({ ...prev, [id]: null }));
 
     try {
-      const params = new URLSearchParams();
-      params.set('placa', placa.toUpperCase());
-      if (placaToken) params.set('token', placaToken);
-
-      const resp = await fetch(`/api/placa?${params.toString()}`);
-      const data = await resp.json();
-
-      if (!resp.ok) {
-        throw new Error(data.error || 'Erro ao consultar placa');
-      }
-
-      const marca = [data.MARCA, data.MODELO].filter(Boolean).join(' ');
-      const cor = data.cor && data.cor.trim() ? data.cor.trim() : '';
-      if (marca) {
-        update(id, { modelo: marca, cor });
-      } else if (cor) {
-        update(id, { cor });
-      }
+      const placaConsultada = normalizarPlaca(placa);
+      const { modelo, cor } = await consultarPlacaApi(placa);
+      setEnvolvidos((listaAtual) => aplicarDadosConsultados(listaAtual, id, placaConsultada, { modelo, cor }));
     } catch (err) {
       setPlacaError((prev) => ({ ...prev, [id]: err.message }));
     } finally {
       setLoadingPlaca((prev) => ({ ...prev, [id]: false }));
-    }
-  }
-
-  function salvarToken() {
-    const novo = window.prompt('Token da Placa:', placaToken || '');
-    if (novo !== null) {
-      const token = novo.trim();
-      setPlacaToken(token);
-      localStorage.setItem(PLACA_TOKEN_KEY, token);
     }
   }
 
@@ -269,7 +241,6 @@ export default function Envolvidos({ gpsInfo = null }) {
       return { ...e, fotos };
     });
     setEnvolvidos(lista);
-    salvar(lista);
     showToast('Foto removida', 'info', 1500);
   }
 
@@ -289,7 +260,6 @@ export default function Envolvidos({ gpsInfo = null }) {
           return { ...e, fotos: [...(e.fotos || []), ...novas] };
         });
         setEnvolvidos(lista);
-        salvar(lista);
       })
       .catch((err) => {
         console.error('Erro ao gravar fotos da galeria:', err);
@@ -407,14 +377,6 @@ export default function Envolvidos({ gpsInfo = null }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
         <h2 className="text-base sm:text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvidos</h2>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={salvarToken}
-            className="btn-outline text-xs active:scale-95"
-            title="Configurar token da API de placa"
-          >
-            🔧 Placa
-          </button>
           <button onClick={adicionar} className="btn-ios text-xs active:scale-95">
             + Adicionar
           </button>
@@ -644,10 +606,10 @@ export default function Envolvidos({ gpsInfo = null }) {
                   {!ev.placa_estrangeira && (
                     <button
                       type="button"
-                      onClick={() => consultarPlaca(ev.id, ev.placa, ev.placa_estrangeira)}
+                      onClick={() => consultarPlaca(ev.id, ev.placa)}
                       disabled={loadingPlaca[ev.id] || !ev.placa || ev.placa.length < 7}
                       className="btn-outline text-xs px-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Consultar placa e preencher modelo automaticamente"
+                      title="Consultar placa e preencher modelo e cor"
                     >
                       {loadingPlaca[ev.id] ? '...' : '🔍'}
                     </button>
@@ -659,14 +621,27 @@ export default function Envolvidos({ gpsInfo = null }) {
               </div>
             </div>
 
-            <div>
-              <label className="ds-label">Modelo do Veículo</label>
-              <input
-                value={ev.modelo}
-                onChange={(e) => update(ev.id, { modelo: e.target.value })}
-                className="ds-input text-sm"
-                placeholder={loadingPlaca[ev.id] ? 'Buscando...' : 'Ex: VW CROSSFOX'}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor={`modelo_${ev.id}`} className="ds-label">Marca/Modelo do Veículo</label>
+                <input
+                  id={`modelo_${ev.id}`}
+                  value={ev.modelo}
+                  onChange={(e) => update(ev.id, { modelo: e.target.value })}
+                  className="ds-input text-sm"
+                  placeholder={loadingPlaca[ev.id] ? 'Buscando...' : 'Ex: VW CROSSFOX'}
+                />
+              </div>
+              <div>
+                <label htmlFor={`cor_${ev.id}`} className="ds-label">Cor do Veículo</label>
+                <input
+                  id={`cor_${ev.id}`}
+                  value={ev.cor}
+                  onChange={(e) => update(ev.id, { cor: e.target.value })}
+                  className="ds-input text-sm"
+                  placeholder={loadingPlaca[ev.id] ? 'Buscando...' : 'Ex: Prata'}
+                />
+              </div>
             </div>
 
             <div>

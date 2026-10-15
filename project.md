@@ -94,7 +94,7 @@ documento inteiro; `LimparDados` apaga os dois bancos. Rascunhos legados
 
 ### Crítico
 
-- ✅ **RESOLVIDO** — Token de placa via `PLACA_API_TOKEN` (`process.env`) em `app/api/placa/route.js`; sem logs de URL/body. `?token=` aceito como override manual.
+- ✅ **RESOLVIDO** — Token de placa via `PLACA_API_TOKEN` (`process.env`) em `app/api/placa/route.js`; nunca aceito do navegador nem incluído em logs.
 - **`app/page.jsx` retorna `null`**. Toda a UI vive no `layout.jsx`, que é `'use client'`. Perde Metadata API, SSR e atalhos PWA (`/?aba=envolvidos` não muda de aba).
 - ✅ **RESOLVIDO** — Fotos em IndexedDB (`pmrv-fotos`, blobs); o documento guarda só referências.
 - ✅ **RESOLVIDO** — Ocorrência como documento único (Context + IndexedDB `pmrv-ocorrencias` + `PMRV_OCORRENCIA`) com autosave; recarregar restaura tudo.
