@@ -53,6 +53,19 @@ const EMPTY_ENV = () => ({
   fotos: [],
 });
 
+const ACOES_RELATO = {
+  ortografia: {
+    carregando: 'Corrigindo…',
+    instrucao:
+      'Corrija somente ortografia, acentuação, concordância e pontuação do relato individual abaixo. Preserve as palavras, a ordem das informações e todos os fatos; não reescreva, não resuma e não acrescente nada. Responda APENAS com o texto corrigido, sem comentários.',
+  },
+  melhorar: {
+    carregando: 'Melhorando…',
+    instrucao:
+      'Reescreva o relato individual abaixo para deixá-lo claro, direto e objetivo, com linguagem simples e fácil de entender. Preserve todos os fatos e a sequência dos acontecimentos. Não invente, não presuma, não omita informações e não faça juízo de valor. Responda APENAS com o relato melhorado, sem comentários.',
+  },
+};
+
 function novoEnvolvido(seq) {
   return { ...EMPTY_ENV(), id: seq };
 }
@@ -64,6 +77,7 @@ export default function Envolvidos({ gpsInfo = null }) {
   const [seq, setSeq] = useState(0);
   const [loadingPlaca, setLoadingPlaca] = useState({});
   const [placaError, setPlacaError] = useState({});
+  const [relatoIA, setRelatoIA] = useState({});
   const [busca, setBusca] = useState({ q: '', resultados: [], aberto: false, carregando: false, alvoId: null });
   const [municipios, setMunicipios] = useState(MUNICIPIOS_POR_UF);
 
@@ -307,27 +321,22 @@ export default function Envolvidos({ gpsInfo = null }) {
     }
   }
 
-  async function corrigirRelato(id) {
+  async function tratarRelato(id, acao) {
     const ev = envolvidos.find((e) => e.id === id);
+    const configuracao = ACOES_RELATO[acao];
+    if (!configuracao) return;
     if (!ev || !ev.relato.trim()) {
-      alert('Escreva o relato antes de corrigir com IA.');
+      alert('Escreva o relato antes de usar a revisão com IA.');
       return;
     }
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      alert('Sem conexão com a internet.\n\nA correção com IA precisa de internet.');
+      alert('Sem conexão com a internet.\n\nA revisão com IA precisa de internet.');
       return;
     }
 
-    const btn = document.getElementById(`env_ia_${ev.id}`);
-    const rotulo = btn ? btn.textContent : '✨ Corrigir com IA';
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Corrigindo…';
-    }
-
-    const prompt =
-      'Melhore o relato abaixo de um envolvido em um sinistro de trânsito: corrija ortografia, acentuação, concordância e pontuação, mantenha os fatos e a norma culta do português do Brasil. Responda APENAS com o texto corrigido, sem comentários.\n\n' +
-      ev.relato;
+    setRelatoIA((anterior) => ({ ...anterior, [id]: acao }));
+    const relatoOriginal = ev.relato;
+    const prompt = `${configuracao.instrucao}\n\n${relatoOriginal}`;
 
     try {
       const res = await callGroq({ apiKey: obterChaveIA(), prompt, system: PMRV_AGENTE_PADRAO });
@@ -336,17 +345,20 @@ export default function Envolvidos({ gpsInfo = null }) {
       } else if (res.error === 'quota') {
         alert('Cota da API excedida no momento.\n\nAguarde alguns minutos e tente novamente.');
       } else if (res.text) {
-        const texto = cleanIAResponse(res.text);
-        update(id, { relato: texto });
+        const texto = capitalizarFrase(cleanIAResponse(res.text));
+        setEnvolvidos((listaAtual) =>
+          listaAtual.map((envolvido) =>
+            envolvido.id === id && envolvido.relato === relatoOriginal
+              ? { ...envolvido, relato: texto }
+              : envolvido
+          )
+        );
       }
     } catch (err) {
-      console.error('Erro ao corrigir relato:', err);
-      alert('Não foi possível corrigir com IA.\n\nVerifique sua conexão e tente novamente.');
+      console.error('Erro ao revisar relato:', err);
+      alert('Não foi possível revisar com IA.\n\nVerifique sua conexão e tente novamente.');
     } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = rotulo;
-      }
+      setRelatoIA((anterior) => ({ ...anterior, [id]: null }));
     }
   }
 
@@ -384,7 +396,7 @@ export default function Envolvidos({ gpsInfo = null }) {
       </div>
 
       <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono mb-4 p-3">
-        Cada envolvido tem dados, relato individual (com correção por IA) e fotos. <b>Salvar relato</b> envia o texto para o Resumo da Dinâmica. Use <b>📷 Tirar fotos</b> ou <b>🖼️ Galeria</b>.
+        Cada envolvido tem dados, relato individual (com revisão por IA) e fotos. <b>Salvar relato</b> envia o texto para o Resumo da Dinâmica. Use <b>📷 Tirar fotos</b> ou <b>🖼️ Galeria</b>.
       </p>
 
       <div className="space-y-6">
@@ -647,14 +659,30 @@ export default function Envolvidos({ gpsInfo = null }) {
             <div>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1 gap-2">
                 <label className="ds-label mb-0">Relato Individual</label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
-                    id={`env_ia_${ev.id}`}
-                    onClick={() => corrigirRelato(ev.id)}
-                    className="btn-outline text-[10px]"
+                    type="button"
+                    onClick={() => tratarRelato(ev.id, 'ortografia')}
+                    disabled={!!relatoIA[ev.id]}
+                    className="btn-outline text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Corrigir ortografia"
+                    title="Corrige somente a escrita, sem reescrever o relato"
                   >
-                    ✨ Corrigir com IA
+                    {relatoIA[ev.id] === 'ortografia' ? ACOES_RELATO.ortografia.carregando : '✓ Corrigir ortografia'}
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => tratarRelato(ev.id, 'melhorar')}
+                    disabled={!!relatoIA[ev.id]}
+                    className="btn-outline text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="Melhorar relato"
+                    title="Deixa o relato claro e objetivo, sem alterar os fatos"
+                  >
+                    {relatoIA[ev.id] === 'melhorar' ? ACOES_RELATO.melhorar.carregando : '✨ Melhorar relato'}
+                  </button>
+                  <span role="status" className="sr-only">
+                    {relatoIA[ev.id] ? ACOES_RELATO[relatoIA[ev.id]].carregando : ''}
+                  </span>
                   <button
                     type="button"
                     onClick={() => salvarRelatoIndividual(ev.id)}
@@ -664,6 +692,9 @@ export default function Envolvidos({ gpsInfo = null }) {
                   </button>
                 </div>
               </div>
+              <p className="text-[10px] font-mono text-charcoal/70 mb-2">
+                Ortografia corrige a escrita. Melhorar deixa o texto claro e objetivo sem alterar os fatos.
+              </p>
               <MentionInput
                 value={ev.relato}
                 onChange={(value) => update(ev.id, { relato: value })}
