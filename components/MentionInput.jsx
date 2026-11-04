@@ -3,6 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { rodoviaLabel } from '@/lib/rodovias-list';
 import { apresentacaoEnvolvido } from '@/lib/dinamica-presumida';
+import { CarIcon, FileTextIcon, MapPinIcon, UserIcon } from '@/components/icons';
+
+function MentionTypeIcon({ type }) {
+  const Icon = type === 'pessoa' ? UserIcon : type === 'veiculo' ? CarIcon : type === 'apresentacao' ? FileTextIcon : MapPinIcon;
+  return <Icon className="w-4 h-4" />;
+}
 
 // `extras`: itens adicionais [{ type, id, label, sublabel, insert }] (ex.: rodovia e km).
 export default function MentionInput({ id, value, onChange, envolvidos, placeholder, rows = 4, className = '', gpsLocation = null, extras = [] }) {
@@ -209,7 +215,7 @@ export default function MentionInput({ id, value, onChange, envolvidos, placehol
                     ? 'bg-gold/20 text-charcoal border border-gold/50'
                     : 'bg-surface text-charcoal border border-charcoal/40'
               }`}>
-                {item.type === 'pessoa' ? '👤' : item.type === 'veiculo' ? '🚗' : item.type === 'apresentacao' ? '📝' : '📍'}
+                <MentionTypeIcon type={item.type} />
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-charcoal truncate">{item.label}</p>

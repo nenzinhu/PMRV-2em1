@@ -18,6 +18,7 @@ import {
 } from '@/lib/danos';
 import { salvarDanosNoResumo } from '@/lib/resumo-relatos';
 import ModeloFotoPicker from '@/components/ModeloFotoPicker';
+import { AlertTriangleIcon, BroomIcon, CameraIcon, CopyIcon, ImageIcon, SearchIcon, UploadIcon, DownloadIcon } from '@/components/icons';
 
 const ERROS_IA = {
   nokey: 'Nenhuma chave de IA configurada no servidor.',
@@ -246,7 +247,7 @@ export default function DanosFotos() {
       <div className="flex justify-between items-center mb-4 gap-3">
         <h2 className="text-base sm:text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Danos por foto</h2>
         <button type="button" onClick={limpar} disabled={!fotos.length && !descricao} className="btn-outline text-xs active:scale-95 disabled:opacity-50">
-          🧹 Limpar
+          <span className="inline-flex items-center gap-1.5"><BroomIcon className="w-4 h-4" /> Limpar</span>
         </button>
       </div>
 
@@ -263,10 +264,10 @@ export default function DanosFotos() {
           </h3>
           <div className="flex gap-2">
             <button type="button" onClick={() => cameraRef.current?.click()} disabled={vagas <= 0} className="btn-ios text-xs disabled:opacity-50">
-              📷 Câmera
+              <span className="inline-flex items-center gap-1.5"><CameraIcon className="w-4 h-4" /> Câmera</span>
             </button>
             <button type="button" onClick={() => galeriaRef.current?.click()} disabled={vagas <= 0} className="btn-outline text-xs disabled:opacity-50">
-              🖼️ Galeria
+              <span className="inline-flex items-center gap-1.5"><ImageIcon className="w-4 h-4" /> Galeria</span>
             </button>
           </div>
         </div>
@@ -295,7 +296,7 @@ export default function DanosFotos() {
 
         {modeloFoto?.maxImagens < fotos.length && !modeloFoto.automatico && (
           <p className="mb-2 text-xs font-mono text-brick" role="note">
-            ⚠️ {modeloFoto.label} lê no máximo {modeloFoto.maxImagens} fotos. Com {fotos.length}, será usado outro modelo gratuito.
+            <span className="inline-flex items-start gap-1.5"><AlertTriangleIcon className="w-4 h-4 shrink-0 mt-0.5" /> {modeloFoto.label} lê no máximo {modeloFoto.maxImagens} fotos. Com {fotos.length}, será usado outro modelo gratuito.</span>
           </p>
         )}
         {fotos.length === 0 ? (
@@ -335,7 +336,7 @@ export default function DanosFotos() {
           </select>
           {fotosDoEnvolvido.length > 0 && (
             <button type="button" onClick={importarDoEnvolvido} disabled={vagas <= 0} className="btn-outline text-xs mt-2 disabled:opacity-50">
-              ⬇️ Usar as {fotosDoEnvolvido.length} foto(s) deste envolvido
+              <span className="inline-flex items-center gap-1.5"><DownloadIcon className="w-4 h-4" /> Usar as {fotosDoEnvolvido.length} foto(s) deste envolvido</span>
             </button>
           )}
         </div>
@@ -365,7 +366,7 @@ export default function DanosFotos() {
             <span className="btn-spinner" aria-hidden="true" /> Analisando…
           </>
         ) : (
-          '🔍 Descrever danos com IA'
+          <span className="inline-flex items-center justify-center gap-2"><SearchIcon className="w-4 h-4" /> Descrever danos com IA</span>
         )}
       </button>
       <p className={`mt-2 min-h-[1rem] text-xs leading-relaxed font-mono whitespace-pre-line ${status.includes('\n') ? 'text-left text-brick' : 'text-center text-pmrv'}`} role="status" aria-live="polite">
@@ -387,10 +388,10 @@ export default function DanosFotos() {
           />
           <div className="flex flex-col sm:flex-row gap-2 mt-2">
             <button type="button" onClick={enviarParaResumo} disabled={analisando || !descricao.trim()} className="btn-ios flex-1 text-xs disabled:opacity-50">
-              📤 Adicionar ao Resumo
+              <span className="inline-flex items-center gap-1.5"><UploadIcon className="w-4 h-4" /> Adicionar ao Resumo</span>
             </button>
             <button type="button" onClick={copiar} disabled={analisando || !descricao.trim()} className="btn-outline flex-1 text-xs disabled:opacity-50">
-              📋 Copiar
+              <span className="inline-flex items-center gap-1.5"><CopyIcon className="w-4 h-4" /> Copiar</span>
             </button>
           </div>
         </section>

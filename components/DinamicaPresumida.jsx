@@ -11,6 +11,7 @@ import EstiloPicker from '@/components/EstiloPicker';
 import AjusteFino from '@/components/AjusteFino';
 import { aplicarAjusteFino, carregarAjusteFino } from '@/lib/ajuste-fino';
 import { ACOES_RELATO, promptRevisaoRelato } from '@/lib/revisao-relato';
+import { BroomIcon, CheckIcon, FileTextIcon, MapPinIcon, PlusIcon, SearchIcon, SparkIcon, UploadIcon } from '@/components/icons';
 import {
   DINAMICA_PRESUMIDA_KEY,
   apresentacaoEnvolvido,
@@ -205,7 +206,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
       } else if (res.error === 'quota') {
         alert('Cota da API excedida no momento.\n\nAguarde alguns minutos e tente novamente.');
       } else if (res.error === 'nokey') {
-        alert('Este provedor de IA não tem chave configurada.\n\nEscolha outro no botão 🤖 do topo.');
+        alert('Este provedor de IA não tem chave configurada.\n\nEscolha outro no seletor de IA do topo.');
       } else if (res.text) {
         const texto = capitalizarFrase(cleanIAResponse(res.text));
         setEstado((atual) => ({
@@ -248,16 +249,16 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
       if (res.error === 'auth') {
         if (window.confirm('Chave da API inválida ou sem permissão.\n\nDeseja informar outra chave agora?')) obterChaveIA(true);
       } else if (res.error === 'quota') {
-        alert('Cota da API excedida no momento.\n\nAguarde alguns minutos ou troque o modelo no botão 🤖.');
+        alert('Cota da API excedida no momento.\n\nAguarde alguns minutos ou troque o modelo no seletor de IA.');
       } else if (res.error === 'nokey') {
-        alert('Este provedor de IA não tem chave configurada.\n\nEscolha outro no botão 🤖 do topo.');
+        alert('Este provedor de IA não tem chave configurada.\n\nEscolha outro no seletor de IA do topo.');
       } else if (res.text) {
         setEstado((s) => aplicarRespostaDinamica(s, cleanIAResponse(res.text)));
         showToast('Dinâmica gerada', 'success', 1800);
       }
     } catch (err) {
       console.error('Erro ao gerar dinâmica presumida:', err);
-      alert('Não foi possível gerar a dinâmica.\n\nTente novamente ou troque o modelo no botão 🤖.');
+      alert('Não foi possível gerar a dinâmica.\n\nTente novamente ou troque o modelo no seletor de IA.');
     } finally {
       setGerando(false);
     }
@@ -283,12 +284,12 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
       <div className="flex justify-between items-center gap-3">
         <h2 className="text-base sm:text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Relato e Dinâmica</h2>
         <button type="button" onClick={limpar} className="btn-outline text-xs active:scale-95">
-          🧹 Limpar
+          <span className="inline-flex items-center gap-1.5"><BroomIcon className="w-4 h-4" /> Limpar</span>
         </button>
       </div>
 
       <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono p-3">
-        Preencha o condutor e a placa (🔍 busca modelo e cor) e digite o relato do <b>envolvido 1</b> — use
+        Preencha o condutor e a placa (<SearchIcon className="inline w-3.5 h-3.5 align-[-2px]" /> busca modelo e cor) e digite o relato do <b>envolvido 1</b> — use
         <b> @</b> para inserir nome, veículo, rodovia e km. A IA presume o relato dos demais (deixe em branco) e a
         <b> dinâmica do ocorrido</b>. Depois toque <b>Transferir para o Relato Policial</b>.
       </p>
@@ -313,7 +314,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
             <h3 id={`dp-titulo-${env.id}`} className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm">
               Envolvido {i + 1}
               {env.presumido && (
-                <span className="ml-2 rounded-full bg-gold/20 px-2 py-0.5 text-xs text-charcoal normal-case">✨ presumido pela IA</span>
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-gold/20 px-2 py-0.5 text-xs text-charcoal normal-case"><SparkIcon className="w-3.5 h-3.5" /> presumido pela IA</span>
               )}
             </h3>
             {i >= 2 && (
@@ -373,7 +374,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
                   title="Buscar modelo e cor pela placa"
                   aria-label="Buscar modelo e cor pela placa"
                 >
-                  {placaStatus[env.id]?.carregando ? <span className="btn-spinner" aria-hidden="true" /> : '🔍'}
+                  {placaStatus[env.id]?.carregando ? <span className="btn-spinner" aria-hidden="true" /> : <SearchIcon className="w-4 h-4" />}
                 </button>
               </div>
               {placaStatus[env.id]?.erro && (
@@ -417,7 +418,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
                   aria-label="Corrigir ortografia"
                   title="Corrige somente a escrita, sem reescrever o relato"
                 >
-                  {relatoIA[env.id] === 'ortografia' ? ACOES_RELATO.ortografia.carregando : '✓ Corrigir ortografia'}
+                    {relatoIA[env.id] === 'ortografia' ? ACOES_RELATO.ortografia.carregando : <span className="inline-flex items-center gap-1"><CheckIcon className="w-3.5 h-3.5" /> Corrigir ortografia</span>}
                 </button>
                 <button
                   type="button"
@@ -427,14 +428,14 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
                   aria-label="Melhorar relato"
                   title="Deixa o relato claro e objetivo, sem alterar os fatos"
                 >
-                  {relatoIA[env.id] === 'melhorar' ? ACOES_RELATO.melhorar.carregando : '✨ Melhorar relato'}
+                    {relatoIA[env.id] === 'melhorar' ? ACOES_RELATO.melhorar.carregando : <span className="inline-flex items-center gap-1"><SparkIcon className="w-3.5 h-3.5" /> Melhorar relato</span>}
                 </button>
                 <span role="status" className="sr-only">
                   {relatoIA[env.id] ? ACOES_RELATO[relatoIA[env.id]].carregando : ''}
                 </span>
                 {apresentacaoEnvolvido(env) && (
                   <button type="button" onClick={() => inserirApresentacao(env)} className="btn-outline text-xs active:scale-95">
-                    📝 Inserir dados no relato
+                    <span className="inline-flex items-center gap-1.5"><FileTextIcon className="w-4 h-4" /> Inserir dados no relato</span>
                   </button>
                 )}
               </div>
@@ -458,7 +459,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
             />
             {local && (
               <p className="mt-1 text-xs font-mono text-charcoal">
-                📍 Local: {local.rodovia}{local.km ? `, km ${local.km}` : ''} — disponível no @
+                <><MapPinIcon className="inline w-3.5 h-3.5 align-[-2px]" /> Local: {local.rodovia}{local.km ? `, km ${local.km}` : ''} — disponível no @</>
               </p>
             )}
           </div>
@@ -467,7 +468,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
 
       {!estado.apenasUm && (
         <button type="button" onClick={adicionarEnvolvido} className="btn-outline w-full text-xs active:scale-95">
-          + Adicionar envolvido
+          <span className="inline-flex items-center justify-center gap-1.5"><PlusIcon className="w-4 h-4" /> Adicionar envolvido</span>
         </button>
       )}
 
@@ -483,9 +484,9 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
             <span className="btn-spinner" aria-hidden="true" /> Gerando…
           </>
         ) : estado.apenasUm ? (
-          '✨ Gerar dinâmica presumida'
+          <span className="inline-flex items-center justify-center gap-2"><SparkIcon className="w-4 h-4" /> Gerar dinâmica presumida</span>
         ) : (
-          '✨ Presumir relatos e gerar dinâmica'
+          <span className="inline-flex items-center justify-center gap-2"><SparkIcon className="w-4 h-4" /> Presumir relatos e gerar dinâmica</span>
         )}
       </button>
 
@@ -503,7 +504,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
             className="ds-input text-sm leading-relaxed"
           />
           <button type="button" onClick={transferirParaRelato} className="btn-ios w-full text-sm active:scale-95">
-            📤 Transferir para o Relato Policial
+            <span className="inline-flex items-center justify-center gap-2"><UploadIcon className="w-4 h-4" /> Transferir para o Relato Policial</span>
           </button>
         </section>
       )}

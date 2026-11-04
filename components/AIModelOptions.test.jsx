@@ -25,16 +25,16 @@ afterEach(() => {
 });
 
 describe('seletores de modelos permitidos', () => {
-  it('seletor geral mostra somente as 18 opções fixas dos quatro provedores', async () => {
+  it('seletor geral mostra somente as opções fixas dos quatro provedores', async () => {
     localStorage.setItem('PMRV_AI_MODEL_groq', 'modelo/antigo');
     render(<AIProviderPicker />);
 
     await waitFor(() => expect(fetch).toHaveBeenCalled());
-    const seletor = screen.getByLabelText('Provedor e modelo de IA gratuito');
+    const seletor = screen.getByLabelText('Provedor e modelo de IA');
     const opcoes = Array.from(seletor.options);
-    expect(opcoes).toHaveLength(18);
+    expect(opcoes).toHaveLength(21);
     expect(opcoes.map((opcao) => opcao.textContent)).not.toContain('Modelo intruso');
-    expect(seletor.value).toBe('groq|qwen/qwen3.8-27b');
+    expect(seletor.value).toBe('groq|openai/gpt-oss-120b');
   });
 
   it('seletor de fotos descarta modelo antigo e não adiciona opções ao vivo', async () => {

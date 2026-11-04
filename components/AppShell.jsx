@@ -18,7 +18,7 @@ import { useInstallPWA } from '@/hooks/useInstallPWA';
 import { useGpsLocation } from '@/hooks/useGpsLocation';
 import { ABAS, abaFromSearchParam } from '@/lib/aba';
 import { gpsLocationLabel } from '@/lib/gps-label';
-import { MapPinIcon, PaletteIcon, ExpandIcon, CollapseIcon, DownloadIcon, FilePlusIcon } from '@/components/icons';
+import { MapPinIcon, PaletteIcon, ExpandIcon, CollapseIcon, DownloadIcon, FilePlusIcon, MoreHorizontalIcon } from '@/components/icons';
 import { OcorrenciaProvider, useOcorrencia } from '@/components/OcorrenciaProvider';
 
 function NovaOcorrenciaButton({ onDone }) {
@@ -205,7 +205,7 @@ function AppShellInner({ aba, themeOpen, setThemeOpen, mounted, setMounted, fsAc
                   aria-expanded={moreOpen}
                   aria-haspopup="menu"
                 >
-                  <span className="text-base leading-none" aria-hidden="true">•••</span>
+                  <MoreHorizontalIcon className="w-4 h-4" />
                   <span className="hidden sm:inline">Mais</span>
                 </button>
                 {moreOpen && (

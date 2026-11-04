@@ -17,7 +17,7 @@ import {
   PMRV_AGENTE_PADRAO,
 } from '@/lib/pmrv';
 import { MUNICIPIOS_POR_UF, garantirMunicipios } from '@/lib/municipios';
-import { WhatsAppIcon } from './icons';
+import { CameraIcon, CheckIcon, ImageIcon, PlusIcon, SaveIcon, SearchIcon, SparkIcon, UsersIcon, WhatsAppIcon } from './icons';
 import MentionInput from './MentionInput';
 import Skeleton from './Skeleton';
 import { showToast } from '@/components/Toast';
@@ -378,13 +378,13 @@ export default function Envolvidos({ gpsInfo = null }) {
         <h2 className="text-base sm:text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvidos</h2>
         <div className="flex gap-2">
           <button onClick={adicionar} className="btn-ios text-xs active:scale-95">
-            + Adicionar
+            <span className="inline-flex items-center gap-1.5"><PlusIcon className="w-4 h-4" /> Adicionar</span>
           </button>
         </div>
       </div>
 
       <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono mb-4 p-3">
-        Cada envolvido tem dados, relato individual (com revisão por IA) e fotos. <b>Salvar relato</b> envia o texto para o Resumo da Dinâmica. Use <b>📷 Tirar fotos</b> ou <b>🖼️ Galeria</b>.
+        Cada envolvido tem dados, relato individual (com revisão por IA) e fotos. <b>Salvar relato</b> envia o texto para o Resumo da Dinâmica. Use os botões <b>Tirar fotos</b> ou <b>Galeria</b> para anexar imagens.
       </p>
 
       <div className="space-y-6">
@@ -611,7 +611,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                       className="btn-outline text-xs px-3 disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Consultar placa e preencher modelo e cor"
                     >
-                      {loadingPlaca[ev.id] ? '...' : '🔍'}
+                      {loadingPlaca[ev.id] ? <span className="btn-spinner" aria-hidden="true" /> : <SearchIcon className="w-4 h-4" />}
                     </button>
                   )}
                 </div>
@@ -656,7 +656,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                     aria-label="Corrigir ortografia"
                     title="Corrige somente a escrita, sem reescrever o relato"
                   >
-                    {relatoIA[ev.id] === 'ortografia' ? ACOES_RELATO.ortografia.carregando : '✓ Corrigir ortografia'}
+                    {relatoIA[ev.id] === 'ortografia' ? ACOES_RELATO.ortografia.carregando : <span className="inline-flex items-center gap-1"><CheckIcon className="w-3.5 h-3.5" /> Corrigir ortografia</span>}
                   </button>
                   <button
                     type="button"
@@ -666,7 +666,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                     aria-label="Melhorar relato"
                     title="Deixa o relato claro e objetivo, sem alterar os fatos"
                   >
-                    {relatoIA[ev.id] === 'melhorar' ? ACOES_RELATO.melhorar.carregando : '✨ Melhorar relato'}
+                    {relatoIA[ev.id] === 'melhorar' ? ACOES_RELATO.melhorar.carregando : <span className="inline-flex items-center gap-1"><SparkIcon className="w-3.5 h-3.5" /> Melhorar relato</span>}
                   </button>
                   <span role="status" className="sr-only">
                     {relatoIA[ev.id] ? ACOES_RELATO[relatoIA[ev.id]].carregando : ''}
@@ -676,7 +676,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                     onClick={() => salvarRelatoIndividual(ev.id)}
                     className="btn-ios text-xs"
                   >
-                    Salvar relato
+                    <span className="inline-flex items-center gap-1.5"><SaveIcon className="w-4 h-4" /> Salvar relato</span>
                   </button>
                 </div>
               </div>
@@ -704,7 +704,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                     className="btn-ios text-xs"
                     title="Abre a câmera: tire quantas fotos quiser (cancele para parar)"
                   >
-                    📷 Tirar fotos
+                    <span className="inline-flex items-center gap-1.5"><CameraIcon className="w-4 h-4" /> Tirar fotos</span>
                   </button>
                   <button
                     type="button"
@@ -712,7 +712,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                     className="btn-outline text-xs"
                     title="Adicionar fotos da galeria (quantas quiser)"
                   >
-                    🖼️ Galeria
+                    <span className="inline-flex items-center gap-1.5"><ImageIcon className="w-4 h-4" /> Galeria</span>
                   </button>
                 </div>
               </div>
@@ -771,7 +771,7 @@ export default function Envolvidos({ gpsInfo = null }) {
 
       {envolvidos.length === 0 && (
         <div className="bg-surface border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal">
-          <div className="text-3xl mb-2" aria-hidden="true">👮‍♂️</div>
+          <UsersIcon className="w-8 h-8 text-pmrv mx-auto mb-2" />
           Nenhum envolvido adicionado ainda.
         </div>
       )}

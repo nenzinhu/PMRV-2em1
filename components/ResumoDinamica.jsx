@@ -10,6 +10,7 @@ import {
 import { showToast } from '@/components/Toast';
 import { loadResumoState } from '@/lib/resumo-relatos';
 import { useOcorrencia } from '@/components/OcorrenciaProvider';
+import { BroomIcon, CheckIcon, ClipboardListIcon, PlusIcon, SaveIcon, SparkIcon, UploadIcon } from '@/components/icons';
 import {
   RESUMO_ESTILO_PADRAO,
   RESUMO_OPCOES,
@@ -265,10 +266,10 @@ export default function ResumoDinamica() {
         <h2 className="text-base sm:text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Resumo da Dinâmica</h2>
         <div className="flex gap-2">
           <button type="button" onClick={limparTudo} className="btn-outline text-xs active:scale-95">
-            🧹 Limpar
+            <span className="inline-flex items-center gap-1.5"><BroomIcon className="w-4 h-4" /> Limpar</span>
           </button>
           <button type="button" onClick={adicionarRelato} className="btn-ios text-xs active:scale-95">
-            + Adicionar Relato
+            <span className="inline-flex items-center gap-1.5"><PlusIcon className="w-4 h-4" /> Adicionar Relato</span>
           </button>
         </div>
       </div>
@@ -290,7 +291,11 @@ export default function ResumoDinamica() {
                   onClick={() => transferirParaRelatoPolicial(r.id)}
                   className="btn-outline text-xs active:scale-95"
                 >
-                  {transferindoId === r.id ? 'Transferido!' : '📤 Transferir p/ Relato Policial'}
+                  {transferindoId === r.id ? (
+                    <span className="inline-flex items-center gap-1.5"><CheckIcon className="w-4 h-4" /> Transferido!</span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5"><UploadIcon className="w-4 h-4" /> Transferir p/ Relato Policial</span>
+                  )}
                 </button>
                 <button type="button" onClick={() => removerRelato(r.id)} className="btn-ios text-xs bg-brick !border-brick active:scale-95">
                   Remover
@@ -310,7 +315,7 @@ export default function ResumoDinamica() {
 
       {relatos.length === 0 && (
         <div className="bg-surface border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal">
-          <div className="text-3xl mb-2" aria-hidden="true">📋</div>
+          <ClipboardListIcon className="w-8 h-8 text-pmrv mx-auto mb-2" />
           Nenhum relato ainda. Salve o relato individual na aba Envolvidos.
         </div>
       )}
@@ -354,7 +359,7 @@ export default function ResumoDinamica() {
             <span className="btn-spinner" aria-hidden="true" /> Melhorando…
           </>
         ) : (
-          '✨ Melhorar Resumo'
+          <span className="inline-flex items-center justify-center gap-1.5"><SparkIcon className="w-4 h-4" /> Melhorar Resumo</span>
         )}
       </button>
 
@@ -375,7 +380,7 @@ export default function ResumoDinamica() {
                 disabled={!resumo.trim()}
                 className="btn-outline text-xs active:scale-95 disabled:opacity-50"
               >
-                💾 Salvar
+                <span className="inline-flex items-center gap-1.5"><SaveIcon className="w-4 h-4" /> Salvar</span>
               </button>
             </div>
             <div className="flex gap-1">

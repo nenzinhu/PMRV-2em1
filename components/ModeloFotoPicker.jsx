@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { PMRV_MODELOS_VISAO } from '@/lib/ai-models';
+import { AlertTriangleIcon } from '@/components/icons';
 
 // Seletor da aba Danos: somente os modelos permitidos que leem fotos.
 // A escolha persiste em localStorage; "Automático" percorre a lista fixa.
@@ -92,7 +93,7 @@ export default function ModeloFotoPicker({ onChange }) {
         {escolhido.descricao}
         {!escolhido.automatico && semChave(escolhido.provedor) && (
           <span className="block mt-1 text-brick">
-            ⚠️ {escolhido.provedorLabel} sem chave no servidor: será usado outro modelo gratuito com visão.
+            <span className="inline-flex items-start gap-1.5"><AlertTriangleIcon className="w-4 h-4 shrink-0 mt-0.5" /> {escolhido.provedorLabel} sem chave no servidor: será usado outro modelo gratuito com visão.</span>
           </span>
         )}
       </p>

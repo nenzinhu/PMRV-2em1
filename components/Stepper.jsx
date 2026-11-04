@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import { gsap, prefersReducedMotion, registerGsap, useGSAP } from '@/lib/gsap-register';
+import { CheckIcon } from '@/components/icons';
 
 registerGsap();
 
@@ -19,8 +20,9 @@ export default function Stepper({ currentStep, ehVitima }) {
     { n: 2, label: '2', show: true },
     { n: 3, label: '3', show: true },
     { n: 4, label: '4', show: ehVitima },
-    { n: 5, label: '✓', show: true },
+    { n: 5, label: null, show: true },
   ];
+  const nomes = { 1: 'Identificação', 2: 'Local e ocorrência', 3: 'Dinâmica', 4: 'Vítimas', 5: 'Revisão e envio' };
 
   function dotClass(n) {
     if (n === currentStep) return 'bg-pmrv border-pmrv shadow-[0_0_0_4px_rgba(0,132,72,0.15)]';
@@ -56,7 +58,7 @@ export default function Stepper({ currentStep, ehVitima }) {
         aria-valuemin={1}
         aria-valuemax={totalActive}
         aria-valuenow={passoAtual}
-        aria-valuetext={`Etapa ${passoAtual} de ${totalActive}`}
+        aria-valuetext={`Etapa ${passoAtual} de ${totalActive}: ${nomes[currentStep]}`}
       >
         <div className="absolute left-0 top-1/2 w-full h-0.5 bg-step-idle -translate-y-1/2 z-0" />
         <div className="absolute left-0 top-1/2 w-full h-0.5 -translate-y-1/2 z-0 overflow-hidden">
@@ -77,10 +79,13 @@ export default function Stepper({ currentStep, ehVitima }) {
               aria-hidden="true"
               className={`step-dot z-10 w-8 h-8 sm:w-9 sm:h-9 ${dotClass(d.n)} flex items-center justify-center font-mono font-semibold text-xs sm:text-sm border-2`}
             >
-              {d.label}
+              {d.label || <CheckIcon className="w-4 h-4" />}
             </div>
           ))}
       </div>
+      <p className="mt-3 text-center text-sm font-semibold text-pmrv" aria-live="polite">
+        Etapa {passoAtual} de {totalActive}: {nomes[currentStep]}
+      </p>
     </div>
   );
 }

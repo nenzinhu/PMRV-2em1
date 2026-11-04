@@ -10,10 +10,11 @@ import {
 } from '@/lib/pmrv';
 import { PMRV_MODELOS_FALLBACK, PMRV_MODELO_PADRAO, PMRV_PROVEDOR_PADRAO } from '@/lib/ai-models';
 import { showToast } from '@/components/Toast';
+import { AlertTriangleIcon, ChevronDownIcon, RobotIcon } from '@/components/icons';
 
 const SEP = '|';
 
-// Chip de header "🤖 Provedor · Modelo". Um <select> nativo transparente cobre o
+// Chip de header "IA · Modelo". Um <select> nativo transparente cobre o
 // chip (sem opacity:0, que em alguns navegadores deixa a lista transparente; as
 // opções têm cores próprias para não herdar o branco do header): ao tocar, abre a lista fixa de modelos permitidos agrupados por
 // provedor (optgroup). O servidor informa apenas quais provedores têm chave configurada.
@@ -68,21 +69,21 @@ export default function AIProviderPicker({ variant = 'header' }) {
       className={`${variant === 'menu' ? 'menu-ai-picker' : 'header-chip max-w-[42vw] sm:max-w-[18rem]'} relative cursor-pointer focus-within:ring-2 focus-within:ring-focus`}
       title={`IA: ${provAtual.label} · ${modeloAtual?.label || modelo}${semChave ? ' (sem chave no servidor)' : ''}`}
     >
-      <span aria-hidden="true">🤖</span>
+      <RobotIcon className="w-4 h-4 shrink-0" />
       <span className="truncate" aria-hidden="true">
         <span className="hidden sm:inline">{provAtual.label} · </span>
         <span className="normal-case">{modeloAtual?.label || modelo}</span>
       </span>
       {semChave && (
         <span aria-hidden="true" title="Sem chave no servidor">
-          ⚠️
+          <AlertTriangleIcon className="w-4 h-4 shrink-0" />
         </span>
       )}
-      <span aria-hidden="true">▾</span>
+      <ChevronDownIcon className="w-3.5 h-3.5 shrink-0" />
       <select
         value={`${provedor}${SEP}${modelo}`}
         onChange={onChange}
-        aria-label="Provedor e modelo de IA gratuito"
+        aria-label="Provedor e modelo de IA"
         className="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-transparent text-transparent [&_optgroup]:bg-white [&_optgroup]:text-pmrv [&_option]:bg-white [&_option]:text-charcoal"
       >
         {PMRV_AI_PROVIDERS.map((p) => (

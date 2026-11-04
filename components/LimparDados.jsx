@@ -43,7 +43,7 @@ export default function LimparDados({ className = '' }) {
           <span className="btn-spinner" aria-hidden="true" /> Limpando…
         </>
       ) : (
-        '🧹 Limpar dados e cache'
+        'Limpar dados e cache'
       )}
     </button>
   );

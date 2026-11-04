@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { WhatsAppIcon } from './icons';
+import { CopyIcon, DownloadIcon, SaveIcon, WhatsAppIcon } from './icons';
 import { generateReport, envolvidosText } from '@/lib/pmrv';
 import { montarDossie, baixarJSON, hashJSON } from '@/lib/ocorrencia';
 import { listarHistoricoIDB, excluirOcorrenciaHistoricoIDB } from '@/lib/idb';
@@ -134,7 +134,7 @@ export default function SalvarOcorrencia() {
         </div>
       ) : !report.trim() ? (
         <div className="bg-surface border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal">
-          <div className="text-3xl mb-2" aria-hidden="true">💾</div>
+          <SaveIcon className="w-8 h-8 text-pmrv mx-auto mb-2" />
           Ainda não há conteúdo. Preencha o Relato, os Envolvidos ou o Resumo.
         </div>
       ) : (
@@ -163,11 +163,11 @@ export default function SalvarOcorrencia() {
               Enviar tudo no WhatsApp
             </button>
             <button type="button" onClick={copiarPMSC} className="ds-btn-gold w-full">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+              <CopyIcon />
               Copiar Dossiê p/ Mobile (Limpo)
             </button>
             <button type="button" onClick={exportarJSON} className="btn-outline w-full text-xs py-3 active:scale-95">
-              ⬇️ Exportar backup (.json)
+              <span className="inline-flex items-center gap-1.5"><DownloadIcon className="w-4 h-4" /> Exportar backup (.json)</span>
             </button>
           </div>
         </section>

@@ -78,10 +78,8 @@ describe('AppShell — migração legada, botão Nova e toasts', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Dossiê completo da ocorrência').value).toContain('123456');
     });
-    // Envolvido migrado aparece no dossiê (bloco de envolvidos do montarDossie).
-    await waitFor(() => {
-      expect(screen.getByLabelText('Dossiê completo da ocorrência').value).toContain('João da Silva');
-    });
+    // Dados de envolvidos não são repetidos no dossiê completo.
+    expect(screen.getByLabelText('Dossiê completo da ocorrência').value).not.toContain('João da Silva');
     // O texto padrão não carrega mais rodapé de versão (pedido da unidade).
     expect(screen.getByLabelText('Dossiê completo da ocorrência').value).not.toContain('Gerado pelo PMRV-SC');
   });

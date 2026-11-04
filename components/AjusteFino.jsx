@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AJUSTE_FINO_PADRAO, TAMANHOS, carregarAjusteFino, salvarAjusteFino } from '@/lib/ajuste-fino';
+import { ChevronDownIcon, SettingsIcon } from '@/components/icons';
 
 // Painel recolhível de "ajuste fino" da geração de relatos. As preferências
 // valem para todas as gerações por IA (Dinâmica, Resumo e Relato Policial).
@@ -23,8 +24,8 @@ export default function AjusteFino() {
   return (
     <details className="ds-card group">
       <summary className="cursor-pointer list-none flex items-center justify-between gap-2 font-mono font-semibold uppercase tracking-tight text-pmrv text-sm">
-        <span>⚙️ Ajuste fino da IA {personalizado && <span className="ml-1 text-xs text-gold-ink">• personalizado</span>}</span>
-        <span aria-hidden="true" className="transition-transform group-open:rotate-180">▾</span>
+        <span className="inline-flex items-center gap-2"><SettingsIcon className="w-4 h-4" /> Ajuste fino da IA {personalizado && <span className="ml-1 text-xs text-gold-ink">• personalizado</span>}</span>
+        <ChevronDownIcon className="w-4 h-4 transition-transform group-open:rotate-180" />
       </summary>
 
       <p className="text-[12px] leading-relaxed text-charcoal/75 font-mono">

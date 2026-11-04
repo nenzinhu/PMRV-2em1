@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Stepper from './Stepper';
-import { ArrowRightIcon, ArrowLeftIcon, WhatsAppIcon, CopyIcon } from './icons';
+import { ArrowRightIcon, ArrowLeftIcon, WhatsAppIcon, CopyIcon, MicIcon, ClipboardListIcon, DownloadIcon, SearchIcon, CheckIcon } from './icons';
 import {
   PMRV_DINAMICAS,
   PMRV_SUBTIPOS,
@@ -409,7 +409,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
       alert('Sem conexão com a internet.\n\nA Descrição IA precisa de internet. O texto padrão (offline) continua disponível normalmente.');
       return;
     }
-    // Chave padrão no servidor; obterChaveIA() retorna override opcional (🔑).
+    // Chave padrão no servidor; obterChaveIA() retorna override opcional.
     const apiKey = obterChaveIA();
     setIaLoading(estilo);
     try {
@@ -445,7 +445,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
       alert('O relatório está vazio.');
       return;
     }
-    // Chave padrão no servidor; obterChaveIA() retorna override opcional (🔑).
+    // Chave padrão no servidor; obterChaveIA() retorna override opcional.
     const apiKey = obterChaveIA();
     setReviewLoading(true);
     try {
@@ -458,7 +458,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
         const resultado = extractJSON(res.text);
         const correcoes = Array.isArray(resultado.correcoes) ? resultado.correcoes : [];
         if (correcoes.length === 0 || !resultado.texto_corrigido) {
-          alert('✓ Revisão concluída: nenhum erro encontrado.');
+          alert('Revisão concluída: nenhum erro encontrado.');
           return;
         }
         const lista = correcoes.map((c) => '• ' + c).join('\n');
@@ -573,20 +573,24 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
         onClick={() => setShowPreview(true)}
         className="btn-outline w-full mb-4 flex items-center justify-center gap-2"
       >
-        📋 Prévia do Acidente
+        <span className="inline-flex items-center justify-center gap-2"><ClipboardListIcon className="w-4 h-4" /> Prévia do Acidente</span>
       </button>
 
       {showPreview && (
         <div
           className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
           onClick={() => setShowPreview(false)}
+          role="presentation"
         >
           <div
             className="ds-card w-full max-w-lg max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pmrv-preview-title"
           >
             <div className="ds-section-title">
-              <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">
+              <h2 id="pmrv-preview-title" className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">
                 Prévia do Acidente
               </h2>
               <button type="button" onClick={() => setShowPreview(false)} className="ds-icon-btn" title="Fechar" aria-label="Fechar prévia">
@@ -697,7 +701,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               <span className="text-gold-ink">1.</span> Identificação
             </h2>
             <button type="button" onClick={() => startRecognition(onVoiceStep1)} className="ds-icon-btn" title="Preencher por voz (Diga: Protocolo..., Viatura..., Conhecimento...)">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
+              <MicIcon />
             </button>
           </div>
 
@@ -771,7 +775,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
             </div>
             {form.horaTipo === 'auto' && (
               <p className="mt-2 text-xs font-mono text-charcoal">
-                Hora no relatório: {form.horaFato || '---'} (não muda ao gerar)
+                Esta hora fica registrada no relatório e não muda quando você o gerar: {form.horaFato || '---'}.
               </p>
             )}
             {form.horaTipo === 'manual' && (
@@ -883,7 +887,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               <span className="text-gold-ink">2.</span> Localização
             </h2>
             <button type="button" onClick={() => startRecognition(onVoiceStep2)} className="ds-icon-btn" title="Preencher por voz (Diga: Rodovia..., KM...)" aria-label="Preencher localização por voz">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
+              <MicIcon />
             </button>
           </div>
 
@@ -969,7 +973,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               <span className="text-gold-ink">3.</span> Natureza e Dinâmica
             </h2>
             <button type="button" onClick={() => startRecognition(onVoiceAppend('pmrv_dinamica_texto'))} className="ds-icon-btn" title="Gravar por voz" aria-label="Gravar dinâmica por voz">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
+              <MicIcon />
             </button>
           </div>
 
@@ -1043,7 +1047,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                 className="btn-outline p-1 text-xs leading-none"
                 title="Importar resumo salvo na aba Resumo da Dinâmica"
               >
-                📥 Importar Resumo
+                <span className="inline-flex items-center gap-1.5"><DownloadIcon className="w-4 h-4" /> Importar Resumo</span>
               </button>
             </div>
             <div className="mb-2">
@@ -1259,10 +1263,10 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
         <section className="ds-card">
           <div className="ds-section-title">
             <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">
-              <span className="text-gold-ink">✓</span> Revisão e Edição Final
+              <span className="text-gold-ink"><CheckIcon className="w-4 h-4 inline" /></span> Revisão e Edição Final
             </h2>
             <button type="button" onClick={() => startRecognition(onVoiceAppend('pmrv_relatorio_edit'))} className="ds-icon-btn" title="Adicionar por voz" aria-label="Adicionar ao relatório por voz">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
+              <MicIcon />
             </button>
           </div>
           <div className="mb-4">
@@ -1322,7 +1326,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                   <span className="btn-spinner" aria-hidden="true" /> Revisando…
                 </>
               ) : (
-                <>🔍 Revisar Ortografia com IA (Norma Culta)</>
+                <span className="inline-flex items-center justify-center gap-2"><SearchIcon className="w-4 h-4" /> Revisar Ortografia com IA (Norma Culta)</span>
               )}
             </button>
           </div>
@@ -1332,7 +1336,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               Enviar tudo no WhatsApp
             </button>
             <button onClick={copiarPMSC} className="ds-btn-gold w-full">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+              <CopyIcon />
               Copiar Relatório p/ Mobile (Limpo)
             </button>
             <div className="flex gap-2 text-sm">
