@@ -23,7 +23,7 @@ export default function AjusteFino() {
   return (
     <details className="ds-card group">
       <summary className="cursor-pointer list-none flex items-center justify-between gap-2 font-mono font-semibold uppercase tracking-tight text-pmrv text-sm">
-        <span>⚙️ Ajuste fino da IA {personalizado && <span className="ml-1 text-[10px] text-gold">• personalizado</span>}</span>
+        <span>⚙️ Ajuste fino da IA {personalizado && <span className="ml-1 text-xs text-gold-ink">• personalizado</span>}</span>
         <span aria-hidden="true" className="transition-transform group-open:rotate-180">▾</span>
       </summary>
 
@@ -35,7 +35,7 @@ export default function AjusteFino() {
       <div>
         <label htmlFor="af-temp" className="ds-label">
           Criatividade: {ajuste.temperatura.toFixed(1)}{' '}
-          <span className="normal-case font-normal text-charcoal/60">
+          <span className="normal-case font-normal text-charcoal">
             ({ajuste.temperatura <= 0.3 ? 'fiel aos fatos' : ajuste.temperatura <= 0.6 ? 'equilibrado' : 'mais livre'})
           </span>
         </label>
@@ -57,8 +57,8 @@ export default function AjusteFino() {
           {TAMANHOS.map((t) => (
             <label
               key={t.id}
-              className={`flex-1 cursor-pointer text-center rounded-xl border-2 py-2 text-xs font-mono font-semibold uppercase focus-within:ring-2 focus-within:ring-gold ${
-                ajuste.tamanho === t.id ? 'bg-pmrv text-white border-pmrv' : 'border-charcoal/40'
+              className={`flex-1 cursor-pointer text-center rounded-xl border-2 py-2 text-xs font-mono font-semibold uppercase focus-within:ring-2 focus-within:ring-focus ${
+                ajuste.tamanho === t.id ? 'bg-pmrv text-on-primary border-pmrv' : 'border-charcoal/40'
               }`}
             >
               <input

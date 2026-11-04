@@ -130,11 +130,11 @@ export default function SalvarOcorrencia() {
       </p>
 
       {!pronto ? (
-        <div className="bg-white border-2 border-dashed border-charcoal p-6 text-center font-mono text-xs text-charcoal/60">
+        <div className="bg-surface border-2 border-dashed border-charcoal p-6 text-center font-mono text-xs text-charcoal">
           Carregando ocorrência…
         </div>
       ) : !report.trim() ? (
-        <div className="bg-white border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal/60">
+        <div className="bg-surface border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal">
           <div className="text-3xl mb-2" aria-hidden="true">💾</div>
           Ainda não há conteúdo. Preencha o Relato, os Envolvidos ou o Resumo.
         </div>
@@ -142,7 +142,7 @@ export default function SalvarOcorrencia() {
         <section className="ds-card">
           <div className="flex justify-between items-center mb-2">
             <label className="ds-label mb-0">Dossiê completo</label>
-            <span className="text-[10px] text-charcoal font-mono font-semibold uppercase tracking-wider bg-bone border border-charcoal px-2 py-1">
+            <span className="text-xs text-charcoal font-mono font-semibold uppercase tracking-wider bg-bone border border-charcoal px-2 py-1">
               Pronto para enviar
             </span>
           </div>
@@ -154,7 +154,7 @@ export default function SalvarOcorrencia() {
             aria-label="Dossiê completo da ocorrência"
           />
           {hash && (
-            <p className="text-[10px] font-mono text-charcoal/60 mt-1 break-all" title="SHA-256 do documento exportado em JSON">
+            <p className="text-xs font-mono text-charcoal mt-1 break-all" title="SHA-256 do documento exportado em JSON">
               SHA-256 do backup: {hash}
             </p>
           )}
@@ -178,22 +178,22 @@ export default function SalvarOcorrencia() {
         <section className="ds-card mt-4">
           <div className="flex justify-between items-center mb-2">
             <label className="ds-label mb-0">Histórico ({historico.length})</label>
-            <span className="text-[10px] text-charcoal font-mono uppercase tracking-wider bg-bone border border-charcoal px-2 py-1">
+            <span className="text-xs text-charcoal font-mono uppercase tracking-wider bg-bone border border-charcoal px-2 py-1">
               arquivadas pelo botão Nova
             </span>
           </div>
           <ul className="space-y-2">
             {historico.map((o) => (
-              <li key={o.id} className="flex items-center justify-between gap-2 border border-charcoal/20 bg-white p-2">
+              <li key={o.id} className="flex items-center justify-between gap-2 border border-charcoal/20 bg-surface p-2">
                 <div className="min-w-0">
                   <p className="font-mono text-xs font-semibold text-charcoal truncate">{resumoHistorico(o)}</p>
-                  <p className="text-[10px] font-mono text-charcoal/60">{rotuloData(o.atualizadoEm)}</p>
+                  <p className="text-xs font-mono text-charcoal">{rotuloData(o.atualizadoEm)}</p>
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <button
                     type="button"
                     onClick={() => restaurar(o)}
-                    className="btn-outline text-[10px] py-1 px-2"
+                    className="btn-outline text-xs py-1 px-2"
                     aria-label={`Restaurar ocorrência ${resumoHistorico(o)}`}
                   >
                     Restaurar
@@ -201,7 +201,7 @@ export default function SalvarOcorrencia() {
                   <button
                     type="button"
                     onClick={() => excluir(o)}
-                    className="btn-outline text-[10px] py-1 px-2 border-brick text-brick"
+                    className="btn-outline text-xs py-1 px-2 border-brick text-brick"
                     aria-label={`Excluir do histórico a ocorrência ${resumoHistorico(o)}`}
                   >
                     Excluir
@@ -217,7 +217,7 @@ export default function SalvarOcorrencia() {
         <h3 className="text-sm font-mono font-semibold uppercase tracking-tight text-brick">
           Limpar dados e cache
         </h3>
-        <p className="text-xs text-charcoal/70 font-mono">
+        <p className="text-xs text-charcoal font-mono">
           Depois de enviar a ocorrência, limpe rascunhos, fotos e o cache do app para não acumular no aparelho. Tema, unidade, VTR e chaves de API são mantidos.
         </p>
         <LimparDados />

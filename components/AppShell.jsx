@@ -267,7 +267,7 @@ function AppShellInner({ aba, themeOpen, setThemeOpen, mounted, setMounted, fsAc
       </div>
 
       {themeOpen && (
-        <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center">
+        <div className="fixed inset-0 z-overlay flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={() => setThemeOpen(false)} aria-hidden="true" />
           <div className="relative w-full sm:max-w-lg max-h-[90vh] overflow-y-auto ds-card !rounded-t-2xl sm:!rounded-2xl animate-slideUp" role="dialog" aria-label="Personalizar tema" aria-modal="true">
             <ThemeConfig onClose={() => setThemeOpen(false)} />

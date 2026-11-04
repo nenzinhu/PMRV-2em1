@@ -190,7 +190,7 @@ export default function MentionInput({ id, value, onChange, envolvidos, placehol
       />
       {showMentions && filteredItems.length > 0 && (
         <div
-          className="absolute bg-white border-2 border-charcoal shadow-[4px_4px_0_#2B2B2B] rounded-xl overflow-hidden max-h-48 overflow-y-auto"
+          className="absolute bg-surface border-2 border-charcoal shadow-[4px_4px_0_#2B2B2B] rounded-xl overflow-hidden max-h-48 overflow-y-auto"
           style={dropdownStyle}
         >
           {filteredItems.map((item, index) => (
@@ -207,16 +207,16 @@ export default function MentionInput({ id, value, onChange, envolvidos, placehol
                   ? 'bg-pmrv/10 text-pmrv border border-pmrv/30'
                   : item.type === 'veiculo'
                     ? 'bg-gold/20 text-charcoal border border-gold/50'
-                    : 'bg-white text-charcoal border border-charcoal/40'
+                    : 'bg-surface text-charcoal border border-charcoal/40'
               }`}>
                 {item.type === 'pessoa' ? '👤' : item.type === 'veiculo' ? '🚗' : item.type === 'apresentacao' ? '📝' : '📍'}
               </span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-charcoal truncate">{item.label}</p>
-                <p className="text-[10px] font-mono text-charcoal/60 uppercase tracking-wider">{item.sublabel}</p>
+                <p className="text-xs font-mono text-charcoal uppercase tracking-wider">{item.sublabel}</p>
               </div>
               {index === selectedIndex && (
-                <span className="text-[10px] font-mono text-gold">↵</span>
+                <span className="text-xs font-mono text-gold-ink">↵</span>
               )}
             </button>
           ))}

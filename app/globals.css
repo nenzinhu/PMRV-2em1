@@ -11,9 +11,18 @@
   --ds-ink: #2b6cb0;
   --ds-border: #1e293b;
   --ds-accent: #fbbf24;
+  --ds-on-accent: #1e293b;
+  /* Dourado como texto: #fbbf24 sobre branco mede 1.67:1, então texto usa este tom (5.93:1) */
+  --ds-gold-ink: #8a5a00;
   --ds-danger: #dc2626;
+  --ds-success: #15803d;
+  --ds-on-success: #ffffff;
   --ds-muted: #dbeafe;
   --ds-primary: #008448;
+  /* Texto sobre superfície primária (5.28:1 no claro) */
+  --ds-on-primary: #FFFFFF;
+  /* Anel de foco: 5.28:1 sobre branco, 4.67:1 sobre o fundo bone */
+  --ds-focus: #0b6bcb;
 }
 
 :root.dark {
@@ -23,9 +32,17 @@
   --ds-ink: #60a5fa;
   --ds-border: #334155;
   --ds-accent: #fbbf24;
+  --ds-on-accent: #0f172a;
+  --ds-gold-ink: #fbbf24;
   --ds-danger: #f87171;
+  --ds-success: #22c55e;
+  --ds-on-success: #0f172a;
   --ds-muted: #1e293b;
   --ds-primary: #22c55e;
+  /* Branco sobre o verde claro do escuro cai para 2.28:1; texto escuro sobe para 7.83:1 */
+  --ds-on-primary: #0f172a;
+  /* 5.75:1 sobre a surface escura */
+  --ds-focus: #60a5fa;
 }
 
 @layer base {
@@ -38,7 +55,7 @@
     color: var(--ds-text);
     background-color: var(--ds-bg);
     background-image: linear-gradient(180deg, color-mix(in srgb, var(--ds-bg) 94%, #fff) 0%, var(--ds-bg) 100%);
-    background-attachment: fixed;
+    /* sem background-attachment: fixed — repaint caro no scroll em iOS/Android */
     overflow-x: hidden;
     /* iPhone (notch e barra inferior): respeita áreas seguras quando instalado como app */
     padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
@@ -74,29 +91,46 @@
 
   .ds-card-danger {
     @apply p-5 sm:p-6 space-y-4;
-    background: color-mix(in srgb, #fff 82%, #F9ECE9);
+    background: color-mix(in srgb, var(--ds-surface) 92%, var(--ds-danger));
     border: 2px solid var(--ds-danger);
     border-radius: 18px;
     box-shadow: 4px 4px 0 var(--ds-danger), 0 18px 40px rgba(196, 69, 54, 0.12);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    /* sem backdrop-filter: o card entra com cardIn e blur em superfície animada custa caro no mobile */
   }
 
   .ds-label {
-    @apply block font-mono text-[13px] font-semibold uppercase tracking-wide text-charcoal mb-1.5;
+    @apply block font-mono text-[13px] font-semibold uppercase tracking-wider text-charcoal mb-1.5;
   }
 
   .ds-input {
-    @apply w-full p-3 bg-white/90 border focus:ring-2 focus:ring-gold outline-none transition rounded-xl placeholder:text-slate-500;
-    border-color: color-mix(in srgb, var(--ds-text) 30%, transparent);
+    @apply w-full p-3 border outline-none transition rounded-xl placeholder:text-slate-500;
+    /* color-mix em vez de bg-surface/90: modificador de opacidade não compila em token var() */
+    background-color: color-mix(in srgb, var(--ds-surface) 92%, transparent);
+    /* 50% garante 3:1 da borda do campo (era 30% = 1.84:1) */
+    border-color: color-mix(in srgb, var(--ds-text) 50%, transparent);
   }
 
   .ds-input-muted {
-    @apply w-full p-3 bg-bone/80 border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition rounded-xl placeholder:text-slate-500;
+    @apply w-full p-3 border-2 border-charcoal outline-none transition rounded-xl placeholder:text-slate-500;
+    background-color: color-mix(in srgb, var(--ds-bg) 80%, transparent);
   }
 
   .ds-input-danger {
-    @apply w-full p-3 bg-[#F9ECE9] border-2 border-brick focus:ring-2 focus:ring-brick outline-none transition rounded-xl placeholder:text-slate-500;
+    @apply w-full p-3 border-2 border-brick outline-none transition rounded-xl placeholder:text-slate-500;
+    background-color: color-mix(in srgb, var(--ds-surface) 88%, var(--ds-danger));
+  }
+
+  /* Anel de foco único do design-system (3:1+ em ambos os temas).
+     Usa outline para não brigar com as sombras duras (shadow-[4px_4px_0_...]). */
+  .ds-icon-btn:focus-visible,
+  .ds-btn:focus-visible,
+  .btn-ios:focus-visible,
+  .btn-outline:focus-visible,
+  .ds-input:focus-visible,
+  .ds-input-muted:focus-visible,
+  .ds-input-danger:focus-visible {
+    outline: 2px solid var(--ds-focus);
+    outline-offset: 2px;
   }
 
   .ds-icon-btn {
@@ -134,7 +168,7 @@
   .ds-btn-primary {
     @apply ds-btn border-2 shadow-[4px_4px_0_var(--ds-accent)] py-4;
     background-color: var(--ds-primary);
-    color: #fff;
+    color: var(--ds-on-primary);
     border-color: var(--ds-primary);
   }
   .ds-btn-primary:hover:not(:disabled) {
@@ -147,7 +181,7 @@
   }
 
   .ds-btn-ghost {
-    @apply ds-btn bg-white text-charcoal border-charcoal hover:bg-bone py-4;
+    @apply ds-btn bg-surface text-charcoal border-charcoal py-4;
   }
   .ds-btn-ghost:hover:not(:disabled) {
     background-color: var(--ds-bg);
@@ -159,7 +193,8 @@
   .ds-btn-whatsapp {
     @apply ds-btn border-2 shadow-[4px_4px_0_#0A0A0A] py-5 text-lg transform active:scale-95;
     background-color: #25d366;
-    color: #fff;
+    /* branco sobre este verde mede 1.98:1; texto escuro sobe para 9:1 */
+    color: #0f172a;
     border-color: var(--ds-primary);
   }
   .ds-btn-whatsapp:hover:not(:disabled) {
@@ -185,10 +220,10 @@
   }
 
   .ds-btn-danger {
-    @apply ds-btn bg-white text-brick border-brick hover:bg-[#F9ECE9] py-3;
+    @apply ds-btn bg-surface text-brick border-brick py-3;
   }
   .ds-btn-danger:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--ds-danger) 8%, #fff);
+    background-color: color-mix(in srgb, var(--ds-danger) 8%, var(--ds-surface));
     border-color: color-mix(in srgb, var(--ds-danger) 85%, #000);
   }
   .ds-btn-danger:active:not(:disabled) {
@@ -202,7 +237,8 @@
 
 /* Cor do número conforme o estado do passo (classes aplicadas via JS) */
 .step-dot {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* anima só cor de estado; transform fica por conta do GSAP */
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 .step-dot.bg-step-idle {
@@ -210,12 +246,13 @@
 }
 
 .step-dot.bg-pmrv {
-  color: #FFFFFF;
+  color: var(--ds-on-primary);
   border-color: var(--ds-ink);
 }
 
 .step-dot.bg-step-done {
-  color: var(--ds-ink);
+  /* antes: --ds-ink sobre o verde do primary = 1.13:1 (número praticamente invisível) */
+  color: var(--ds-on-primary);
   border-color: var(--ds-ink);
 }
 
@@ -275,7 +312,7 @@
     border-radius: 14px;
     padding: 14px 20px;
     background-color: var(--ds-primary);
-    color: #fff;
+    color: var(--ds-on-primary);
     border-color: var(--ds-primary);
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
@@ -299,9 +336,10 @@
 
   /* estilizar-botao: outline (botão secundário touch-first) */
   .btn-outline {
-    @apply font-mono font-semibold uppercase tracking-wider border-2 bg-white transition-all flex items-center justify-center gap-2;
+    @apply font-mono font-semibold uppercase tracking-wider border-2 transition-all flex items-center justify-center gap-2;
     border-radius: 14px;
     padding: 12px 18px;
+    background-color: var(--ds-surface);
     color: var(--ds-primary);
     border-color: var(--ds-primary);
     -webkit-tap-highlight-color: transparent;
@@ -309,13 +347,13 @@
     min-height: 44px;
   }
   .btn-outline:hover:not(:disabled) {
-    background-color: color-mix(in srgb, var(--ds-primary) 9%, #fff);
+    background-color: color-mix(in srgb, var(--ds-primary) 9%, var(--ds-surface));
     border-color: color-mix(in srgb, var(--ds-primary) 84%, #000);
     color: color-mix(in srgb, var(--ds-primary) 84%, #000);
   }
   .btn-outline:active:not(:disabled) {
     transform: translate(2px, 2px);
-    background-color: color-mix(in srgb, var(--ds-primary) 15%, #fff);
+    background-color: color-mix(in srgb, var(--ds-primary) 15%, var(--ds-surface));
   }
   .btn-outline:disabled {
     opacity: 0.4;
@@ -355,7 +393,7 @@
     z-index: 40;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    background: rgba(255, 255, 255, 0.72);
+    background: color-mix(in srgb, var(--ds-surface) 85%, transparent);
     padding-top: env(safe-area-inset-top);
     border-bottom: 2px solid var(--ds-ink);
   }
@@ -370,7 +408,7 @@
   }
 
   .header-chip {
-    @apply inline-flex items-center gap-1 text-white text-[10px] font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded-full;
+    @apply inline-flex items-center gap-1 text-white text-xs font-mono font-semibold uppercase tracking-wider px-2 py-1 rounded-full;
     background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.28);
     backdrop-filter: blur(10px);
@@ -398,7 +436,8 @@
   .page-slide,
   .animate-card-in,
   .gps-chip,
-  .swipe-hint {
+  .swipe-hint,
+  .skeleton {
     animation: none !important;
   }
 

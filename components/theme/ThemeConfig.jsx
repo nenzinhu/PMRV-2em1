@@ -127,7 +127,7 @@ export default function ThemeConfig({ onClose }) {
                 type="button"
                 onClick={() => update({ mode })}
                 className={`flex-1 py-3 border-2 font-mono text-xs uppercase tracking-wider ${
-                  theme.mode === mode ? 'bg-pmrv text-white border-pmrv' : 'bg-white text-charcoal border-charcoal hover:bg-bone'
+                  theme.mode === mode ? 'bg-pmrv text-on-primary border-pmrv' : 'bg-surface text-charcoal border-charcoal'
                 }`}
                 role="radio"
                 aria-checked={theme.mode === mode}
@@ -243,7 +243,7 @@ export default function ThemeConfig({ onClose }) {
 
         <div className="border-2 border-brick p-3 bg-[#F9ECE9]">
           <p className="text-xs font-mono uppercase tracking-wider text-brick mb-1">Dados e cache</p>
-          <p className="text-[11px] font-mono text-charcoal/70 mb-3">
+          <p className="text-xs font-mono text-charcoal mb-3">
             Remove rascunhos, fotos dos envolvidos, resumos e o cache do aplicativo para não acumular no aparelho. Tema, VTR e chaves ficam salvos.
           </p>
           <LimparDados />

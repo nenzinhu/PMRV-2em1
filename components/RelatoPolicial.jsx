@@ -627,9 +627,9 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
 
             <h3 className="font-mono font-semibold text-sm uppercase tracking-tight text-pmrv mt-4 mb-2 border-b border-charcoal/30 pb-1">Data e Horário da Ocorrência</h3>
             <div className="grid grid-cols-3 gap-3">
-              <div className="text-center font-mono text-[10px] uppercase text-gold">Fato</div>
-              <div className="text-center font-mono text-[10px] uppercase text-gold">Comunicação</div>
-              <div className="text-center font-mono text-[10px] uppercase text-gold">Atendimento</div>
+              <div className="text-center font-mono text-xs uppercase text-gold-ink">Fato</div>
+              <div className="text-center font-mono text-xs uppercase text-gold-ink">Comunicação</div>
+              <div className="text-center font-mono text-xs uppercase text-gold-ink">Atendimento</div>
               <input value={dataFatoFieldValue(form.dataFato)} readOnly disabled placeholder="dd/mm/aaaa" className="ds-input text-center bg-bone/60" />
               <input value={dataFatoFieldValue(form.dataFato)} readOnly disabled placeholder="dd/mm/aaaa" className="ds-input text-center bg-bone/60" />
               <input value={dataFatoFieldValue(form.dataFato)} readOnly disabled placeholder="dd/mm/aaaa" className="ds-input text-center bg-bone/60" />
@@ -694,7 +694,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
         <section className="ds-card">
           <div className="ds-section-title">
             <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">
-              <span className="text-gold">1.</span> Identificação
+              <span className="text-gold-ink">1.</span> Identificação
             </h2>
             <button type="button" onClick={() => startRecognition(onVoiceStep1)} className="ds-icon-btn" title="Preencher por voz (Diga: Protocolo..., Viatura..., Conhecimento...)">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
@@ -754,7 +754,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                       dataFato: form.dataFato || n.dataFato,
                     });
                   }}
-                  className="w-4 h-4 text-pmrv focus:ring-gold"
+                  className="w-4 h-4 text-pmrv focus-visible:ring-2 focus-visible:ring-focus"
                 />
                 <span className="text-sm">Capturada</span>
               </label>
@@ -764,13 +764,13 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                   name="pmrv_hora_tipo"
                   checked={form.horaTipo === 'manual'}
                   onChange={() => set({ horaTipo: 'manual' })}
-                  className="w-4 h-4 text-pmrv focus:ring-gold"
+                  className="w-4 h-4 text-pmrv focus-visible:ring-2 focus-visible:ring-focus"
                 />
                 <span className="text-sm">Manual</span>
               </label>
             </div>
             {form.horaTipo === 'auto' && (
-              <p className="mt-2 text-[11px] font-mono text-charcoal/70">
+              <p className="mt-2 text-xs font-mono text-charcoal">
                 Hora no relatório: {form.horaFato || '---'} (não muda ao gerar)
               </p>
             )}
@@ -797,7 +797,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-mono font-semibold uppercase text-sm text-pmrv">Localização por GPS</p>
-                <p className="text-[11px] text-charcoal/70">
+                <p className="text-xs text-charcoal">
                   Na rodovia: SC e KM. Fora dela: endereço do mapa.
                 </p>
               </div>
@@ -820,7 +820,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                     {gpsInfo.endereco}
                   </span>
                 ) : (
-                  <p className="text-charcoal/70">Fora da rodovia. Buscando endereço no mapa…</p>
+                  <p className="text-charcoal">Fora da rodovia. Buscando endereço no mapa…</p>
                 )}
               </div>
             )}
@@ -832,13 +832,13 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                 <span className="bg-gold/15 text-charcoal border border-gold/50 px-2 py-1 rounded">
                   KM: <b>{formatKMNumero(gpsInfo.km)}</b>
                 </span>
-                <span className="bg-gray-100 text-charcoal/70 px-2 py-1 rounded">
+                <span className="bg-gray-100 text-charcoal px-2 py-1 rounded">
                   ±{Math.round(gpsInfo.dist)} m
                 </span>
               </div>
             )}
             {gpsOn && (
-              <label className="mt-2 flex items-center gap-1.5 text-[11px] font-mono text-charcoal/70 cursor-pointer">
+              <label className="mt-2 flex items-center gap-1.5 text-xs font-mono text-charcoal cursor-pointer">
                 <input
                   type="checkbox"
                   checked={autoKmGps}
@@ -849,7 +849,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               </label>
             )}
             {gpsInfo && gpsInfo.lat != null && (
-              <p className="mt-2 text-[10px] font-mono text-charcoal/60">
+              <p className="mt-2 text-xs font-mono text-charcoal">
                 Lat {gpsInfo.lat.toFixed(5)} · Lon {gpsInfo.lon.toFixed(5)}
                 {mapsUrl(gpsInfo.lat, gpsInfo.lon) ? (
                   <>
@@ -880,7 +880,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
         <section className="ds-card">
           <div className="ds-section-title">
             <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">
-              <span className="text-gold">2.</span> Localização
+              <span className="text-gold-ink">2.</span> Localização
             </h2>
             <button type="button" onClick={() => startRecognition(onVoiceStep2)} className="ds-icon-btn" title="Preencher por voz (Diga: Rodovia..., KM...)" aria-label="Preencher localização por voz">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
@@ -966,7 +966,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
         <section className="ds-card">
           <div className="ds-section-title">
             <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">
-              <span className="text-gold">3.</span> Natureza e Dinâmica
+              <span className="text-gold-ink">3.</span> Natureza e Dinâmica
             </h2>
             <button type="button" onClick={() => startRecognition(onVoiceAppend('pmrv_dinamica_texto'))} className="ds-icon-btn" title="Gravar por voz" aria-label="Gravar dinâmica por voz">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
@@ -1047,7 +1047,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               </button>
             </div>
             <div className="mb-2">
-              <span className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-gold mb-1">Descrição IA</span>
+              <span className="block font-mono text-xs font-semibold uppercase tracking-wider text-gold-ink mb-1">Descrição IA</span>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {ESTILOS_RELATO.map((estilo) => (
                   <button
@@ -1067,7 +1067,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               rows={4}
               value={form.dinamica}
               onChange={(e) => set({ dinamica: capitalizarFrase(e.target.value) })}
-              className="w-full p-3 bg-white border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none transition leading-relaxed"
+              className="w-full p-3 bg-surface border-2 border-charcoal focus:ring-2 focus:ring-focus outline-none transition leading-relaxed"
             />
           </div>
           <div className="flex gap-3 pt-4">
@@ -1089,7 +1089,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               <input type="number" min={0} value={form.qtdLeve} onChange={(e) => set({ qtdLeve: e.target.value })} className="ds-input text-center font-mono font-semibold text-lg" />
             </div>
             <div>
-              <label className="ds-label text-gold text-center">Graves</label>
+              <label className="ds-label text-gold-ink text-center">Graves</label>
               <input type="number" min={0} value={form.qtdGrave} onChange={(e) => set({ qtdGrave: e.target.value })} className="ds-input bg-bone border-gold text-center font-mono font-semibold text-lg text-charcoal" />
             </div>
             <div>
@@ -1118,7 +1118,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                   ))}
                 </select>
               ) : (
-                <p className="text-[11px] text-charcoal/50 font-mono">
+                <p className="text-xs text-charcoal font-mono">
                   Nenhum envolvido cadastrado ainda na aba Envolvidos.
                 </p>
               )}
@@ -1136,7 +1136,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                     className={`flex items-center gap-2 text-xs font-mono px-3 py-2 rounded border cursor-pointer ${
                       form.atendimentoViatura === opt.value
                         ? 'border-pmrv bg-pmrv/10 text-pmrv font-semibold'
-                        : 'border-charcoal/20 text-charcoal/70'
+                        : 'border-charcoal/20 text-charcoal'
                     }`}
                   >
                     <input
@@ -1213,7 +1213,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                     className={`flex items-center gap-2 text-xs font-mono px-3 py-2 rounded border cursor-pointer ${
                       form.destinoVitima === opt.value
                         ? 'border-pmrv bg-pmrv/10 text-pmrv font-semibold'
-                        : 'border-charcoal/20 text-charcoal/70'
+                        : 'border-charcoal/20 text-charcoal'
                     }`}
                   >
                     <input
@@ -1259,7 +1259,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
         <section className="ds-card">
           <div className="ds-section-title">
             <h2 className="text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">
-              <span className="text-gold">✓</span> Revisão e Edição Final
+              <span className="text-gold-ink">✓</span> Revisão e Edição Final
             </h2>
             <button type="button" onClick={() => startRecognition(onVoiceAppend('pmrv_relatorio_edit'))} className="ds-icon-btn" title="Adicionar por voz" aria-label="Adicionar ao relatório por voz">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" /></svg>
@@ -1279,7 +1279,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                   className={`flex items-center gap-2 text-xs font-mono px-3 py-2 rounded border cursor-pointer ${
                     form.irregularidade === opt.value
                       ? 'border-pmrv bg-pmrv/10 text-pmrv font-semibold'
-                      : 'border-charcoal/20 text-charcoal/70'
+                      : 'border-charcoal/20 text-charcoal'
                   }`}
                 >
                   <input
@@ -1298,7 +1298,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
               <label className="ds-label mb-0">Relatório Completo (Editável)</label>
-              <span className="text-[10px] text-charcoal font-mono font-semibold uppercase tracking-wider bg-bone border border-charcoal px-2 py-1">
+              <span className="text-xs text-charcoal font-mono font-semibold uppercase tracking-wider bg-bone border border-charcoal px-2 py-1">
                 Revisão Geral
               </span>
             </div>
@@ -1308,7 +1308,7 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
               value={finalReport}
               onChange={onRelatorioEdit}
               spellCheck
-              className="w-full bg-charcoal text-bone p-4 font-mono text-xs leading-relaxed outline-none focus:ring-2 focus:ring-gold transition-all border-2 border-charcoal"
+              className="w-full bg-charcoal text-bone p-4 font-mono text-xs leading-relaxed outline-none focus:ring-2 focus:ring-focus transition-all border-2 border-charcoal"
             />
             <button
               id="btn-revisar-ia"

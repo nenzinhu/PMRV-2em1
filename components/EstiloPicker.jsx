@@ -8,15 +8,15 @@ export default function EstiloPicker({ value, onChange, legenda = 'Estilo do tex
   const nome = useId();
   return (
     <fieldset disabled={disabled} className="min-w-0">
-      <legend className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-gold mb-1">{legenda}</legend>
+      <legend className="block font-mono text-xs font-semibold uppercase tracking-wider text-gold-ink mb-1">{legenda}</legend>
       <div className="flex flex-wrap gap-1.5">
         {ESTILOS_RELATO.map((e) => {
           const ativo = value === e.id;
           return (
             <label
               key={e.id}
-              className={`cursor-pointer select-none rounded-full border-2 px-3 py-1.5 text-[11px] font-mono font-semibold uppercase tracking-wide transition-colors focus-within:ring-2 focus-within:ring-gold ${
-                ativo ? 'bg-pmrv text-white border-pmrv' : 'border-charcoal/40 text-charcoal/80 hover:border-pmrv'
+              className={`cursor-pointer select-none rounded-full border-2 px-3 py-1.5 text-xs font-mono font-semibold uppercase tracking-wider transition-colors focus-within:ring-2 focus-within:ring-focus ${
+                ativo ? 'bg-pmrv text-on-primary border-pmrv' : 'border-charcoal/40 text-charcoal/80 hover:border-pmrv'
               }`}
             >
               <input

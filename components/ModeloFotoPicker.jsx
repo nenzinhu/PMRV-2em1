@@ -98,7 +98,7 @@ export default function ModeloFotoPicker({ onChange }) {
       </p>
 
       <details className="mt-2">
-        <summary className="cursor-pointer text-[11px] font-mono font-semibold uppercase tracking-wider text-pmrv">
+        <summary className="cursor-pointer text-xs font-mono font-semibold uppercase tracking-wider text-pmrv">
           Comparar os {modelos.length} modelos gratuitos
         </summary>
         <dl className="mt-2 space-y-2">
@@ -106,7 +106,7 @@ export default function ModeloFotoPicker({ onChange }) {
             <div key={valorDe(m)}>
               <dt className="text-[12px] font-mono font-semibold">
                 {m.label}{' '}
-                <span className="font-normal text-charcoal/60">
+                <span className="font-normal text-charcoal">
                   · {m.provedorLabel}
                   {semChave(m.provedor) ? ' (sem chave)' : ''}
                 </span>
