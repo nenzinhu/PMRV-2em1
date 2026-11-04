@@ -36,7 +36,7 @@ afterEach(() => {
 });
 
 describe('ResumoDinamica — transferência de relato individual', () => {
-  it('persiste o texto no Relato Policial sem sair da aba de resumo', async () => {
+  it('persiste o texto e abre a aba Relato Policial', async () => {
     render(<ResumoDinamica />);
 
     fireEvent.click(await screen.findByRole('button', { name: /transferir p\/ relato policial/i }));
@@ -62,8 +62,8 @@ describe('ResumoDinamica — transferência de relato individual', () => {
         },
       },
     });
-    expect(onSetDinamica).toHaveBeenCalledOnce();
-    expect(onSetDinamica.mock.calls[0][0].detail).toBe('O veículo seguia pela rodovia.');
-    expect(onNavigate).not.toHaveBeenCalled();
+    expect(onSetDinamica).not.toHaveBeenCalled();
+    expect(onNavigate).toHaveBeenCalledOnce();
+    expect(onNavigate.mock.calls[0][0].detail).toBe('relato');
   });
 });

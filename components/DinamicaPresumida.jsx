@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { callGroq, capitalizarFrase, cleanIAResponse, obterChaveIA } from '@/lib/pmrv';
 import { showToast } from '@/components/Toast';
+import { useOcorrencia } from '@/components/OcorrenciaProvider';
 import MentionInput from '@/components/MentionInput';
 import { aplicarDadosConsultados, consultarPlaca, normalizarPlaca, placaConsultavel } from '@/lib/placa';
 import { RELATO_DRAFT_KEY, parseRelatoDraft } from '@/lib/relato-draft';
@@ -91,6 +92,7 @@ function itensLocal(local) {
 }
 
 export default function DinamicaPresumida({ gpsInfo = null }) {
+  const { pronto: docPronto, atualizar: atualizarDoc } = useOcorrencia();
   const [estado, setEstado] = useState(estadoInicialDinamica);
   const [gerando, setGerando] = useState(false);
   const [cadastrados, setCadastrados] = useState([]);
@@ -267,7 +269,17 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
   function transferirParaRelato() {
     const texto = estado.dinamica.trim();
     if (!texto) return;
-    window.dispatchEvent(new CustomEvent('set-dinamica', { detail: texto }));
+    if (!docPronto) {
+      showToast('Aguarde o carregamento da ocorrência antes de transferir.', 'warning', 2500);
+      return;
+    }
+    atualizarDoc((prev) => ({
+      ...prev,
+      relato: {
+        ...prev.relato,
+        form: { ...(prev.relato?.form || {}), dinamica: texto },
+      },
+    }));
     window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'relato' }));
     showToast('Dinâmica transferida para o Relato Policial', 'success', 2000);
   }

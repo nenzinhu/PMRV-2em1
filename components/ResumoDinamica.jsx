@@ -95,16 +95,18 @@ export default function ResumoDinamica() {
         },
       };
     });
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('set-dinamica', { detail: texto }));
-    }
     return true;
   }
 
   function transferirParaRelatoPolicial(id) {
     const relato = relatos.find((r) => r.id === id);
     if (!relato) return;
-    gravarDinamicaNoRelato(relato.texto);
+    if (!gravarDinamicaNoRelato(relato.texto)) {
+      showToast('Aguarde o carregamento da ocorrência antes de transferir.', 'warning', 2500);
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'relato' }));
+    showToast('Relato transferido para o Relato Policial', 'success', 2000);
     setTransferindoId(id);
     setTimeout(() => setTransferindoId(null), 2000);
   }
@@ -115,10 +117,13 @@ export default function ResumoDinamica() {
       alert('Não há resumo para salvar.');
       return;
     }
-    gravarDinamicaNoRelato(texto);
+    if (!gravarDinamicaNoRelato(texto)) {
+      showToast('Aguarde o carregamento da ocorrência antes de salvar.', 'warning', 2500);
+      return;
+    }
     showToast('Resumo gravado no Relato Policial', 'success', 2000);
     if (irParaSalvar) {
-      window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'salvar' }));
+      window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'relato' }));
     }
   }
 
@@ -275,7 +280,7 @@ export default function ResumoDinamica() {
       </div>
 
       <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono mb-4 p-3">
-        Os relatos individuais entram aqui ao tocar <b>Salvar relato</b> na aba Envolvidos. Depois escolha entre <b>Relato Narrativo Direto</b> (formal, objetivo e neutro) e <b>Relato Técnico/Policial</b> (impessoal, técnico e sem atribuir culpa). Ao gerar ou tocar <b>Salvar</b>, o texto já vai para a dinâmica do Relato Policial.
+        Os relatos individuais entram aqui ao tocar <b>Salvar relato</b> na aba Envolvidos. Depois escolha entre <b>Relato Narrativo Direto</b> (formal, objetivo e neutro) e <b>Relato Técnico/Policial</b> (impessoal, técnico e sem atribuir culpa). Ao gerar ou tocar <b>Salvar</b>, o texto vai para a dinâmica do Relato Policial.
       </p>
 
       <div className="space-y-4">

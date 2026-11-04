@@ -1024,14 +1024,22 @@ export default function RelatoPolicial({ gpsOn = false, gpsInfo = null }) {
                 type="button"
                 onClick={() => {
                   try {
-                    let data = null;
-                    const rawDoc = localStorage.getItem('PMRV_OCORRENCIA');
-                    if (rawDoc) data = JSON.parse(rawDoc)?.resumo || null;
-                    if (!data) {
-                      const raw = localStorage.getItem('PMRV_RESUMO_DINAMICA');
-                      data = raw ? JSON.parse(raw) : null;
+                    let texto = typeof doc?.resumo?.resumo === 'string' ? doc.resumo.resumo.trim() : '';
+                    if (!texto) {
+                      const estilo = doc?.resumo?.estiloResumo;
+                      const porEstilo = doc?.resumo?.resumos?.[estilo];
+                      texto = typeof porEstilo === 'string' ? porEstilo.trim() : '';
                     }
-                    const texto = (data && typeof data.resumo === 'string' ? data.resumo : '').trim();
+                    if (!texto) {
+                      const rawDoc = localStorage.getItem('PMRV_OCORRENCIA');
+                      const resumoSalvo = rawDoc ? JSON.parse(rawDoc)?.resumo : null;
+                      texto = typeof resumoSalvo?.resumo === 'string' ? resumoSalvo.resumo.trim() : '';
+                    }
+                    if (!texto) {
+                      const raw = localStorage.getItem('PMRV_RESUMO_DINAMICA');
+                      const legado = raw ? JSON.parse(raw) : null;
+                      texto = typeof legado?.resumo === 'string' ? legado.resumo.trim() : '';
+                    }
                     if (!texto) {
                       alert('Nenhum resumo da dinâmica disponível.');
                       return;
