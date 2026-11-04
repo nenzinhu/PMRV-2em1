@@ -82,8 +82,8 @@ describe('AppShell — migração legada, botão Nova e toasts', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Dossiê completo da ocorrência').value).toContain('João da Silva');
     });
-    // Rodapé de versão presente (rastreabilidade).
-    expect(screen.getByLabelText('Dossiê completo da ocorrência').value).toContain('modelo de ocorrência v3');
+    // O texto padrão não carrega mais rodapé de versão (pedido da unidade).
+    expect(screen.getByLabelText('Dossiê completo da ocorrência').value).not.toContain('Gerado pelo PMRV-SC');
   });
 
   it('botão Nova dispara toast de sucesso (bug B1) e arquiva a ocorrência atual', async () => {

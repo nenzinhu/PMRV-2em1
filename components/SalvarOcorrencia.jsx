@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { WhatsAppIcon } from './icons';
 import { generateReport, envolvidosText } from '@/lib/pmrv';
-import { dossieVersionado, baixarJSON, hashJSON } from '@/lib/ocorrencia';
-import { rodapeVersao } from '@/lib/versao';
+import { montarDossie, baixarJSON, hashJSON } from '@/lib/ocorrencia';
 import { listarHistoricoIDB, excluirOcorrenciaHistoricoIDB } from '@/lib/idb';
 import { useOcorrencia } from './OcorrenciaProvider';
 import { showToast } from './Toast';
@@ -35,7 +34,7 @@ export default function SalvarOcorrencia() {
       setReport('');
       return;
     }
-    setReport(dossieVersionado({ generateReport, envolvidosText }, doc, rodapeVersao));
+    setReport(montarDossie({ generateReport, envolvidosText }, doc));
   }, [doc]);
 
   const carregarHistorico = useCallback(() => {
