@@ -259,13 +259,13 @@ export default function DanosFotos() {
       <section className="ds-card" aria-labelledby="danos-fotos-titulo">
         <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
           <h3 id="danos-fotos-titulo" className="ds-label mb-0">
-            Fotos <span className="font-normal text-charcoal/60">({fotos.length}/{DANOS_MAX_FOTOS})</span>
+            Fotos <span className="font-normal text-charcoal">({fotos.length}/{DANOS_MAX_FOTOS})</span>
           </h3>
           <div className="flex gap-2">
-            <button type="button" onClick={() => cameraRef.current?.click()} disabled={vagas <= 0} className="btn-ios text-[10px] disabled:opacity-50">
+            <button type="button" onClick={() => cameraRef.current?.click()} disabled={vagas <= 0} className="btn-ios text-xs disabled:opacity-50">
               📷 Câmera
             </button>
-            <button type="button" onClick={() => galeriaRef.current?.click()} disabled={vagas <= 0} className="btn-outline text-[10px] disabled:opacity-50">
+            <button type="button" onClick={() => galeriaRef.current?.click()} disabled={vagas <= 0} className="btn-outline text-xs disabled:opacity-50">
               🖼️ Galeria
             </button>
           </div>
@@ -294,12 +294,12 @@ export default function DanosFotos() {
         />
 
         {modeloFoto?.maxImagens < fotos.length && !modeloFoto.automatico && (
-          <p className="mb-2 text-[11px] font-mono text-brick" role="note">
+          <p className="mb-2 text-xs font-mono text-brick" role="note">
             ⚠️ {modeloFoto.label} lê no máximo {modeloFoto.maxImagens} fotos. Com {fotos.length}, será usado outro modelo gratuito.
           </p>
         )}
         {fotos.length === 0 ? (
-          <div className="w-full h-32 border-2 border-dashed border-charcoal flex items-center justify-center text-[10px] font-mono text-charcoal/50 text-center px-4">
+          <div className="w-full h-32 border-2 border-dashed border-charcoal flex items-center justify-center text-xs font-mono text-charcoal text-center px-4">
             Nenhuma foto ainda — use Câmera ou Galeria
           </div>
         ) : (
@@ -311,7 +311,7 @@ export default function DanosFotos() {
                 <button
                   type="button"
                   onClick={() => remover(f.id)}
-                  className="absolute top-1 right-1 bg-brick text-white text-[10px] font-mono font-semibold px-2 py-1 border-2 border-brick"
+                  className="absolute top-1 right-1 bg-brick text-on-primary text-xs font-mono font-semibold px-2 py-1 border-2 border-brick"
                   aria-label={`Remover foto ${idx + 1}`}
                 >
                   ✕
@@ -334,7 +334,7 @@ export default function DanosFotos() {
             ))}
           </select>
           {fotosDoEnvolvido.length > 0 && (
-            <button type="button" onClick={importarDoEnvolvido} disabled={vagas <= 0} className="btn-outline text-[10px] mt-2 disabled:opacity-50">
+            <button type="button" onClick={importarDoEnvolvido} disabled={vagas <= 0} className="btn-outline text-xs mt-2 disabled:opacity-50">
               ⬇️ Usar as {fotosDoEnvolvido.length} foto(s) deste envolvido
             </button>
           )}
@@ -368,7 +368,7 @@ export default function DanosFotos() {
           '🔍 Descrever danos com IA'
         )}
       </button>
-      <p className={`mt-2 min-h-[1rem] text-[11px] leading-relaxed font-mono whitespace-pre-line ${status.includes('\n') ? 'text-left text-brick' : 'text-center text-pmrv'}`} role="status" aria-live="polite">
+      <p className={`mt-2 min-h-[1rem] text-xs leading-relaxed font-mono whitespace-pre-line ${status.includes('\n') ? 'text-left text-brick' : 'text-center text-pmrv'}`} role="status" aria-live="polite">
         {status}
       </p>
 
@@ -383,7 +383,7 @@ export default function DanosFotos() {
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
             readOnly={analisando}
-            className="w-full p-2 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none text-sm leading-relaxed"
+            className="w-full p-2 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-focus outline-none text-sm leading-relaxed"
           />
           <div className="flex flex-col sm:flex-row gap-2 mt-2">
             <button type="button" onClick={enviarParaResumo} disabled={analisando || !descricao.trim()} className="btn-ios flex-1 text-xs disabled:opacity-50">

@@ -301,7 +301,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
             onChange={(e) => alternarApenasUm(e.target.checked)}
             className="h-5 w-5 accent-pmrv"
           />
-          Apenas 1 envolvido <span className="text-charcoal/60 text-xs">(saída de pista, capotamento…)</span>
+          Apenas 1 envolvido <span className="text-charcoal text-xs">(saída de pista, capotamento…)</span>
         </label>
         <EstiloPicker value={estado.estilo} onChange={(estilo) => alterar({ estilo })} />
       </div>
@@ -313,11 +313,11 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
             <h3 id={`dp-titulo-${env.id}`} className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm">
               Envolvido {i + 1}
               {env.presumido && (
-                <span className="ml-2 rounded-full bg-gold/20 px-2 py-0.5 text-[10px] text-charcoal normal-case">✨ presumido pela IA</span>
+                <span className="ml-2 rounded-full bg-gold/20 px-2 py-0.5 text-xs text-charcoal normal-case">✨ presumido pela IA</span>
               )}
             </h3>
             {i >= 2 && (
-              <button type="button" onClick={() => removerEnvolvido(env.id)} className="btn-outline text-[10px] active:scale-95">
+              <button type="button" onClick={() => removerEnvolvido(env.id)} className="btn-outline text-xs active:scale-95">
                 Remover
               </button>
             )}
@@ -377,7 +377,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
                 </button>
               </div>
               {placaStatus[env.id]?.erro && (
-                <p role="alert" className="text-[11px] font-mono text-brick mt-1">{placaStatus[env.id].erro}</p>
+                <p role="alert" className="text-xs font-mono text-brick mt-1">{placaStatus[env.id].erro}</p>
               )}
             </div>
             <div>
@@ -413,7 +413,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
                   type="button"
                   onClick={() => revisarRelato(env, 'ortografia')}
                   disabled={!!relatoIA[env.id]}
-                  className="btn-outline text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-outline text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Corrigir ortografia"
                   title="Corrige somente a escrita, sem reescrever o relato"
                 >
@@ -423,7 +423,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
                   type="button"
                   onClick={() => revisarRelato(env, 'melhorar')}
                   disabled={!!relatoIA[env.id]}
-                  className="btn-outline text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-outline text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Melhorar relato"
                   title="Deixa o relato claro e objetivo, sem alterar os fatos"
                 >
@@ -433,13 +433,13 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
                   {relatoIA[env.id] ? ACOES_RELATO[relatoIA[env.id]].carregando : ''}
                 </span>
                 {apresentacaoEnvolvido(env) && (
-                  <button type="button" onClick={() => inserirApresentacao(env)} className="btn-outline text-[10px] active:scale-95">
+                  <button type="button" onClick={() => inserirApresentacao(env)} className="btn-outline text-xs active:scale-95">
                     📝 Inserir dados no relato
                   </button>
                 )}
               </div>
             </div>
-            <p className="text-[10px] font-mono text-charcoal/70 mb-2">
+            <p className="text-xs font-mono text-charcoal mb-2">
               Ortografia corrige a escrita. Melhorar deixa o texto claro e objetivo sem alterar os fatos.
             </p>
             <MentionInput
@@ -457,7 +457,7 @@ export default function DinamicaPresumida({ gpsInfo = null }) {
               className="ds-input text-sm leading-relaxed"
             />
             {local && (
-              <p className="mt-1 text-[11px] font-mono text-charcoal/60">
+              <p className="mt-1 text-xs font-mono text-charcoal">
                 📍 Local: {local.rodovia}{local.km ? `, km ${local.km}` : ''} — disponível no @
               </p>
             )}

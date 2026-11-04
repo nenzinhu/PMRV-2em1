@@ -65,7 +65,7 @@ export default function AIProviderPicker({ variant = 'header' }) {
 
   return (
     <label
-      className={`${variant === 'menu' ? 'menu-ai-picker' : 'header-chip max-w-[42vw] sm:max-w-[18rem]'} relative cursor-pointer focus-within:ring-2`}
+      className={`${variant === 'menu' ? 'menu-ai-picker' : 'header-chip max-w-[42vw] sm:max-w-[18rem]'} relative cursor-pointer focus-within:ring-2 focus-within:ring-focus`}
       title={`IA: ${provAtual.label} · ${modeloAtual?.label || modelo}${semChave ? ' (sem chave no servidor)' : ''}`}
     >
       <span aria-hidden="true">🤖</span>

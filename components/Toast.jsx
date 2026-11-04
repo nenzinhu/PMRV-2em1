@@ -30,17 +30,22 @@ export default function Toast() {
   if (!toasts.length) return null;
 
   const palette = {
-    info: 'bg-pmrv text-white border-pmrv',
-    success: 'bg-green-600 text-white border-green-700',
-    error: 'bg-brick text-white border-brick',
-    warning: 'bg-gold text-pmrv border-gold',
+    info: 'bg-pmrv text-on-primary border-pmrv',
+    success: 'bg-success text-on-success border-success',
+    error: 'bg-brick text-on-primary border-brick',
+    warning: 'bg-gold text-on-accent border-gold',
   };
 
   return (
-    <div className="fixed bottom-24 left-0 right-0 z-[70] flex flex-col items-center gap-2 pointer-events-none">
+    <div
+      className="fixed bottom-24 left-0 right-0 z-toast flex flex-col items-center gap-2 pointer-events-none"
+      role="status"
+      aria-live="polite"
+    >
       {toasts.map((t) => (
         <div
           key={t.id}
+          role={t.type === 'error' ? 'alert' : undefined}
           className={`pointer-events-auto px-4 py-2 border-2 shadow-[4px_4px_0_#2B2B2B] font-mono text-xs uppercase tracking-wider animate-slideUp ${palette[t.type] || palette.info}`}
         >
           {t.message}

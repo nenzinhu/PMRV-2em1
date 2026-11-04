@@ -10,6 +10,7 @@ export default function Stepper({ currentStep, ehVitima }) {
   const activeIndex = stepsMap.indexOf(currentStep);
   const totalActive = stepsMap.length;
   const ratio = totalActive <= 1 ? 1 : activeIndex / (totalActive - 1);
+  const passoAtual = Math.min(Math.max(activeIndex + 1, 1), totalActive);
   const barRef = useRef(null);
   const rowRef = useRef(null);
 
@@ -47,7 +48,16 @@ export default function Stepper({ currentStep, ehVitima }) {
 
   return (
     <div className="max-w-xl mx-auto px-3 sm:px-6 py-4 sm:py-5">
-      <div ref={rowRef} className="flex items-center justify-between relative">
+      <div
+        ref={rowRef}
+        className="flex items-center justify-between relative"
+        role="progressbar"
+        aria-label="Progresso do relato"
+        aria-valuemin={1}
+        aria-valuemax={totalActive}
+        aria-valuenow={passoAtual}
+        aria-valuetext={`Etapa ${passoAtual} de ${totalActive}`}
+      >
         <div className="absolute left-0 top-1/2 w-full h-0.5 bg-step-idle -translate-y-1/2 z-0" />
         <div className="absolute left-0 top-1/2 w-full h-0.5 -translate-y-1/2 z-0 overflow-hidden">
           <div
@@ -64,6 +74,7 @@ export default function Stepper({ currentStep, ehVitima }) {
             <div
               key={d.n}
               data-step-active={d.n === currentStep ? 'true' : 'false'}
+              aria-hidden="true"
               className={`step-dot z-10 w-8 h-8 sm:w-9 sm:h-9 ${dotClass(d.n)} flex items-center justify-center font-mono font-semibold text-xs sm:text-sm border-2`}
             >
               {d.label}

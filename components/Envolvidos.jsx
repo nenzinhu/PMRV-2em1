@@ -486,12 +486,12 @@ export default function Envolvidos({ gpsInfo = null }) {
                   className="ds-input text-sm disabled:opacity-50"
                 />
                 {busca.alvoId === ev.id && busca.aberto && (
-                  <ul className="absolute z-20 left-0 right-0 mt-1 bg-white border-2 border-charcoal shadow-lg max-h-52 overflow-y-auto">
+                  <ul className="absolute z-20 left-0 right-0 mt-1 bg-surface border-2 border-charcoal shadow-lg max-h-52 overflow-y-auto">
                     {busca.carregando && (
-                      <li className="px-3 py-2 text-xs text-charcoal/70 font-mono">Buscando…</li>
+                      <li className="px-3 py-2 text-xs text-charcoal font-mono">Buscando…</li>
                     )}
                     {!busca.carregando && busca.resultados.length === 0 && busca.q.length >= 3 && (
-                      <li className="px-3 py-2 text-xs text-charcoal/70 font-mono">Nenhum resultado.</li>
+                      <li className="px-3 py-2 text-xs text-charcoal font-mono">Nenhum resultado.</li>
                     )}
                     {busca.resultados.map((res, i) => (
                       <li key={i}>
@@ -501,15 +501,15 @@ export default function Envolvidos({ gpsInfo = null }) {
                           className="block w-full text-left px-3 py-2 text-xs hover:bg-pmrv/10 transition"
                         >
                           <span className="block font-medium">{res.endereco || res.label}</span>
-                          {res.bairro && <span className="block text-charcoal/60">Bairro: {res.bairro}</span>}
-                          <span className="block text-charcoal/50">{res.cidade}</span>
+                          {res.bairro && <span className="block text-charcoal">Bairro: {res.bairro}</span>}
+                          <span className="block text-charcoal">{res.cidade}</span>
                         </button>
                       </li>
                     ))}
                   </ul>
                 )}
               </div>
-              <span className="block text-[10px] text-charcoal/50 font-mono mt-1">
+              <span className="block text-xs text-charcoal font-mono mt-1">
                 {!ev.uf || !ev.cidade ? 'Selecione o estado e a cidade para habilitar a busca.' : 'Preencha estado e cidade para refinar a busca.'}
               </span>
             </div>
@@ -525,7 +525,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                   autoComplete="off"
                 />
                 {sugerirTipoLogradouro(ev.endereco).length > 0 && (
-                  <ul className="absolute z-10 mt-1 w-full rounded-md border border-charcoal/15 bg-white shadow-md overflow-hidden">
+                  <ul className="absolute z-10 mt-1 w-full rounded-md border border-charcoal/15 bg-surface shadow-md overflow-hidden">
                     {sugerirTipoLogradouro(ev.endereco).map((t) => (
                       <li key={t.nome}>
                         <button
@@ -534,7 +534,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                           onClick={() => update(ev.id, { endereco: aplicarTipoLogradouro(ev.endereco, t.nome) })}
                           className="w-full text-left px-2 py-1.5 text-sm hover:bg-charcoal/5"
                         >
-                          {t.nome} <span className="text-charcoal/50 text-xs">({t.abrev})</span>
+                          {t.nome} <span className="text-charcoal text-xs">({t.abrev})</span>
                         </button>
                       </li>
                     ))}
@@ -616,7 +616,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                   )}
                 </div>
                 {placaError[ev.id] && (
-                  <p className="text-[10px] font-mono text-brick mt-1">{placaError[ev.id]}</p>
+                  <p className="text-xs font-mono text-brick mt-1">{placaError[ev.id]}</p>
                 )}
               </div>
             </div>
@@ -652,7 +652,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                     type="button"
                     onClick={() => tratarRelato(ev.id, 'ortografia')}
                     disabled={!!relatoIA[ev.id]}
-                    className="btn-outline text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-outline text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Corrigir ortografia"
                     title="Corrige somente a escrita, sem reescrever o relato"
                   >
@@ -662,7 +662,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                     type="button"
                     onClick={() => tratarRelato(ev.id, 'melhorar')}
                     disabled={!!relatoIA[ev.id]}
-                    className="btn-outline text-[10px] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-outline text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                     aria-label="Melhorar relato"
                     title="Deixa o relato claro e objetivo, sem alterar os fatos"
                   >
@@ -674,13 +674,13 @@ export default function Envolvidos({ gpsInfo = null }) {
                   <button
                     type="button"
                     onClick={() => salvarRelatoIndividual(ev.id)}
-                    className="btn-ios text-[10px]"
+                    className="btn-ios text-xs"
                   >
                     Salvar relato
                   </button>
                 </div>
               </div>
-              <p className="text-[10px] font-mono text-charcoal/70 mb-2">
+              <p className="text-xs font-mono text-charcoal mb-2">
                 Ortografia corrige a escrita. Melhorar deixa o texto claro e objetivo sem alterar os fatos.
               </p>
               <MentionInput
@@ -689,7 +689,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                 envolvidos={envolvidos}
                 rows={4}
                 placeholder="Descreva o que aconteceu... Use @ para mencionar pessoas, veículos ou localização GPS"
-                className="w-full p-2 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none text-sm leading-relaxed"
+                className="w-full p-2 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-focus outline-none text-sm leading-relaxed"
                 gpsLocation={gpsInfo}
               />
             </div>
@@ -701,7 +701,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                   <button
                     type="button"
                     onClick={() => tirarFotos(ev.id)}
-                    className="btn-ios text-[10px]"
+                    className="btn-ios text-xs"
                     title="Abre a câmera: tire quantas fotos quiser (cancele para parar)"
                   >
                     📷 Tirar fotos
@@ -709,7 +709,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                   <button
                     type="button"
                     onClick={() => document.getElementById(`gal_${ev.id}`).click()}
-                    className="btn-outline text-[10px]"
+                    className="btn-outline text-xs"
                     title="Adicionar fotos da galeria (quantas quiser)"
                   >
                     🖼️ Galeria
@@ -738,7 +738,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                 }}
               />
               {(ev.fotos || []).length === 0 ? (
-                <div className="w-full h-32 border-2 border-dashed border-charcoal flex items-center justify-center text-[10px] font-mono text-charcoal/50 text-center">
+                <div className="w-full h-32 border-2 border-dashed border-charcoal flex items-center justify-center text-xs font-mono text-charcoal text-center">
                   Nenhuma foto ainda — use Tirar fotos ou Galeria
                 </div>
               ) : (
@@ -755,7 +755,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                       <button
                         type="button"
                         onClick={() => removerFoto(ev.id, idx)}
-                        className="absolute top-1 right-1 bg-brick text-white text-[10px] font-mono font-semibold px-2 py-1 border-2 border-brick"
+                        className="absolute top-1 right-1 bg-brick text-on-primary text-xs font-mono font-semibold px-2 py-1 border-2 border-brick"
                         title="Remover esta foto"
                       >
                         ✕
@@ -770,7 +770,7 @@ export default function Envolvidos({ gpsInfo = null }) {
       </div>
 
       {envolvidos.length === 0 && (
-        <div className="bg-white border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal/60">
+        <div className="bg-surface border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal">
           <div className="text-3xl mb-2" aria-hidden="true">👮‍♂️</div>
           Nenhum envolvido adicionado ainda.
         </div>
@@ -784,7 +784,7 @@ export default function Envolvidos({ gpsInfo = null }) {
       {preview && (
         <div
           onClick={() => setPreview(null)}
-          className="fixed inset-0 z-[100] bg-pmrv/90 flex flex-col items-center justify-center p-4 cursor-zoom-out"
+          className="fixed inset-0 z-modal bg-pmrv/90 flex flex-col items-center justify-center p-4 cursor-zoom-out"
           role="dialog"
           aria-label="Pré-visualização da foto"
         >

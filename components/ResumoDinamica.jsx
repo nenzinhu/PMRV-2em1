@@ -301,7 +301,7 @@ export default function ResumoDinamica() {
               rows={4}
               value={r.texto}
               onChange={(e) => atualizarRelato(r.id, e.target.value)}
-              className="w-full p-2 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-gold outline-none text-sm leading-relaxed"
+              className="w-full p-2 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-focus outline-none text-sm leading-relaxed"
               placeholder="Descreva o que você viu ou aconteceu..."
             />
           </div>
@@ -309,13 +309,13 @@ export default function ResumoDinamica() {
       </div>
 
       {relatos.length === 0 && (
-        <div className="bg-white border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal/60">
+        <div className="bg-surface border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal">
           <div className="text-3xl mb-2" aria-hidden="true">📋</div>
           Nenhum relato ainda. Salve o relato individual na aba Envolvidos.
         </div>
       )}
 
-      <p className="mt-4 mb-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-gold">
+      <p className="mt-4 mb-2 font-mono text-xs font-semibold uppercase tracking-wider text-gold-ink">
         Gerar resumo
       </p>
       <div className="flex flex-col sm:flex-row gap-2">
@@ -359,7 +359,7 @@ export default function ResumoDinamica() {
       </button>
 
       {statusIA && !loadingIA && (
-        <p className="mt-2 text-[10px] font-mono text-pmrv text-center">{statusIA}</p>
+        <p className="mt-2 text-xs font-mono text-pmrv text-center">{statusIA}</p>
       )}
 
       {(resumo || ESTILO_BOTOES.some((e) => resumos[e.id])) && (
@@ -373,7 +373,7 @@ export default function ResumoDinamica() {
                 type="button"
                 onClick={() => salvarResumoNoRelato({ irParaSalvar: true })}
                 disabled={!resumo.trim()}
-                className="btn-outline text-[10px] active:scale-95 disabled:opacity-50"
+                className="btn-outline text-xs active:scale-95 disabled:opacity-50"
               >
                 💾 Salvar
               </button>
@@ -385,10 +385,10 @@ export default function ResumoDinamica() {
                   type="button"
                   onClick={() => mostrarEstilo(estilo.id)}
                   disabled={!resumos[estilo.id]}
-                  className={`flex-1 text-[10px] font-mono font-semibold uppercase tracking-wider py-1 rounded border ${
+                  className={`flex-1 text-xs font-mono font-semibold uppercase tracking-wider py-1 rounded border ${
                     estiloResumo === estilo.id
-                      ? 'bg-pmrv text-white border-pmrv'
-                      : 'border-charcoal/30 text-charcoal/70 disabled:opacity-40'
+                      ? 'bg-pmrv text-on-primary border-pmrv'
+                      : 'border-charcoal/30 text-charcoal disabled:opacity-40'
                   }`}
                 >
                   {estilo.label}
