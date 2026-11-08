@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pmrv-sc-relatos-v6';
+const CACHE_NAME = 'pmrv-sc-relatos-v7';
 const ASSETS = [
   '/',
   '/manifest.json',
@@ -50,14 +50,8 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
-        .then((res) => {
-          if (shouldCache(request, res)) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put('/', copy));
-          }
-          return res;
-        })
-        .catch(() => caches.match('/').then((r) => r || caches.match(request)))
+        // A navegação com ?aba= não deve substituir o shell armazenado em '/'.
+        .catch(() => caches.match('/'))
     );
     return;
   }

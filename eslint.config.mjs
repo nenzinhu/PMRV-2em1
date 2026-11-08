@@ -1,21 +1,19 @@
 // ESLint faz parte do build de novo (next.config.mjs sem ignoreDuringBuilds).
-import coreWebVitals from 'eslint-config-next/core-web-vitals';
+import { FlatCompat } from '@eslint/eslintrc';
 
-export default [
-  ...coreWebVitals,
+const compat = new FlatCompat({ baseDirectory: import.meta.dirname });
+
+const config = [
+  ...compat.extends('next/core-web-vitals'),
   {
     rules: {
       // Estilo livre: o projeto não usa prettier.
       'react/no-unescaped-entities': 'off',
-      // Regras novas do react-hooks v6: os padrões atuais do app (setState em
-      // effect de boot, refs de última leitura) são legados e seguros, mas a
-      // migração para os idiomas recomendados é incremental — por isso só
-      // warning. Código NOVO deve evitar esses padrões.
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/refs': 'warn',
     },
   },
   {
     ignores: ['node_modules/**', '.next/**', 'out/**', 'lib/municipios/**', 'lib/municipios-sc.js', 'scripts_gen_icons.js'],
   },
 ];
+
+export default config;

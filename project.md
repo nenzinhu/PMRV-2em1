@@ -44,8 +44,9 @@ lib/
 ```
 
 **Ocorrência como documento único**: relato, envolvidos, danos, resumo e
-referências de fotos vivem em UM registro (`PMRV_OCORRENCIA` no localStorage,
-fonte da verdade em IndexedDB `pmrv-ocorrencias`). "Nova ocorrência" troca o
+referências de fotos vivem em UM registro (IndexedDB `pmrv-ocorrencias`, com
+cópia de compatibilidade em `PMRV_OCORRENCIA` no localStorage). As telas alteram
+o documento pelo `OcorrenciaProvider`. "Nova ocorrência" troca o
 documento inteiro; `LimparDados` apaga os dois bancos. Rascunhos legados
 (`PMRV_RELATO_RASCUNHO`, `PMRV_ENVOLVIDOS`, `PMRV_DANOS`,
 `PMRV_RESUMO_DINAMICA`) são migrados automaticamente no primeiro boot.
@@ -78,6 +79,8 @@ documento inteiro; `LimparDados` apaga os dois bancos. Rascunhos legados
 - Swipe entre abas no celular; Viatura lembrada no dispositivo
 - "Nova ocorrência" arquiva no HISTÓRICO (aba Salvar): restaurar/excluir — nada se perde
 - Dossiê em um só texto (relatório + envolvidos + resumo + danos) + backup JSON
+- API de IA limita o corpo a 10 MiB, prompts e tokens a limites definidos e 20 chamadas por minuto/IP/instância
+- Relatos e fotos enviados à IA são encaminhados ao provedor selecionado; chaves de servidor ficam no servidor, mas chaves pessoais opcionais ficam no localStorage do aparelho
 - Unidade (BPMRv/CIA/Posto) configurável no aparelho — qualquer posto usa o app
 - Backup com hash SHA-256 exibido + rodapé de versão do app/modelo no dossiê
 
@@ -95,20 +98,20 @@ documento inteiro; `LimparDados` apaga os dois bancos. Rascunhos legados
 ### Crítico
 
 - ✅ **RESOLVIDO** — Token de placa via `PLACA_API_TOKEN` (`process.env`) em `app/api/placa/route.js`; nunca aceito do navegador nem incluído em logs.
-- **`app/page.jsx` retorna `null`**. Toda a UI vive no `layout.jsx`, que é `'use client'`. Perde Metadata API, SSR e atalhos PWA (`/?aba=envolvidos` não muda de aba).
+- ✅ **RESOLVIDO** — `app/page.jsx` renderiza o AppShell no servidor e lê `?aba=` para abrir a aba indicada.
 - ✅ **RESOLVIDO** — Fotos em IndexedDB (`pmrv-fotos`, blobs); o documento guarda só referências.
 - ✅ **RESOLVIDO** — Ocorrência como documento único (Context + IndexedDB `pmrv-ocorrencias` + `PMRV_OCORRENCIA`) com autosave; recarregar restaura tudo.
 - ✅ **RESOLVIDO (em grande parte)** — Data/hora do fato (`dataFato`/`horaFato`) persistidas no documento e usadas pelo relatório; rascunho não inventa data.
 
 ### Alto
 
-- Estado espalhado em eventos + `localStorage` em vez de um store único (rascunho da ocorrência).
-- Unidade fixa: “1º BPMRv / 1ª CIA / Posto 19”. Outros postos não conseguem usar sem editar código.
-- ✅ **RESOLVIDO** — Índice espacial (grade UTM) montado uma vez no boot; busca só nas células vizinhas. GeoJSON pré-cacheado no service worker (v6) — match offline.
-- Groq com `web_search`, `code_interpreter` e `visit_website` ligados — desnecessários e arriscados para reescrita de relatório.
+- ✅ **RESOLVIDO** — Telas de relato, envolvidos, resumo e danos persistem pelo documento central no provider; o IndexedDB é a fonte da verdade.
+- ✅ **RESOLVIDO** — Unidade BPMRv/CIA/Posto configurável no aparelho.
+- ✅ **RESOLVIDO** — Índice espacial UTM e GeoJSON pré-cacheado no service worker (v7) permitem localizar rodovias offline.
+- **Limite da API de IA** — O limitador atual é por IP e instância; em implantação com múltiplas instâncias, usar um limitador distribuído para aplicar um teto global.
 - ✅ **RESOLVIDO** — ESLint roda no build (`eslint.config.mjs` flat + `next.config.mjs` sem `ignoreDuringBuilds`) e Vitest cobre `lib` (129 testes).
 - ✅ **RESOLVIDO** — Chave pública removida dos componentes; IA só pelo proxy `/api/ai`.
-- Atalhos do manifesto (`?aba=`) e deep link não são lidos.
+- ✅ **RESOLVIDO** — Atalhos do manifesto (`?aba=`) e links diretos abrem a aba correspondente.
 
 ### Médio
 
@@ -117,7 +120,7 @@ documento inteiro; `LimparDados` apaga os dois bancos. Rascunhos legados
 - Validação só por `alert()`; campos obrigatórios da cidade/sentido/dinâmica frouxos.
 - Reconhecimento de voz só Chrome/WebKit; sem feedback visual de gravação.
 - ✅ **RESOLVIDO (texto)** — Dossiê na aba Salvar junta relatório + envolvidos + resumo + danos + backup JSON; fotos anexas ficam para o item 3 (pacote único de envio).
-- ✅ **RESOLVIDO** — `/rodovias-sc.geojson` no cache v6 do service worker.
+- ✅ **RESOLVIDO** — `/rodovias-sc.geojson` no cache v7 do service worker.
 - Header GPS duplicado no mobile (chip + ícone).
 
 ### Baixo
@@ -125,7 +128,7 @@ documento inteiro; `LimparDados` apaga os dois bancos. Rascunhos legados
 - Sem TypeScript.
 - `page.jsx` importa componentes que não usa.
 - Posto, modelo Groq e listas de cidade hardcoded em vários arquivos.
-- Sem README / `.env.example` (este `project.md` passa a ser o mapa do repositório).
+- Limites de validação de campos ainda variam entre as telas.
 
 ---
 

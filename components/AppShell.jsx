@@ -225,6 +225,9 @@ function AppShellInner({ aba, themeOpen, setThemeOpen, mounted, setMounted, fsAc
                     <div className="more-menu-divider" />
                     <p className="more-menu-label">Modelo de inteligência artificial</p>
                     <AIProviderPicker variant="menu" />
+                    <p className="px-3 pb-2 text-[11px] leading-relaxed text-white/75">
+                      Ao usar recursos de IA, o texto e as fotos enviados são encaminhados ao provedor selecionado ou ao próximo disponível no fallback. Chaves pessoais informadas ficam salvas neste aparelho.
+                    </p>
                     {supportsInstall && !isInstalled && !isStandalone && (
                       <button type="button" onClick={install} className="more-menu-action" aria-label="Instalar aplicativo">
                         <DownloadIcon className="w-4 h-4" /> Instalar aplicativo

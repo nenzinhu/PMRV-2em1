@@ -6,7 +6,6 @@ import { showToast } from '@/components/Toast';
 import { apagarFoto, lerFotoBlob, novoFotoId, salvarFotoBlob } from '@/lib/foto-store';
 import {
   DANOS_MAX_FOTOS,
-  DANOS_STORAGE_KEY,
   DANOS_SYSTEM,
   buildDanosPrompt,
   mensagemFalhaIA,
@@ -24,31 +23,11 @@ const ERROS_IA = {
   nokey: 'Nenhuma chave de IA configurada no servidor.',
   auth: 'Chave da API inválida ou sem permissão.',
   quota: 'Cota da API excedida no momento. Aguarde alguns minutos e tente novamente.',
+  rate_limit: 'Muitas solicitações em pouco tempo. Aguarde um minuto e tente novamente.',
   novisao:
     'Nenhum provedor configurado lê imagens. Configure Groq, OpenRouter ou Cohere e escolha um modelo com visão.',
   invalid: 'Fotos inválidas ou grandes demais. Remova alguma e tente de novo.',
 };
-
-function carregarEnvolvidos() {
-  const fontes = [];
-  try {
-    const raw = localStorage.getItem('PMRV_OCORRENCIA');
-    if (raw) fontes.push(JSON.parse(raw));
-  } catch {
-    /* cópia inválida */
-  }
-  try {
-    const obj = JSON.parse(localStorage.getItem('PMRV_ENVOLVIDOS') || '{}');
-    if (obj) fontes.push({ envolvidos: Array.isArray(obj.lista) ? obj.lista : [] });
-  } catch {
-    /* legado inválido */
-  }
-  for (const fonte of fontes) {
-    const lista = Array.isArray(fonte?.envolvidos) ? fonte.envolvidos : [];
-    if (lista.length) return lista.filter((ev) => descreverVeiculo(ev));
-  }
-  return [];
-}
 
 function soltarUrl(src) {
   if (typeof src === 'string' && src.startsWith('blob:')) URL.revokeObjectURL(src);
@@ -64,6 +43,8 @@ export default function DanosFotos() {
   const [status, setStatus] = useState('');
   const [pronto, setPronto] = useState(false);
   const [modeloFoto, setModeloFoto] = useState(null);
+  const [docIdCarregado, setDocIdCarregado] = useState(null);
+  const { doc, pronto: docPronto, atualizar: atualizarDoc } = useOcorrencia();
   const galeriaRef = useRef(null);
   const cameraRef = useRef(null);
   const fotosRef = useRef(fotos);
@@ -72,17 +53,12 @@ export default function DanosFotos() {
   }, [fotos]);
 
   useEffect(() => {
+    if (!docPronto || !doc) return;
     let cancelado = false;
-    // Documento único primeiro; legado só durante a transição.
-    let rawDanos = null;
-    try {
-      const rawDoc = localStorage.getItem('PMRV_OCORRENCIA');
-      rawDanos = rawDoc ? JSON.stringify(JSON.parse(rawDoc)?.danos || null) : null;
-    } catch {
-      rawDanos = null;
-    }
-    const salvo = parseDanos(rawDanos && rawDanos !== 'null' ? rawDanos : localStorage.getItem(DANOS_STORAGE_KEY));
-    setEnvolvidos(carregarEnvolvidos());
+    setPronto(false);
+    setDocIdCarregado(null);
+    const salvo = parseDanos(JSON.stringify(doc.danos || {}));
+    setEnvolvidos((Array.isArray(doc.envolvidos) ? doc.envolvidos : []).filter((ev) => descreverVeiculo(ev)));
     setEnvolvidoId(salvo.envolvidoId);
     setObservacao(salvo.observacao);
     setDescricao(salvo.descricao);
@@ -99,30 +75,19 @@ export default function DanosFotos() {
       }
       setFotos(validas);
       setPronto(true);
+      setDocIdCarregado(doc.id);
     });
     return () => {
       cancelado = true;
       fotosRef.current.forEach((f) => soltarUrl(f.src));
     };
-  }, []);
+  }, [docPronto, doc?.id]);
 
   useEffect(() => {
-    if (!pronto) return;
-    const payload = serializeDanos({ fotos, envolvidoId, observacao, descricao });
-    localStorage.setItem(DANOS_STORAGE_KEY, payload);
-    // Reflete no documento único (o provider persiste em IDB).
-    try {
-      const rawDoc = localStorage.getItem('PMRV_OCORRENCIA');
-      const doc = rawDoc ? JSON.parse(rawDoc) : null;
-      if (doc) {
-        const proximo = { ...doc, danos: { ...doc.danos, fotos, envolvidoId, observacao, descricao } };
-        localStorage.setItem('PMRV_OCORRENCIA', JSON.stringify(proximo));
-        window.dispatchEvent(new CustomEvent('pmrv-ocorrencia-changed'));
-      }
-    } catch {
-      /* documento ainda não carregado */
-    }
-  }, [pronto, fotos, envolvidoId, observacao, descricao]);
+    if (!pronto || !docPronto || docIdCarregado !== doc?.id) return;
+    const danos = JSON.parse(serializeDanos({ fotos, envolvidoId, observacao, descricao }));
+    atualizarDoc((prev) => ({ ...prev, danos }));
+  }, [pronto, docPronto, docIdCarregado, doc?.id, fotos, envolvidoId, observacao, descricao, atualizarDoc]);
 
   const envolvido = envolvidos.find((ev) => String(ev.id) === envolvidoId) || null;
   const veiculo = descreverVeiculo(envolvido);

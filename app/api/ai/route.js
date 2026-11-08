@@ -10,12 +10,69 @@ export const runtime = 'nodejs';
 // Com fotos o upload e a leitura demoram mais.
 const TIMEOUT_INICIO_MS = 25000;
 const TIMEOUT_INICIO_IMAGENS_MS = 60000;
+const MAX_BODY_BYTES = 10 * 1024 * 1024;
+const MAX_PROMPT_CHARS = 50000;
+const MAX_SYSTEM_CHARS = 20000;
+const MAX_TOKENS = 4096;
+const RATE_WINDOW_MS = 60_000;
+const RATE_LIMIT = 20;
+const requestsPorIp = new Map();
 
 function erroJson(error, status, extra = {}) {
   return new Response(JSON.stringify({ error, ...extra }), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+async function lerJsonLimitado(req) {
+  const contentLength = Number(req.headers.get('content-length'));
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) return { grande: true };
+  if (!req.body) return { json: null };
+  const reader = req.body.getReader();
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_BODY_BYTES) {
+      await reader.cancel();
+      return { grande: true };
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return { json: JSON.parse(new TextDecoder().decode(bytes)) };
+  } catch {
+    return { json: null };
+  }
+}
+
+// Limite por instância para reduzir abuso acidental e rajadas. Em deployments
+// com múltiplas instâncias, um limitador distribuído deve substituir este mapa.
+function excedeuLimite(req) {
+  const ip = req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const agora = Date.now();
+  const registro = requestsPorIp.get(ip);
+  if (!registro || agora - registro.inicio >= RATE_WINDOW_MS) {
+    if (requestsPorIp.size >= 2000) {
+      for (const [chave, valor] of requestsPorIp) {
+        if (agora - valor.inicio >= RATE_WINDOW_MS) requestsPorIp.delete(chave);
+      }
+    }
+    if (requestsPorIp.size >= 2000) return true;
+    requestsPorIp.set(ip, { inicio: agora, quantidade: 1 });
+    return false;
+  }
+  registro.quantidade += 1;
+  return registro.quantidade > RATE_LIMIT;
 }
 
 // Motivo legível da falha do provedor (sem segredos: só a mensagem de erro dele).
@@ -57,16 +114,22 @@ async function tentar({ provedor, modelo, apiKey, chatUrl }, mensagens, { temper
 }
 
 export async function POST(req) {
-  let payload;
-  try {
-    payload = await req.json();
-  } catch {
-    return erroJson('invalid', 400);
-  }
+  if (excedeuLimite(req)) return erroJson('rate_limit', 429, { retryAfter: 60 });
+  const recebido = await lerJsonLimitado(req).catch(() => ({ json: null }));
+  if (recebido.grande) return erroJson('invalid', 413);
+  const payload = recebido.json;
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return erroJson('invalid', 400);
 
   const { prompt, system = null, temperature = 1, maxTokens = 2048, model = null } = payload;
   const imagens = validarImagens(payload.images);
-  if (imagens === false || typeof prompt !== 'string' || !prompt.trim()) return erroJson('invalid', 400);
+  if (
+    imagens === false ||
+    typeof prompt !== 'string' || !prompt.trim() || prompt.length > MAX_PROMPT_CHARS ||
+    (system !== null && (typeof system !== 'string' || system.length > MAX_SYSTEM_CHARS)) ||
+    !Number.isFinite(temperature) || temperature < 0 || temperature > 2 ||
+    !Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > MAX_TOKENS ||
+    (payload.apiKey != null && (typeof payload.apiKey !== 'string' || payload.apiKey.length > 512))
+  ) return erroJson('invalid', 400);
 
   const opcoes = {
     provider: payload.provider,
@@ -95,7 +158,7 @@ export async function POST(req) {
       upstream = await tentar(t, mensagens, { temperature, maxTokens, timeoutMs });
     } catch (err) {
       const motivo = err.name === 'AbortError' ? `sem resposta em ${timeoutMs / 1000}s` : `falha de rede (${err.message})`;
-      console.warn(`[api/ai] ${t.provedor.id}/${t.modelo}: ${motivo}`);
+      console.warn(`[api/ai] ${t.provedor.id}/${t.modelo}: falha de conexão`);
       falhas.push({ ...falha, status: 504, motivo });
       ultimoStatus = 504;
       continue;
@@ -115,7 +178,7 @@ export async function POST(req) {
     }
     ultimoStatus = upstream.status;
     const motivo = await motivoDoErro(upstream);
-    console.warn(`[api/ai] ${t.provedor.id}/${t.modelo}: HTTP ${upstream.status} ${motivo}`);
+    console.warn(`[api/ai] ${t.provedor.id}/${t.modelo}: HTTP ${upstream.status}`);
     falhas.push({ ...falha, status: upstream.status, motivo });
   }
 
