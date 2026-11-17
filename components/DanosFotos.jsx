@@ -1,5 +1,7 @@
 'use client';
 
+import { useOcorrencia } from '@/components/OcorrenciaProvider';
+
 import { useEffect, useRef, useState } from 'react';
 import { callGroq } from '@/lib/pmrv';
 import { showToast } from '@/components/Toast';
@@ -15,7 +17,7 @@ import {
   respostaSemImagem,
   serializeDanos,
 } from '@/lib/danos';
-import { salvarDanosNoResumo } from '@/lib/resumo-relatos';
+import { upsertDanosNoResumo } from '@/lib/resumo-relatos';
 import ModeloFotoPicker from '@/components/ModeloFotoPicker';
 import { AlertTriangleIcon, BroomIcon, CameraIcon, CopyIcon, ImageIcon, SearchIcon, UploadIcon, DownloadIcon } from '@/components/icons';
 
@@ -182,8 +184,8 @@ export default function DanosFotos() {
   }
 
   function enviarParaResumo() {
-    const r = salvarDanosNoResumo({ texto: descricao, rotulo: veiculo, chave: envolvidoId || 'geral' });
-    if (!r.ok) return;
+    if (!docPronto || !descricao.trim()) return;
+    atualizarDoc((prev) => ({ ...prev, resumo: { ...prev.resumo, relatos: upsertDanosNoResumo(prev.resumo.relatos, { texto: descricao, rotulo: veiculo, chave: envolvidoId || 'geral' }) } }));
     showToast('Danos adicionados ao Resumo da Dinâmica', 'success', 2000);
     window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'resumo' }));
   }

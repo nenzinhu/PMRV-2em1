@@ -1,526 +1,446 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { callGroq, capitalizarFrase, cleanIAResponse, obterChaveIA } from '@/lib/pmrv';
+import { callGroq, cleanIAResponse, obterChaveIA } from '@/lib/pmrv';
 import { showToast } from '@/components/Toast';
 import { useOcorrencia } from '@/components/OcorrenciaProvider';
 import MentionInput from '@/components/MentionInput';
-import { aplicarDadosConsultados, consultarPlaca, normalizarPlaca, placaConsultavel } from '@/lib/placa';
-import { RELATO_DRAFT_KEY, parseRelatoDraft } from '@/lib/relato-draft';
-import { rodoviaLabel } from '@/lib/rodovias-list';
 import EstiloPicker from '@/components/EstiloPicker';
 import AjusteFino from '@/components/AjusteFino';
 import { aplicarAjusteFino, carregarAjusteFino } from '@/lib/ajuste-fino';
-import { ACOES_RELATO, promptRevisaoRelato } from '@/lib/revisao-relato';
-import { BroomIcon, CheckIcon, FileTextIcon, MapPinIcon, PlusIcon, SearchIcon, SparkIcon, UploadIcon } from '@/components/icons';
+import { SparkIcon, UploadIcon } from '@/components/icons';
 import {
   DINAMICA_PRESUMIDA_KEY,
-  apresentacaoEnvolvido,
   aplicarRespostaDinamica,
   buildDinamicaPrompt,
-  envolvidosAtivos,
-  estadoInicialDinamica,
-  normalizarEstadoDinamica,
-  novoEnvolvidoDinamica,
+  fonteDinamica,
+  normalizarAnalise,
 } from '@/lib/dinamica-presumida';
+import { estiloRelatoValido } from '@/lib/estilos-relato';
 
-// Envolvidos já cadastrados (documento único; cai no legado só durante a migração).
-function envolvidosCadastrados() {
-  const fontes = [];
-  try {
-    const raw = localStorage.getItem('PMRV_OCORRENCIA');
-    if (raw) fontes.push(JSON.parse(raw));
-  } catch {
-    /* cópia inválida */
-  }
-  try {
-    const obj = JSON.parse(localStorage.getItem('PMRV_ENVOLVIDOS') || 'null');
-    if (obj) fontes.push({ envolvidos: Array.isArray(obj?.lista) ? obj.lista : [] });
-  } catch {
-    /* legado inválido */
-  }
-  const txt = (v) => (typeof v === 'string' ? v : '');
-  for (const fonte of fontes) {
-    const lista = Array.isArray(fonte?.envolvidos) ? fonte.envolvidos : [];
-    if (lista.length) {
-      return lista
-        .map((e) => ({ nome: txt(e.nome), placa: txt(e.placa), modelo: txt(e.modelo), cor: txt(e.cor) }))
-        .filter((e) => e.nome.trim() || e.placa.trim());
-    }
-  }
-  return [];
-}
-
-// Local da ocorrência: GPS (se ligado e na rodovia) ou o preenchido no Relato Policial.
-function localOcorrencia(gpsInfo) {
-  if (gpsInfo?.rodovia && !gpsInfo.foraDaRodovia && gpsInfo.km != null) {
-    return {
-      rodovia: rodoviaLabel(gpsInfo.rodovia) || gpsInfo.rodovia,
-      km: String(Math.round(gpsInfo.km * 1000) / 1000).replace('.', ','),
-    };
-  }
-  try {
-    // Documento único primeiro; rascunho legado só durante a transição.
-    let form = null;
-    try {
-      const raw = localStorage.getItem('PMRV_OCORRENCIA');
-      form = raw ? JSON.parse(raw)?.relato?.form || null : null;
-    } catch {
-      form = null;
-    }
-    if (!form) form = parseRelatoDraft(localStorage.getItem(RELATO_DRAFT_KEY))?.form || null;
-    // Rodovia do rascunho só conta com km preenchido (a rodovia tem valor padrão).
-    if (form?.rodovia && typeof form.km === 'string' && form.km.trim()) {
-      return { rodovia: rodoviaLabel(form.rodovia) || form.rodovia, km: form.km.trim() };
-    }
-  } catch {
-    /* rascunho inválido */
-  }
-  return null;
-}
-
-function itensLocal(local) {
-  if (!local) return [];
-  const itens = [{ type: 'gps', id: 'rodovia', label: local.rodovia, sublabel: 'Rodovia', insert: local.rodovia }];
-  if (local.km) {
-    itens.push(
-      { type: 'gps', id: 'km', label: `km ${local.km}`, sublabel: 'Quilômetro', insert: `km ${local.km}` },
-      { type: 'gps', id: 'rodovia-km', label: `${local.rodovia}, km ${local.km}`, sublabel: 'Rodovia e km', insert: `${local.rodovia}, km ${local.km}` }
-    );
-  }
-  return itens;
-}
+const abrirEnvolvidos = () =>
+  window.dispatchEvent(
+    new CustomEvent('navigate-to', { detail: 'envolvidos' }),
+  );
 
 export default function DinamicaPresumida({ gpsInfo = null }) {
-  const { pronto: docPronto, atualizar: atualizarDoc } = useOcorrencia();
-  const [estado, setEstado] = useState(estadoInicialDinamica);
+  const { doc, pronto, atualizar } = useOcorrencia();
   const [gerando, setGerando] = useState(false);
-  const [cadastrados, setCadastrados] = useState([]);
-  const [local, setLocal] = useState(null);
-  const [placaStatus, setPlacaStatus] = useState({});
-  const [relatoIA, setRelatoIA] = useState({});
-  const carregado = useRef(false);
+  const [erro, setErro] = useState('');
+  const [legado, setLegado] = useState(null);
+  const atual = useRef(null);
+  const requisicao = useRef(0);
+  const envolvidos = doc?.envolvidos || [];
+  const salvo = doc?.dinamica || {};
+  const estado = {
+    envolvidos,
+    estilo: estiloRelatoValido(salvo.estilo),
+    apenasUm: false,
+    dinamica: salvo.dinamica || '',
+  };
+  const form = doc?.relato?.form || {};
+  const local =
+    gpsInfo?.rodovia && !gpsInfo.foraDaRodovia && gpsInfo.km != null
+      ? { rodovia: gpsInfo.rodovia, km: String(gpsInfo.km) }
+      : form.rodovia && String(form.km || '').trim()
+        ? { rodovia: form.rodovia, km: String(form.km) }
+        : null;
+  const fonte = fonteDinamica(estado, local);
+  const declarados = envolvidos.filter(
+    (e) => e.relato?.trim() && !e.presumido,
+  ).length;
+  const desatualizado = !!salvo.dinamica && salvo.fonte !== fonte;
+  const analise = normalizarAnalise(salvo.analise, envolvidos.length);
 
   useEffect(() => {
+    atual.current = { id: doc?.id, fonte };
+  }, [doc?.id, fonte]);
+  useEffect(
+    () => () => {
+      requisicao.current += 1;
+    },
+    [],
+  );
+  useEffect(() => {
+    requisicao.current += 1;
+    setGerando(false);
+    setErro('');
     try {
-      setEstado(normalizarEstadoDinamica(JSON.parse(localStorage.getItem(DINAMICA_PRESUMIDA_KEY) || 'null')));
+      const antigo = JSON.parse(
+        localStorage.getItem(DINAMICA_PRESUMIDA_KEY) || 'null',
+      );
+      if (
+        antigo &&
+        (antigo.dinamica || antigo.envolvidos?.some((e) => e.relato))
+      )
+        setLegado(antigo);
     } catch {
-      setEstado(estadoInicialDinamica());
+      /* Rascunho inválido não impede abrir a ocorrência. */
     }
-    setCadastrados(envolvidosCadastrados());
-    carregado.current = true;
-  }, []);
+  }, [doc?.id]);
 
-  useEffect(() => {
-    if (!carregado.current) return;
-    try {
-      localStorage.setItem(DINAMICA_PRESUMIDA_KEY, JSON.stringify(estado));
-    } catch {
-      /* armazenamento indisponível */
-    }
-  }, [estado]);
-
-  useEffect(() => {
-    setLocal(localOcorrencia(gpsInfo));
-  }, [gpsInfo]);
-
-  const alterar = (patch) => setEstado((s) => ({ ...s, ...patch }));
-
-  function alterarEnvolvido(id, patch) {
-    setEstado((s) => ({ ...s, envolvidos: s.envolvidos.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
-  }
-
-  function adicionarEnvolvido() {
-    setEstado((s) => {
-      const id = Math.max(0, ...s.envolvidos.map((e) => e.id)) + 1;
-      return { ...s, envolvidos: [...s.envolvidos, novoEnvolvidoDinamica(id)] };
-    });
-  }
-
-  function removerEnvolvido(id) {
-    const env = estado.envolvidos.find((e) => e.id === id);
-    if (env?.relato.trim() && !window.confirm('Remover este envolvido e o relato dele?')) return;
-    setEstado((s) => ({ ...s, envolvidos: s.envolvidos.filter((e) => e.id !== id) }));
-  }
-
-  function alternarApenasUm(apenasUm) {
-    setEstado((s) => {
-      // Garante ao menos 2 envolvidos ao desmarcar "apenas 1".
-      const envolvidos =
-        !apenasUm && s.envolvidos.length < 2 ? [...s.envolvidos, novoEnvolvidoDinamica(Math.max(0, ...s.envolvidos.map((e) => e.id)) + 1)] : s.envolvidos;
-      return { ...s, apenasUm, envolvidos };
-    });
-  }
-
-  function importarCadastrado(id, indice) {
-    const c = cadastrados[Number(indice)];
-    if (c) alterarEnvolvido(id, { nome: c.nome, placa: normalizarPlaca(c.placa), modelo: c.modelo, cor: c.cor });
-  }
-
-  async function buscarPlaca(env) {
-    setPlacaStatus((st) => ({ ...st, [env.id]: { carregando: true } }));
-    try {
-      const placaConsultada = normalizarPlaca(env.placa);
-      const { modelo, cor } = await consultarPlaca(env.placa);
-      setEstado((s) => ({
-        ...s,
-        envolvidos: aplicarDadosConsultados(s.envolvidos, env.id, placaConsultada, { modelo, cor }),
-      }));
-      setPlacaStatus((st) => ({ ...st, [env.id]: {} }));
-    } catch (err) {
-      setPlacaStatus((st) => ({ ...st, [env.id]: { erro: err.message } }));
-    }
-  }
-
-  // Coloca a frase "O condutor ... deslocava com seu veículo ..." no início do relato.
-  function inserirApresentacao(env) {
-    const frase = apresentacaoEnvolvido(env, local);
-    if (!frase) return;
-    const resto = env.relato.trim();
-    alterarEnvolvido(env.id, {
-      relato: capitalizarFrase(`${frase}${resto ? `, ${resto.charAt(0).toLowerCase()}${resto.slice(1)}` : ', '}`),
-      presumido: false,
-    });
-    document.getElementById(`dp-relato-${env.id}`)?.focus();
-  }
-
-  async function revisarRelato(env, acao) {
-    const configuracao = ACOES_RELATO[acao];
-    if (!configuracao) return;
-    if (!env.relato.trim()) {
-      alert('Escreva o relato antes de usar a revisão com IA.');
-      return;
-    }
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      alert('Sem conexão com a internet.\n\nA revisão com IA precisa de internet.');
-      return;
-    }
-
-    const relatoOriginal = env.relato;
-    setRelatoIA((anterior) => ({ ...anterior, [env.id]: acao }));
-    try {
-      const res = await callGroq({
-        apiKey: obterChaveIA(),
-        prompt: promptRevisaoRelato(acao, relatoOriginal),
-      });
-      if (res.error === 'auth') {
-        alert('Chave da API inválida ou sem permissão.\n\nVerifique a configuração do sistema.');
-      } else if (res.error === 'quota') {
-        alert('Cota da API excedida no momento.\n\nAguarde alguns minutos e tente novamente.');
-      } else if (res.error === 'nokey') {
-        alert('Este provedor de IA não tem chave configurada.\n\nEscolha outro no seletor de IA do topo.');
-      } else if (res.text) {
-        const texto = capitalizarFrase(cleanIAResponse(res.text));
-        setEstado((atual) => ({
-          ...atual,
-          envolvidos: atual.envolvidos.map((envolvido) =>
-            envolvido.id === env.id && envolvido.relato === relatoOriginal
-              ? { ...envolvido, relato: texto, presumido: false }
-              : envolvido
-          ),
-        }));
-      }
-    } catch (err) {
-      console.error('Erro ao revisar relato da ocorrência:', err);
-      alert('Não foi possível revisar com IA.\n\nVerifique sua conexão e tente novamente.');
-    } finally {
-      setRelatoIA((anterior) => ({ ...anterior, [env.id]: null }));
-    }
+  function alterar(patch) {
+    atualizar((prev) => ({
+      ...prev,
+      dinamica: { ...prev.dinamica, ...patch },
+    }));
   }
 
   async function gerar() {
-    if (!estado.envolvidos[0]?.relato.trim()) {
-      alert('Digite o relato do envolvido 1 antes de gerar.');
-      document.getElementById(`dp-relato-${estado.envolvidos[0]?.id}`)?.focus();
+    if (gerando || !pronto || !declarados) return;
+    if (!navigator.onLine) {
+      setErro(
+        'Sem conexão. Os relatos continuam salvos; conecte-se para gerar a análise.',
+      );
       return;
     }
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      alert('Sem conexão com a internet.\n\nA geração por IA precisa de internet.');
-      return;
-    }
-
-    const ajuste = carregarAjusteFino();
+    const numero = ++requisicao.current;
+    const origem = { id: doc.id, fonte };
     setGerando(true);
+    setErro('');
     try {
+      const ajuste = carregarAjusteFino();
       const res = await callGroq({
         apiKey: obterChaveIA(),
         prompt: aplicarAjusteFino(buildDinamicaPrompt(estado, local), ajuste),
         temperature: ajuste.temperatura,
-        maxTokens: 3000,
+        maxTokens: 4000,
       });
-      if (res.error === 'auth') {
-        if (window.confirm('Chave da API inválida ou sem permissão.\n\nDeseja informar outra chave agora?')) obterChaveIA(true);
-      } else if (res.error === 'quota') {
-        alert('Cota da API excedida no momento.\n\nAguarde alguns minutos ou troque o modelo no seletor de IA.');
-      } else if (res.error === 'nokey') {
-        alert('Este provedor de IA não tem chave configurada.\n\nEscolha outro no seletor de IA do topo.');
-      } else if (res.text) {
-        setEstado((s) => aplicarRespostaDinamica(s, cleanIAResponse(res.text)));
-        showToast('Dinâmica gerada', 'success', 1800);
+      if (numero !== requisicao.current) return;
+      if (res.error)
+        throw new Error(
+          {
+            auth: 'Verifique a chave do provedor de IA.',
+            quota: 'Cota da IA excedida. Aguarde ou escolha outro modelo.',
+            nokey: 'Escolha um provedor configurado no seletor de IA.',
+          }[res.error] || 'A IA não respondeu. Tente novamente.',
+        );
+      if (
+        atual.current?.id !== origem.id ||
+        atual.current?.fonte !== origem.fonte
+      ) {
+        setErro(
+          'Os relatos ou o estilo mudaram durante a geração. Gere novamente para analisar a versão atual.',
+        );
+        return;
       }
-    } catch (err) {
-      console.error('Erro ao gerar dinâmica presumida:', err);
-      alert('Não foi possível gerar a dinâmica.\n\nTente novamente ou troque o modelo no seletor de IA.');
+      const resultado = aplicarRespostaDinamica(
+        estado,
+        cleanIAResponse(res.text || ''),
+      );
+      atualizar((prev) =>
+        prev.id !== origem.id
+          ? prev
+          : {
+              ...prev,
+              dinamica: {
+                ...prev.dinamica,
+                estilo: estado.estilo,
+                dinamica: resultado.dinamica,
+                analise: resultado.analise,
+                fonte: origem.fonte,
+              },
+            },
+      );
+      showToast('Dinâmica e análise prontas para revisão.', 'success');
+    } catch (e) {
+      if (numero === requisicao.current)
+        setErro(e.message || 'Não foi possível gerar. Tente novamente.');
     } finally {
-      setGerando(false);
+      if (numero === requisicao.current) setGerando(false);
     }
   }
 
-  function transferirParaRelato() {
-    const texto = estado.dinamica.trim();
-    if (!texto) return;
-    if (!docPronto) {
-      showToast('Aguarde o carregamento da ocorrência antes de transferir.', 'warning', 2500);
-      return;
-    }
-    atualizarDoc((prev) => ({
+  function transferir() {
+    if (!salvo.dinamica?.trim() || desatualizado) return;
+    atualizar((prev) => ({
       ...prev,
       relato: {
         ...prev.relato,
-        form: { ...(prev.relato?.form || {}), dinamica: texto },
+        form: { ...prev.relato.form, dinamica: salvo.dinamica },
       },
     }));
     window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'relato' }));
-    showToast('Dinâmica transferida para o Relato Policial', 'success', 2000);
+    showToast('Dinâmica transferida para o Relato Policial.', 'success');
   }
 
-  function limpar() {
-    if (!window.confirm('Limpar os relatos e a dinâmica desta aba?')) return;
-    setEstado((s) => ({ ...estadoInicialDinamica(), estilo: s.estilo }));
-  }
-
-  const ativos = envolvidosAtivos(estado);
+  if (!pronto)
+    return (
+      <p className="p-6" role="status">
+        Carregando ocorrência…
+      </p>
+    );
 
   return (
-    <div className="max-w-xl mx-auto p-3 sm:p-4 space-y-4">
-      <div className="flex justify-between items-center gap-3">
-        <h2 className="text-base sm:text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Relato e Dinâmica</h2>
-        <button type="button" onClick={limpar} className="btn-outline text-xs active:scale-95">
-          <span className="inline-flex items-center gap-1.5"><BroomIcon className="w-4 h-4" /> Limpar</span>
+    <div className="relatos-workspace max-w-3xl mx-auto p-3 sm:p-5 space-y-5">
+      <header className="relatos-heading">
+        <div>
+          <p className="relatos-eyebrow">Ocorrência · análise das versões</p>
+          <h2>Relatos e dinâmica</h2>
+          <p>
+            Parta do primeiro relato, ouça os demais e compare as versões antes
+            de finalizar.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn-outline text-xs"
+          onClick={abrirEnvolvidos}
+        >
+          Gerenciar envolvidos
         </button>
-      </div>
-
-      <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono p-3">
-        Preencha o condutor e a placa (<SearchIcon className="inline w-3.5 h-3.5 align-[-2px]" /> busca modelo e cor) e digite o relato do <b>envolvido 1</b> — use
-        <b> @</b> para inserir nome, veículo, rodovia e km. A IA presume o relato dos demais (deixe em branco) e a
-        <b> dinâmica do ocorrido</b>. Depois toque <b>Transferir para o Relato Policial</b>.
-      </p>
-
-      <div className="ds-card">
-        <label className="flex items-center gap-2 font-mono text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={estado.apenasUm}
-            onChange={(e) => alternarApenasUm(e.target.checked)}
-            className="h-5 w-5 accent-pmrv"
-          />
-          Apenas 1 envolvido <span className="text-charcoal text-xs">(saída de pista, capotamento…)</span>
-        </label>
-        <EstiloPicker value={estado.estilo} onChange={(estilo) => alterar({ estilo })} />
-      </div>
-
-
-      {ativos.map((env, i) => (
-        <section key={env.id} className="ds-card" aria-labelledby={`dp-titulo-${env.id}`}>
-          <div className="flex justify-between items-center gap-2 border-b-2 border-charcoal pb-2">
-            <h3 id={`dp-titulo-${env.id}`} className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm">
-              Envolvido {i + 1}
-              {env.presumido && (
-                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-gold/20 px-2 py-0.5 text-xs text-charcoal normal-case"><SparkIcon className="w-3.5 h-3.5" /> presumido pela IA</span>
-              )}
-            </h3>
-            {i >= 2 && (
-              <button type="button" onClick={() => removerEnvolvido(env.id)} className="btn-outline text-xs active:scale-95">
-                Remover
-              </button>
-            )}
-          </div>
-          {cadastrados.length > 0 && (
+      </header>
+      <ol className="relatos-progress" aria-label="Etapas da dinâmica">
+        <li>
+          <b>1</b>
+          <span>
+            Registrar relatos
+            <small>
+              {declarados} de {envolvidos.length} informados
+            </small>
+          </span>
+        </li>
+        <li>
+          <b>2</b>
+          <span>
+            Comparar versões<small>Concordâncias e divergências</small>
+          </span>
+        </li>
+        <li>
+          <b>3</b>
+          <span>
+            Revisar dinâmica<small>Transferir após conferir</small>
+          </span>
+        </li>
+      </ol>
+      <section className="ds-card">
+        <EstiloPicker
+          value={estado.estilo}
+          onChange={(estilo) => alterar({ estilo })}
+          disabled={gerando}
+        />
+      </section>
+      {!envolvidos.length && (
+        <div className="ds-card text-center">
+          <h3 className="font-semibold">Comece pelos envolvidos</h3>
+          <p>
+            Cadastre as pessoas e seus relatos uma única vez. Eles aparecerão
+            aqui automaticamente.
+          </p>
+          <button type="button" className="btn-ios" onClick={abrirEnvolvidos}>
+            Cadastrar envolvidos
+          </button>
+        </div>
+      )}
+      {envolvidos.map((env, i) => (
+        <section
+          key={env.id}
+          className="ds-card relato-person"
+          aria-labelledby={`dp-titulo-${env.id}`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <label htmlFor={`dp-import-${env.id}`} className="ds-label">Importar da aba Envolvidos</label>
-              <select
-                id={`dp-import-${env.id}`}
-                value=""
-                onChange={(e) => importarCadastrado(env.id, e.target.value)}
-                className="ds-input text-sm"
-              >
-                <option value="">Escolher envolvido cadastrado…</option>
-                {cadastrados.map((c, k) => (
-                  <option key={k} value={k}>
-                    {[c.nome, c.placa.toUpperCase(), c.modelo].filter((x) => x.trim()).join(' · ')}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="sm:col-span-2">
-              <label htmlFor={`dp-nome-${env.id}`} className="ds-label">Nome do condutor</label>
-              <input
-                id={`dp-nome-${env.id}`}
-                value={env.nome}
-                onChange={(e) => alterarEnvolvido(env.id, { nome: e.target.value })}
-                placeholder="Ex.: João da Silva"
-                autoComplete="off"
-                className="ds-input text-sm"
-              />
-            </div>
-            <div>
-              <label htmlFor={`dp-placa-${env.id}`} className="ds-label">Placa</label>
-              <div className="flex gap-2">
-                <input
-                  id={`dp-placa-${env.id}`}
-                  value={env.placa}
-                  onChange={(e) => alterarEnvolvido(env.id, { placa: normalizarPlaca(e.target.value) })}
-                  onKeyDown={(e) => e.key === 'Enter' && placaConsultavel(env.placa) && buscarPlaca(env)}
-                  placeholder="ABC1D23"
-                  autoComplete="off"
-                  className="ds-input text-sm uppercase flex-1 min-w-0"
-                />
-                <button
-                  type="button"
-                  onClick={() => buscarPlaca(env)}
-                  disabled={!placaConsultavel(env.placa) || placaStatus[env.id]?.carregando}
-                  aria-busy={!!placaStatus[env.id]?.carregando}
-                  className="btn-outline text-xs px-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Buscar modelo e cor pela placa"
-                  aria-label="Buscar modelo e cor pela placa"
-                >
-                  {placaStatus[env.id]?.carregando ? <span className="btn-spinner" aria-hidden="true" /> : <SearchIcon className="w-4 h-4" />}
-                </button>
-              </div>
-              {placaStatus[env.id]?.erro && (
-                <p role="alert" className="text-xs font-mono text-brick mt-1">{placaStatus[env.id].erro}</p>
-              )}
-            </div>
-            <div>
-              <label htmlFor={`dp-cor-${env.id}`} className="ds-label">Cor</label>
-              <input
-                id={`dp-cor-${env.id}`}
-                value={env.cor}
-                onChange={(e) => alterarEnvolvido(env.id, { cor: e.target.value })}
-                placeholder="Ex.: prata"
-                autoComplete="off"
-                className="ds-input text-sm"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor={`dp-modelo-${env.id}`} className="ds-label">Marca / modelo</label>
-              <input
-                id={`dp-modelo-${env.id}`}
-                value={env.modelo}
-                onChange={(e) => alterarEnvolvido(env.id, { modelo: e.target.value })}
-                placeholder={placaStatus[env.id]?.carregando ? 'Buscando…' : 'Ex.: VW Gol'}
-                autoComplete="off"
-                className="ds-input text-sm"
-              />
-            </div>
-          </div>
-          <div>
-            <div className="flex flex-wrap justify-between items-center gap-2 mb-1.5">
-              <label htmlFor={`dp-relato-${env.id}`} className="ds-label mb-0">
-                {i === 0 ? 'Relato do envolvido 1 *' : 'Relato (em branco = a IA presume)'}
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => revisarRelato(env, 'ortografia')}
-                  disabled={!!relatoIA[env.id]}
-                  className="btn-outline text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Corrigir ortografia"
-                  title="Corrige somente a escrita, sem reescrever o relato"
-                >
-                    {relatoIA[env.id] === 'ortografia' ? ACOES_RELATO.ortografia.carregando : <span className="inline-flex items-center gap-1"><CheckIcon className="w-3.5 h-3.5" /> Corrigir ortografia</span>}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => revisarRelato(env, 'melhorar')}
-                  disabled={!!relatoIA[env.id]}
-                  className="btn-outline text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                  aria-label="Melhorar relato"
-                  title="Deixa o relato claro e objetivo, sem alterar os fatos"
-                >
-                    {relatoIA[env.id] === 'melhorar' ? ACOES_RELATO.melhorar.carregando : <span className="inline-flex items-center gap-1"><SparkIcon className="w-3.5 h-3.5" /> Melhorar relato</span>}
-                </button>
-                <span role="status" className="sr-only">
-                  {relatoIA[env.id] ? ACOES_RELATO[relatoIA[env.id]].carregando : ''}
-                </span>
-                {apresentacaoEnvolvido(env) && (
-                  <button type="button" onClick={() => inserirApresentacao(env)} className="btn-outline text-xs active:scale-95">
-                    <span className="inline-flex items-center gap-1.5"><FileTextIcon className="w-4 h-4" /> Inserir dados no relato</span>
-                  </button>
-                )}
-              </div>
-            </div>
-            <p className="text-xs font-mono text-charcoal mb-2">
-              Ortografia corrige a escrita. Melhorar deixa o texto claro e objetivo sem alterar os fatos.
-            </p>
-            <MentionInput
-              id={`dp-relato-${env.id}`}
-              rows={4}
-              value={env.relato}
-              onChange={(texto) => alterarEnvolvido(env.id, { relato: capitalizarFrase(texto), presumido: false })}
-              envolvidos={estado.envolvidos}
-              extras={itensLocal(local)}
-              placeholder={
-                i === 0
-                  ? 'Ex.: O condutor @João deslocava com seu veículo… (use @ para nome, veículo, rodovia e km)'
-                  : 'Deixe em branco para a IA presumir. Use @ para nome, veículo, rodovia e km.'
-              }
-              className="ds-input text-sm leading-relaxed"
-            />
-            {local && (
-              <p className="mt-1 text-xs font-mono text-charcoal">
-                <><MapPinIcon className="inline w-3.5 h-3.5 align-[-2px]" /> Local: {local.rodovia}{local.km ? `, km ${local.km}` : ''} — disponível no @</>
+              <p className="relatos-eyebrow">
+                Envolvido {i + 1}
+                {i === 0 ? ' · contexto inicial' : ''}
               </p>
-            )}
+              <h3 id={`dp-titulo-${env.id}`} className="text-lg font-semibold">
+                {env.nome || 'Nome não informado'}
+              </h3>
+              <p className="text-sm">
+                {[env.placa, env.modelo, env.cor].filter(Boolean).join(' · ') ||
+                  'Dados do veículo não informados'}
+              </p>
+            </div>
+            <span className="relato-status">
+              {env.presumido
+                ? 'Hipótese antiga · conferir'
+                : env.relato?.trim()
+                  ? 'Relato informado'
+                  : 'Aguardando relato'}
+            </span>
           </div>
+          {i > 0 && envolvidos[0]?.relato?.trim() && (
+            <details className="relato-contexto">
+              <summary>Consultar o primeiro relato</summary>
+              <p className="whitespace-pre-wrap">{envolvidos[0].relato}</p>
+              <p className="text-xs mt-2">
+                Contexto para esclarecer os fatos. Registre a versão desta
+                pessoa com suas próprias informações.
+              </p>
+            </details>
+          )}
+          <label className="ds-label" htmlFor={`dp-relato-${env.id}`}>
+            O que esta pessoa relatou?
+          </label>
+          <MentionInput
+            id={`dp-relato-${env.id}`}
+            rows={5}
+            value={env.relato || ''}
+            envolvidos={envolvidos}
+            gpsLocation={gpsInfo}
+            onChange={(relato) =>
+              atualizar((prev) => ({
+                ...prev,
+                envolvidos: prev.envolvidos.map((e) =>
+                  e.id === env.id ? { ...e, relato } : e,
+                ),
+              }))
+            }
+            placeholder="Registre a versão da pessoa: onde estava, o que percebeu e o que aconteceu. Use @ para mencionar dados."
+            className="ds-input text-sm leading-relaxed resize-none"
+          />
+          {env.presumido && (
+            <p className="text-sm">
+              Este texto foi criado como hipótese na versão anterior. Substitua
+              pelo depoimento efetivamente colhido na aba Envolvidos antes de
+              usá-lo na análise.
+            </p>
+          )}
+          {!env.relato?.trim() && (
+            <p className="text-sm">
+              Sem relato: a análise apontará essa lacuna e sugerirá perguntas,
+              sem criar uma declaração.
+            </p>
+          )}
         </section>
       ))}
-
-      {!estado.apenasUm && (
-        <button type="button" onClick={adicionarEnvolvido} className="btn-outline w-full text-xs active:scale-95">
-          <span className="inline-flex items-center justify-center gap-1.5"><PlusIcon className="w-4 h-4" /> Adicionar envolvido</span>
-        </button>
+      {erro && (
+        <p className="relato-alert" role="alert">
+          {erro}
+        </p>
       )}
-
       <button
         type="button"
         onClick={gerar}
-        disabled={gerando}
+        disabled={gerando || !declarados}
         aria-busy={gerando}
-        className={`btn-ios w-full text-sm active:scale-95 disabled:opacity-60 ${gerando ? 'is-loading' : ''}`}
+        className="btn-ios w-full min-h-12 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {gerando ? (
-          <>
-            <span className="btn-spinner" aria-hidden="true" /> Gerando…
-          </>
-        ) : estado.apenasUm ? (
-          <span className="inline-flex items-center justify-center gap-2"><SparkIcon className="w-4 h-4" /> Gerar dinâmica presumida</span>
-        ) : (
-          <span className="inline-flex items-center justify-center gap-2"><SparkIcon className="w-4 h-4" /> Presumir relatos e gerar dinâmica</span>
-        )}
+        <SparkIcon className="inline w-4 h-4 mr-2" />
+        {gerando ? 'Analisando relatos…' : 'Analisar relatos e gerar dinâmica'}
       </button>
-
-      {estado.dinamica && (
-        <section className="ds-card" aria-labelledby="dp-dinamica-titulo">
-          <h3 id="dp-dinamica-titulo" className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm border-b-2 border-charcoal pb-2">
-            Dinâmica presumida
-          </h3>
-          <label htmlFor="dp-dinamica" className="sr-only">Dinâmica presumida (editável)</label>
-          <textarea
-            id="dp-dinamica"
-            rows={6}
-            value={estado.dinamica}
-            onChange={(e) => alterar({ dinamica: capitalizarFrase(e.target.value) })}
-            className="ds-input text-sm leading-relaxed"
-          />
-          <button type="button" onClick={transferirParaRelato} className="btn-ios w-full text-sm active:scale-95">
-            <span className="inline-flex items-center justify-center gap-2"><UploadIcon className="w-4 h-4" /> Transferir para o Relato Policial</span>
-          </button>
-        </section>
+      {!declarados && envolvidos.length > 0 && (
+        <p className="text-sm">
+          Informe ao menos um relato para começar a análise.
+        </p>
       )}
-
+      {(salvo.dinamica || salvo.fonte) && (
+        <>
+          {desatualizado && (
+            <p className="relato-alert" role="status">
+              Os dados ou o estilo mudaram. Gere novamente antes de transferir;
+              a análise abaixo corresponde à versão anterior.
+            </p>
+          )}
+          <section className="ds-card" aria-labelledby="analise-titulo">
+            <div>
+              <p className="relatos-eyebrow">Conferência das fontes</p>
+              <h3 id="analise-titulo" className="text-lg font-semibold">
+                O que os relatos permitem concluir
+              </h3>
+              <p className="text-sm mt-1">
+                Análise sugerida pela IA. Confira cada ponto nas declarações.
+              </p>
+            </div>
+            <div className="analise-grid">
+              {[
+                ['concordancias', 'Pontos em comum'],
+                ['divergencias', 'Versões diferentes'],
+                ['lacunas', 'Falta esclarecer'],
+              ].map(([key, titulo]) => (
+                <div key={key} className="analise-bloco">
+                  <h4>{titulo}</h4>
+                  {analise[key].length ? (
+                    <ul>
+                      {analise[key].map((t, i) => (
+                        <li key={i}>{t}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>Nenhum ponto informado pela análise.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            {analise.perguntas.length > 0 && (
+              <div>
+                <h4 className="font-semibold mb-2">
+                  Perguntas para continuar a coleta
+                </h4>
+                {analise.perguntas.map((p, i) => (
+                  <details key={i} className="relato-contexto" open>
+                    <summary>
+                      {envolvidos[p.envolvido - 1]?.nome ||
+                        `Envolvido ${p.envolvido}`}
+                    </summary>
+                    <ul className="list-disc pl-5 space-y-2">
+                      {p.perguntas.map((t, k) => (
+                        <li key={k}>{t}</li>
+                      ))}
+                    </ul>
+                  </details>
+                ))}
+              </div>
+            )}
+          </section>
+          <section className="ds-card" aria-labelledby="dp-dinamica-titulo">
+            <div>
+              <p className="relatos-eyebrow">Texto para revisão</p>
+              <h3 id="dp-dinamica-titulo" className="text-lg font-semibold">
+                Dinâmica consolidada
+              </h3>
+            </div>
+            <label htmlFor="dp-dinamica" className="ds-label">
+              Revise o texto antes de transferir
+            </label>
+            <textarea
+              id="dp-dinamica"
+              disabled={gerando}
+              rows={9}
+              value={salvo.dinamica}
+              onChange={(e) => alterar({ dinamica: e.target.value })}
+              className="ds-input text-sm leading-relaxed resize-none"
+            />
+            <button
+              type="button"
+              onClick={transferir}
+              disabled={desatualizado || gerando || !salvo.dinamica.trim()}
+              className="btn-ios w-full disabled:opacity-50"
+            >
+              <UploadIcon className="inline w-4 h-4 mr-2" />
+              Transferir para o Relato Policial
+            </button>
+          </section>
+        </>
+      )}
+      {legado && (
+        <details className="ds-card">
+          <summary className="cursor-pointer font-semibold">
+            Consultar rascunho da versão anterior
+          </summary>
+          <p className="text-sm">
+            Preservado para consulta. Pode pertencer a outra ocorrência; confira
+            antes de copiar informações.
+          </p>
+          {(Array.isArray(legado.envolvidos) ? legado.envolvidos : []).map(
+            (e, i) => (
+              <div key={i}>
+                <h4 className="font-semibold">
+                  {e.nome || `Envolvido ${i + 1}`}{' '}
+                  {e.presumido ? '· hipótese da IA' : ''}
+                </h4>
+                <p className="whitespace-pre-wrap">
+                  {typeof e.relato === 'string' ? e.relato : ''}
+                </p>
+              </div>
+            ),
+          )}
+          <p className="whitespace-pre-wrap">
+            {typeof legado.dinamica === 'string' ? legado.dinamica : ''}
+          </p>
+        </details>
+      )}
       <AjusteFino />
     </div>
   );

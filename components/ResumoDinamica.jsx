@@ -1,415 +1,300 @@
 'use client';
-
 import { useEffect, useRef, useState } from 'react';
-import {
-  capitalizarFrase,
-  callGroq,
-  cleanIAResponse,
-  PMRV_AGENTE_PADRAO,
-} from '@/lib/pmrv';
-import { showToast } from '@/components/Toast';
-import { loadResumoState } from '@/lib/resumo-relatos';
+import { callGroq, cleanIAResponse, obterChaveIA } from '@/lib/pmrv';
 import { useOcorrencia } from '@/components/OcorrenciaProvider';
-import { BroomIcon, CheckIcon, ClipboardListIcon, PlusIcon, SaveIcon, SparkIcon, UploadIcon } from '@/components/icons';
+import { showToast } from '@/components/Toast';
+import EstiloPicker from '@/components/EstiloPicker';
+import { fontesDosRelatos } from '@/lib/fontes-relatos';
 import {
-  RESUMO_ESTILO_PADRAO,
-  RESUMO_OPCOES,
   buildResumoPrompt,
-  estiloResumoValido,
   normalizarResumoEstilos,
   relatosParaBase,
 } from '@/lib/resumo-prompt';
 import { aplicarAjusteFino, carregarAjusteFino } from '@/lib/ajuste-fino';
 
-
-const ESTILO_BOTOES = RESUMO_OPCOES;
-
-const ESTILO_TITULO = {
-  narrativo: 'Relato Narrativo Direto',
-  tecnico_policial: 'Relato Técnico/Policial',
-};
-
-const RESUMOS_VAZIOS = { narrativo: '', tecnico_policial: '' };
-
-// Id do novo card: fora do render (Date.now é impuro durante o render).
-function novoIdRelato() {
-  return Date.now();
-}
-
 export default function ResumoDinamica() {
-  const [relatos, setRelatos] = useState([]);
-  const [resumo, setResumo] = useState('');
-  const [resumos, setResumos] = useState(RESUMOS_VAZIOS);
-  const [estiloResumo, setEstiloResumo] = useState(RESUMO_ESTILO_PADRAO);
-  const [loadingIA, setLoadingIA] = useState(null);
-  const [statusIA, setStatusIA] = useState('');
-  const init = useRef(false);
-  const [transferindoId, setTransferindoId] = useState(null);
-  const { pronto: docPronto, atualizar: atualizarDoc } = useOcorrencia();
-
+  const { doc, pronto, atualizar } = useOcorrencia();
+  const [gerando, setGerando] = useState(false);
+  const [erro, setErro] = useState('');
+  const [removida, setRemovida] = useState(null);
+  const atual = useRef(null);
+  const sequencia = useRef(0);
+  const salvo = doc?.resumo || {};
+  const { resumos, estiloResumo } = normalizarResumoEstilos(salvo);
+  const relatos = fontesDosRelatos(doc?.envolvidos, salvo.relatos);
+  const base = relatosParaBase(relatos);
+  const texto = resumos[estiloResumo] || '';
+  const fonte = salvo.fontes?.[estiloResumo];
+  const desatualizado = !!texto && fonte != null && fonte !== base;
   useEffect(() => {
-    function reload() {
-      // Documento único primeiro; legado só durante a transição.
-      let s = null;
-      try {
-        const raw = localStorage.getItem('PMRV_OCORRENCIA');
-        const doc = raw ? JSON.parse(raw) : null;
-        if (doc?.resumo) {
-          s = {
-            relatos: Array.isArray(doc.resumo.relatos) ? doc.resumo.relatos : [],
-            resumo: typeof doc.resumo.resumo === 'string' ? doc.resumo.resumo : '',
-            resumos: doc.resumo.resumos || RESUMOS_VAZIOS,
-            estiloResumo: doc.resumo.estiloResumo,
-          };
-        }
-      } catch {
-        /* cópia inválida */
-      }
-      if (!s) s = loadResumoState();
-      setRelatos(s.relatos);
-      setResumo(s.resumo);
-      const estilos = normalizarResumoEstilos(s);
-      setResumos(estilos.resumos);
-      setEstiloResumo(estilos.estiloResumo);
-    }
-    reload();
-    init.current = true;
-    window.addEventListener('pmrv-resumo-changed', reload);
-    window.addEventListener('pmrv-ocorrencia-changed', reload);
-    return () => {
-      window.removeEventListener('pmrv-resumo-changed', reload);
-      window.removeEventListener('pmrv-ocorrencia-changed', reload);
-    };
-  }, []);
+    atual.current = { id: doc?.id, base, estiloResumo };
+  }, [doc?.id, base, estiloResumo]);
+  useEffect(() => {
+    sequencia.current += 1;
+    setGerando(false);
+    setErro('');
+    setRemovida(null);
+  }, [doc?.id]);
+  useEffect(
+    () => () => {
+      sequencia.current += 1;
+    },
+    [],
+  );
 
-  function gravarDinamicaNoRelato(texto) {
-    if (typeof texto !== 'string' || !texto.trim() || !docPronto) return false;
-    atualizarDoc((prev) => {
-      if (!prev) return prev;
-      const relato = prev.relato || {};
-      return {
-        ...prev,
-        relato: {
-          ...relato,
-          form: { ...(relato.form || {}), dinamica: texto },
-        },
-      };
+  function salvar(patch) {
+    atualizar((prev) => ({ ...prev, resumo: { ...prev.resumo, ...patch } }));
+  }
+  function alterarNota(id, texto) {
+    salvar({
+      relatos: (salvo.relatos || []).map((r) =>
+        r.id === id ? { ...r, texto } : r,
+      ),
     });
-    return true;
   }
-
-  function transferirParaRelatoPolicial(id) {
-    const relato = relatos.find((r) => r.id === id);
-    if (!relato) return;
-    if (!gravarDinamicaNoRelato(relato.texto)) {
-      showToast('Aguarde o carregamento da ocorrência antes de transferir.', 'warning', 2500);
+  async function gerar() {
+    if (gerando || !base.trim()) return;
+    if (!navigator.onLine) {
+      setErro(
+        'Conecte-se à internet para gerar o resumo. Seus relatos continuam salvos.',
+      );
       return;
     }
-    window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'relato' }));
-    showToast('Relato transferido para o Relato Policial', 'success', 2000);
-    setTransferindoId(id);
-    setTimeout(() => setTransferindoId(null), 2000);
-  }
-
-  function salvarResumoNoRelato({ irParaSalvar } = {}) {
-    const texto = (resumo || '').trim();
-    if (!texto) {
-      alert('Não há resumo para salvar.');
-      return;
-    }
-    if (!gravarDinamicaNoRelato(texto)) {
-      showToast('Aguarde o carregamento da ocorrência antes de salvar.', 'warning', 2500);
-      return;
-    }
-    showToast('Resumo gravado no Relato Policial', 'success', 2000);
-    if (irParaSalvar) {
-      window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'relato' }));
-    }
-  }
-
-  function save(patch) {
-    const state = {
-      relatos: patch.relatos != null ? patch.relatos : relatos,
-      resumo: patch.resumo != null ? patch.resumo : resumo,
-      resumos: patch.resumos != null ? patch.resumos : resumos,
-      estiloResumo: patch.estiloResumo != null ? patch.estiloResumo : estiloResumo,
-    };
-    setRelatos(state.relatos);
-    setResumo(state.resumo);
-    setResumos(state.resumos);
-    setEstiloResumo(state.estiloResumo);
-    if (init.current && docPronto) atualizarDoc((prev) => ({ ...prev, resumo: state }));
-  }
-
-  function adicionarRelato() {
-    const novo = { id: novoIdRelato(), texto: '' };
-    save({ relatos: [...relatos, novo] });
-  }
-
-  function atualizarRelato(id, texto) {
-    const lista = relatos.map((r) => (r.id === id ? { ...r, texto: capitalizarFrase(texto || '') } : r));
-    save({ relatos: lista });
-  }
-
-  function removerRelato(id) {
-    if (!window.confirm('Remover este relato individual?')) return;
-    save({ relatos: relatos.filter((r) => r.id !== id) });
-  }
-
-  function mostrarEstilo(estilo) {
-    const modo = estiloResumoValido(estilo);
-    const texto = resumos[modo] || '';
-    save({ estiloResumo: modo, resumo: texto });
-  }
-
-  async function gerarResumo(estilo) {
-    const modo = estiloResumoValido(estilo);
-    const base = relatosParaBase(relatos);
-
-    if (!base.trim()) {
-      alert('Adicione pelo menos um relato individual.');
-      return;
-    }
-
-    setLoadingIA(modo);
-    setStatusIA(`Gerando resumo ${ESTILO_BOTOES.find((e) => e.id === modo)?.label || ''}...`);
-
+    const numero = ++sequencia.current;
+    const origem = { id: doc.id, base, estiloResumo };
+    setGerando(true);
+    setErro('');
     try {
       const ajuste = carregarAjusteFino();
-      const prompt = aplicarAjusteFino(buildResumoPrompt(relatos, modo), ajuste);
       const res = await callGroq({
         apiKey: obterChaveIA(),
-        prompt,
-        system: PMRV_AGENTE_PADRAO,
+        prompt: aplicarAjusteFino(
+          buildResumoPrompt(relatos, estiloResumo),
+          ajuste,
+        ),
         temperature: ajuste.temperatura,
       });
-
-      if (res.error === 'auth') {
-        alert('Chave da API inválida ou sem permissão.\n\nVerifique a configuração do sistema.');
-        setStatusIA('');
-      } else if (res.error === 'quota') {
-        alert('Cota da API excedida no momento.\n\nAguarde alguns minutos e tente novamente.');
-        setStatusIA('');
-      } else if (res.text) {
-        const texto = cleanIAResponse(res.text);
-        const nextResumos = { ...resumos, [modo]: texto };
-        save({
-          resumo: texto,
-          resumos: nextResumos,
-          estiloResumo: modo,
-        });
-        gravarDinamicaNoRelato(texto);
-        setStatusIA('Resumo gerado e gravado no Relato Policial.');
-        showToast(`Resumo ${ESTILO_BOTOES.find((e) => e.id === modo)?.label} gravado no Relato`, 'success', 2000);
+      if (numero !== sequencia.current) return;
+      if (res.error || !res.text?.trim())
+        throw new Error(
+          'Não foi possível gerar. Verifique a conexão e o provedor de IA e tente novamente.',
+        );
+      if (JSON.stringify(origem) !== JSON.stringify(atual.current)) {
+        setErro(
+          'Os relatos mudaram durante a geração. Gere novamente para usar a versão atual.',
+        );
+        return;
       }
-    } catch (err) {
-      console.error('Erro ao gerar resumo:', err);
-      alert('Não foi possível gerar o resumo.\n\nVerifique sua conexão e tente novamente.');
-      setStatusIA('');
+      const resultado = cleanIAResponse(res.text);
+      atualizar((prev) =>
+        prev.id !== origem.id
+          ? prev
+          : {
+              ...prev,
+              resumo: {
+                ...prev.resumo,
+                resumo: resultado,
+                estiloResumo,
+                resumos: { ...prev.resumo.resumos, [estiloResumo]: resultado },
+                fontes: { ...prev.resumo.fontes, [estiloResumo]: base },
+              },
+            },
+      );
+      showToast('Resumo pronto para revisão.', 'success');
+    } catch (e) {
+      if (numero === sequencia.current) setErro(e.message);
     } finally {
-      setLoadingIA(null);
+      if (numero === sequencia.current) setGerando(false);
     }
   }
-
-  async function melhorarResumo() {
-    if (!resumo.trim()) {
-      alert('Não há resumo para melhorar.');
-      return;
-    }
-
-    const modo = estiloResumoValido(estiloResumo);
-    setLoadingIA('melhorar');
-    setStatusIA('Melhorando resumo com IA...');
-
-    try {
-      const prompt =
-        'Melhore o resumo abaixo de um sinistro de trânsito: corrija ortografia, acentuação, concordância e pontuação, mantenha os fatos e a norma culta do português do Brasil. Não invente fatos. Responda APENAS com o texto corrigido, sem comentários.\n\n' +
-        resumo;
-
-      const res = await callGroq({ apiKey: obterChaveIA(), prompt, system: PMRV_AGENTE_PADRAO });
-
-      if (res.error === 'auth') {
-        alert('Chave da API inválida ou sem permissão.\n\nVerifique a configuração do sistema.');
-        setStatusIA('');
-      } else if (res.error === 'quota') {
-        alert('Cota da API excedida no momento.\n\nAguarde alguns minutos e tente novamente.');
-        setStatusIA('');
-      } else if (res.text) {
-        const texto = cleanIAResponse(res.text);
-        save({
-          resumo: texto,
-          resumos: { ...resumos, [modo]: texto },
-        });
-        gravarDinamicaNoRelato(texto);
-        setStatusIA('Resumo melhorado e gravado no Relato Policial.');
-        showToast('Resumo melhorado e gravado no Relato', 'success', 2000);
-      }
-    } catch (err) {
-      console.error('Erro ao melhorar resumo:', err);
-      alert('Não foi possível melhorar o resumo.\n\nVerifique sua conexão e tente novamente.');
-      setStatusIA('');
-    } finally {
-      setLoadingIA(null);
-    }
+  function transferir() {
+    if (!texto.trim() || desatualizado) return;
+    atualizar((prev) => ({
+      ...prev,
+      relato: {
+        ...prev.relato,
+        form: { ...prev.relato.form, dinamica: texto },
+      },
+    }));
+    window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'relato' }));
+    showToast('Resumo transferido para o Relato Policial.', 'success');
   }
-
-  function limparTudo() {
-    if (!window.confirm('Limpar todos os relatos e o resumo?')) return;
-    save({
-      relatos: [],
-      resumo: '',
-      resumos: RESUMOS_VAZIOS,
-      estiloResumo: RESUMO_ESTILO_PADRAO,
-    });
-    setStatusIA('');
-    showToast('Tudo limpo', 'warning', 1500);
-  }
-
+  if (!pronto)
+    return (
+      <p className="p-6" role="status">
+        Carregando ocorrência…
+      </p>
+    );
   return (
-    <div className="max-w-xl mx-auto p-3 sm:p-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-        <h2 className="text-base sm:text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Resumo da Dinâmica</h2>
-        <div className="flex gap-2">
-          <button type="button" onClick={limparTudo} className="btn-outline text-xs active:scale-95">
-            <span className="inline-flex items-center gap-1.5"><BroomIcon className="w-4 h-4" /> Limpar</span>
-          </button>
-          <button type="button" onClick={adicionarRelato} className="btn-ios text-xs active:scale-95">
-            <span className="inline-flex items-center gap-1.5"><PlusIcon className="w-4 h-4" /> Adicionar Relato</span>
-          </button>
-        </div>
-      </div>
-
-      <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono mb-4 p-3">
-        Os relatos individuais entram aqui ao tocar <b>Salvar relato</b> na aba Envolvidos. Depois escolha entre <b>Relato Narrativo Direto</b> (formal, objetivo e neutro) e <b>Relato Técnico/Policial</b> (impessoal, técnico e sem atribuir culpa). Ao gerar ou tocar <b>Salvar</b>, o texto vai para a dinâmica do Relato Policial.
-      </p>
-
-      <div className="space-y-4">
-        {relatos.map((r, idx) => (
-          <div key={r.id} className="ds-card">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-charcoal pb-2 gap-2">
-              <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm sm:text-base">
-                Relato #{idx + 1} {r.envolvidoNome ? `— ${r.envolvidoNome}` : ''}
-              </h3>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => transferirParaRelatoPolicial(r.id)}
-                  className="btn-outline text-xs active:scale-95"
-                >
-                  {transferindoId === r.id ? (
-                    <span className="inline-flex items-center gap-1.5"><CheckIcon className="w-4 h-4" /> Transferido!</span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5"><UploadIcon className="w-4 h-4" /> Transferir p/ Relato Policial</span>
-                  )}
-                </button>
-                <button type="button" onClick={() => removerRelato(r.id)} className="btn-ios text-xs bg-brick !border-brick active:scale-95">
-                  Remover
-                </button>
-              </div>
-            </div>
-            <textarea
-              rows={4}
-              value={r.texto}
-              onChange={(e) => atualizarRelato(r.id, e.target.value)}
-              className="w-full p-2 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-focus outline-none text-sm leading-relaxed"
-              placeholder="Descreva o que você viu ou aconteceu..."
-            />
-          </div>
-        ))}
-      </div>
-
-      {relatos.length === 0 && (
-        <div className="bg-surface border-2 border-dashed border-charcoal p-6 sm:p-8 text-center font-mono text-xs sm:text-sm text-charcoal">
-          <ClipboardListIcon className="w-8 h-8 text-pmrv mx-auto mb-2" />
-          Nenhum relato ainda. Salve o relato individual na aba Envolvidos.
-        </div>
-      )}
-
-      <p className="mt-4 mb-2 font-mono text-xs font-semibold uppercase tracking-wider text-gold-ink">
-        Gerar resumo
-      </p>
-      <div className="flex flex-col sm:flex-row gap-2">
-        {ESTILO_BOTOES.map((estilo) => (
-          <button
-            key={estilo.id}
-            type="button"
-            onClick={() => gerarResumo(estilo.id)}
-            disabled={loadingIA != null || relatos.length === 0}
-            aria-busy={loadingIA === estilo.id}
-            className={`btn-outline flex-1 text-xs disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 ${
-              estiloResumo === estilo.id && resumo ? 'bg-pmrv/10 !border-pmrv text-pmrv' : ''
-            } ${loadingIA === estilo.id ? 'is-loading' : ''}`}
-          >
-            {loadingIA === estilo.id ? (
-              <>
-                <span className="btn-spinner" aria-hidden="true" /> Gerando…
-              </>
-            ) : (
-              estilo.label
-            )}
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        onClick={melhorarResumo}
-        disabled={loadingIA != null || !resumo.trim()}
-        aria-busy={loadingIA === 'melhorar'}
-        className={`btn-outline w-full mt-2 text-xs disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 ${
-          loadingIA === 'melhorar' ? 'is-loading' : ''
-        }`}
-      >
-        {loadingIA === 'melhorar' ? (
-          <>
-            <span className="btn-spinner" aria-hidden="true" /> Melhorando…
-          </>
-        ) : (
-          <span className="inline-flex items-center justify-center gap-1.5"><SparkIcon className="w-4 h-4" /> Melhorar Resumo</span>
-        )}
-      </button>
-
-      {statusIA && !loadingIA && (
-        <p className="mt-2 text-xs font-mono text-pmrv text-center">{statusIA}</p>
-      )}
-
-      {(resumo || ESTILO_BOTOES.some((e) => resumos[e.id])) && (
-        <div className="mt-6 ds-card">
-          <div className="border-b-2 border-charcoal pb-2 mb-3 flex flex-col gap-2">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-              <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm sm:text-base">
-                Resumo Gerado — {ESTILO_TITULO[estiloResumo] || ESTILO_TITULO[RESUMO_ESTILO_PADRAO]}
-              </h3>
-              <button
-                type="button"
-                onClick={() => salvarResumoNoRelato({ irParaSalvar: true })}
-                disabled={!resumo.trim()}
-                className="btn-outline text-xs active:scale-95 disabled:opacity-50"
-              >
-                <span className="inline-flex items-center gap-1.5"><SaveIcon className="w-4 h-4" /> Salvar</span>
-              </button>
-            </div>
-            <div className="flex gap-1">
-              {ESTILO_BOTOES.map((estilo) => (
-                <button
-                  key={`ver-${estilo.id}`}
-                  type="button"
-                  onClick={() => mostrarEstilo(estilo.id)}
-                  disabled={!resumos[estilo.id]}
-                  className={`flex-1 text-xs font-mono font-semibold uppercase tracking-wider py-1 rounded border ${
-                    estiloResumo === estilo.id
-                      ? 'bg-pmrv text-on-primary border-pmrv'
-                      : 'border-charcoal/30 text-charcoal disabled:opacity-40'
-                  }`}
-                >
-                  {estilo.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">
-            {resumo || 'Gere este tipo de resumo para visualizar o texto.'}
+    <div className="max-w-3xl mx-auto p-3 sm:p-5 space-y-5">
+      <header className="relatos-heading">
+        <div>
+          <p className="relatos-eyebrow">Síntese da ocorrência</p>
+          <h2>Resumo dos relatos</h2>
+          <p>
+            Reúna declarações e notas em um texto curto. Para comparar versões e
+            esclarecer lacunas, abra a análise.
           </p>
         </div>
+        <button
+          type="button"
+          className="btn-outline text-xs"
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent('navigate-to', { detail: 'dinamica' }),
+            )
+          }
+        >
+          Analisar versões
+        </button>
+      </header>
+      <section className="ds-card">
+        <h3 className="font-semibold">Fontes do resumo</h3>
+        <p className="text-sm">
+          Os relatos são atualizados a partir do cadastro. Cada pessoa aparece
+          uma única vez.
+        </p>
+        {!relatos.length && (
+          <p>Nenhum relato informado. Comece pelo cadastro dos envolvidos.</p>
+        )}
+        {relatos.map((r, i) => (
+          <details
+            key={r.id}
+            className="relato-contexto"
+            open={r.envolvidoId == null}
+          >
+            <summary>{r.envolvidoNome || `Nota complementar ${i + 1}`}</summary>
+            {r.envolvidoId != null ? (
+              <>
+                <p className="whitespace-pre-wrap">{r.texto}</p>
+                <button
+                  type="button"
+                  className="btn-outline text-xs mt-2"
+                  onClick={() =>
+                    window.dispatchEvent(
+                      new CustomEvent('navigate-to', { detail: 'envolvidos' }),
+                    )
+                  }
+                >
+                  Editar em envolvidos
+                </button>
+              </>
+            ) : (
+              <>
+                <label htmlFor={`nota-${r.id}`} className="ds-label">
+                  Informação complementar
+                </label>
+                <textarea
+                  id={`nota-${r.id}`}
+                  rows={4}
+                  className="ds-input resize-none"
+                  value={r.texto}
+                  onChange={(e) => alterarNota(r.id, e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn-outline text-xs mt-2"
+                  onClick={() => {
+                    setRemovida(r);
+                    salvar({
+                      relatos: (salvo.relatos || []).filter(
+                        (n) => n.id !== r.id,
+                      ),
+                    });
+                  }}
+                >
+                  Remover nota
+                </button>
+              </>
+            )}
+          </details>
+        ))}
+        <button
+          type="button"
+          className="btn-outline text-xs"
+          onClick={() =>
+            salvar({
+              relatos: [
+                ...(salvo.relatos || []),
+                { id: `nota-${crypto.randomUUID()}`, texto: '' },
+              ],
+            })
+          }
+        >
+          Adicionar nota
+        </button>
+        {removida && (
+          <div role="status" className="text-sm">
+            Nota removida.{' '}
+            <button
+              type="button"
+              className="underline cursor-pointer"
+              onClick={() => {
+                salvar({ relatos: [...(salvo.relatos || []), removida] });
+                setRemovida(null);
+              }}
+            >
+              Desfazer
+            </button>
+          </div>
+        )}
+      </section>
+      <section className="ds-card">
+        <EstiloPicker
+          value={estiloResumo}
+          disabled={gerando}
+          onChange={(estilo) =>
+            salvar({ estiloResumo: estilo, resumo: resumos[estilo] || '' })
+          }
+        />
+        <button
+          type="button"
+          className="btn-ios w-full disabled:opacity-50"
+          disabled={gerando || !base.trim()}
+          aria-busy={gerando}
+          onClick={gerar}
+        >
+          {gerando ? 'Gerando resumo…' : 'Gerar resumo'}
+        </button>
+      </section>
+      {erro && (
+        <p role="alert" className="relato-alert">
+          {erro}
+        </p>
+      )}
+      {(texto || fonte != null) && (
+        <section className="ds-card">
+          <h3 className="font-semibold">Revise antes de transferir</h3>
+          {desatualizado && (
+            <p role="status" className="relato-alert">
+              Os relatos mudaram. Gere novamente para atualizar o resumo.
+            </p>
+          )}
+          <label htmlFor="resumo-revisao" className="ds-label">
+            Resumo editável
+          </label>
+          <textarea
+            id="resumo-revisao"
+              disabled={gerando}
+            rows={8}
+            className="ds-input resize-none"
+            value={texto}
+            onChange={(e) =>
+              salvar({
+                resumo: e.target.value,
+                resumos: { ...resumos, [estiloResumo]: e.target.value },
+              })
+            }
+          />
+          <button
+            type="button"
+            disabled={desatualizado || gerando || !texto.trim()}
+            className="btn-ios w-full disabled:opacity-50"
+            onClick={transferir}
+          >
+            Transferir para o Relato Policial
+          </button>
+        </section>
       )}
     </div>
   );

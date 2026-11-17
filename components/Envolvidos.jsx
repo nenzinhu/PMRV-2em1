@@ -30,9 +30,11 @@ import {
   migrarFotosLegadas,
   hidratarFotos,
 } from '@/lib/foto-store';
-import { salvarRelatoNoResumo, retirarRelatoDoResumo } from '@/lib/resumo-relatos';
+import { upsertRelatoNoResumo, relatoFromEnvolvido, removerRelatoDoEnvolvido } from '@/lib/resumo-relatos';
 import { useOcorrencia } from '@/components/OcorrenciaProvider';
 import { aplicarDadosConsultados, consultarPlaca as consultarPlacaApi, normalizarPlaca, placaConsultavel } from '@/lib/placa';
+import EstiloPicker from '@/components/EstiloPicker';
+import { estiloRelatoValido } from '@/lib/estilos-relato';
 import { ACOES_RELATO, promptRevisaoRelato } from '@/lib/revisao-relato';
 
 const EMPTY_ENV = () => ({
@@ -66,6 +68,11 @@ export default function Envolvidos({ gpsInfo = null }) {
   const [loadingPlaca, setLoadingPlaca] = useState({});
   const [placaError, setPlacaError] = useState({});
   const [relatoIA, setRelatoIA] = useState({});
+  const [carregadoId, setCarregadoId] = useState(null);
+  const [dadosAbertos, setDadosAbertos] = useState({});
+  const docIdAtual = useRef(doc?.id);
+  useEffect(() => { docIdAtual.current = doc?.id; }, [doc?.id]);
+  const estiloRelato = estiloRelatoValido(doc?.dinamica?.estilo);
   const [busca, setBusca] = useState({ q: '', resultados: [], aberto: false, carregando: false, alvoId: null });
   const [municipios, setMunicipios] = useState(MUNICIPIOS_POR_UF);
 
@@ -77,6 +84,7 @@ export default function Envolvidos({ gpsInfo = null }) {
       const lista = Array.isArray(doc?.envolvidos) ? doc.envolvidos : [];
       const s = lista.reduce((m, e) => Math.max(m, Number(e.id) || 0), 0);
       const migrada = lista.map((ev) => ({
+        ...novoEnvolvido(ev.id),
         ...ev,
         placa_estrangeira: ev.placa_estrangeira === true,
         placa_tipo: ev.placa_tipo || 'br',
@@ -92,6 +100,8 @@ export default function Envolvidos({ gpsInfo = null }) {
       }
       if (cancelled) return;
       setEnvolvidos(next);
+      setCarregadoId(doc.id);
+      setDadosAbertos(Object.fromEntries(next.map((e) => [e.id, !e.nome])));
       setSeq(s);
       // Versões antigas aceitavam o token no navegador; ele agora existe só no servidor.
       localStorage.removeItem('PMRV_PLACA_TOKEN');
@@ -115,18 +125,19 @@ export default function Envolvidos({ gpsInfo = null }) {
 
   // Estado local → documento único (o provider persiste).
   useEffect(() => {
-    if (!docPronto) return;
+    if (!docPronto || carregadoId !== doc?.id) return;
     atualizarDoc((prev) => ({
       ...prev,
       envolvidos: envolvidosParaStorage(envolvidos),
     }));
-  }, [docPronto, envolvidos, atualizarDoc]);
+  }, [docPronto, doc?.id, carregadoId, envolvidos, atualizarDoc]);
 
   function adicionar() {
     setEnvolvidos((prev) => {
       const maxId = prev.reduce((m, e) => Math.max(m, Number(e.id) || 0), seq);
       const nextSeq = maxId + 1;
       setSeq(nextSeq);
+      setDadosAbertos((abertos) => ({ ...abertos, [nextSeq]: true }));
       return [...prev, novoEnvolvido(nextSeq)];
     });
   }
@@ -137,9 +148,10 @@ export default function Envolvidos({ gpsInfo = null }) {
     (alvo?.fotos || []).forEach((f) => {
       if (f && f.id) apagarFoto(f.id).catch(() => {});
     });
-    retirarRelatoDoResumo(id);
+    atualizarDoc((prev) => ({ ...prev, resumo: { ...prev.resumo, relatos: removerRelatoDoEnvolvido(prev.resumo.relatos, id) } }));
     const lista = envolvidos.filter((e) => e.id !== id);
     setEnvolvidos(lista);
+    showToast('Envolvido removido', 'warning', 1500);
   }
 
   function update(id, patch) {
@@ -148,7 +160,7 @@ export default function Envolvidos({ gpsInfo = null }) {
     if (patch.nome !== undefined) patch.nome = formatNome(patch.nome);
     if (patch.cidade !== undefined) patch.cidade = capitalizarFrase(patch.cidade);
     if (patch.endereco !== undefined) patch.endereco = capitalizarFrase(patch.endereco);
-    if (patch.relato !== undefined) patch.relato = capitalizarFrase(patch.relato);
+    if (patch.relato !== undefined) { patch.relato = capitalizarFrase(patch.relato); patch.presumido = false; }
     setEnvolvidos((listaAtual) => listaAtual.map((e) => (e.id === id ? { ...e, ...patch } : e)));
   }
 
@@ -324,7 +336,8 @@ export default function Envolvidos({ gpsInfo = null }) {
 
     setRelatoIA((anterior) => ({ ...anterior, [id]: acao }));
     const relatoOriginal = ev.relato;
-    const prompt = promptRevisaoRelato(acao, relatoOriginal);
+    const origemId = doc?.id;
+    const prompt = promptRevisaoRelato(acao, relatoOriginal, estiloRelato);
 
     try {
       const res = await callGroq({ apiKey: obterChaveIA(), prompt, system: PMRV_AGENTE_PADRAO });
@@ -333,6 +346,7 @@ export default function Envolvidos({ gpsInfo = null }) {
       } else if (res.error === 'quota') {
         alert('Cota da API excedida no momento.\n\nAguarde alguns minutos e tente novamente.');
       } else if (res.text) {
+        if (docIdAtual.current !== origemId) return;
         const texto = capitalizarFrase(cleanIAResponse(res.text));
         setEnvolvidos((listaAtual) =>
           listaAtual.map((envolvido) =>
@@ -353,12 +367,10 @@ export default function Envolvidos({ gpsInfo = null }) {
   function salvarRelatoIndividual(id) {
     const ev = envolvidos.find((e) => e.id === id);
     if (!ev) return;
-    const result = salvarRelatoNoResumo(ev);
-    if (!result.ok) {
-      alert('Escreva o relato individual antes de salvar.');
-      return;
-    }
-    showToast(`Relato do Envolvido #${result.envolvidoId} no resumo (${result.total})`, 'success', 2000);
+    const entrada = relatoFromEnvolvido(ev);
+    if (!entrada) { showToast('Escreva o relato individual antes de salvar.', 'warning'); return; }
+    atualizarDoc((prev) => ({ ...prev, envolvidos: envolvidosParaStorage(envolvidos), resumo: { ...prev.resumo, relatos: upsertRelatoNoResumo(prev.resumo.relatos, entrada) } }));
+    showToast('Relato salvo. Disponível na dinâmica e no resumo.', 'success', 2000);
   }
 
   function exportarWhatsApp() {
@@ -384,16 +396,19 @@ export default function Envolvidos({ gpsInfo = null }) {
       </div>
 
       <p className="estilo-glass text-[13px] leading-relaxed text-charcoal/80 font-mono mb-4 p-3">
-        Cada envolvido tem dados, relato individual (com revisão por IA) e fotos. <b>Salvar relato</b> envia o texto para o Resumo da Dinâmica. Use os botões <b>Tirar fotos</b> ou <b>Galeria</b> para anexar imagens.
+        Cadastre cada pessoa uma única vez. Os relatos ficam disponíveis em <b>Relatos e dinâmica</b> para comparar versões e esclarecer o que falta.
       </p>
 
+      <section className="ds-card mb-4"><EstiloPicker value={estiloRelato} onChange={(estilo) => atualizarDoc((prev) => ({ ...prev, dinamica: { ...prev.dinamica, estilo } }))} />
+        <button type="button" className="btn-outline w-full text-sm" onClick={() => window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'dinamica' }))}>Comparar relatos e gerar dinâmica</button>
+      </section>
       <div className="space-y-6">
         {envolvidos.map((ev) => (
           <article key={ev.id} className="ds-card">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-charcoal pb-2 gap-2">
-              <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm sm:text-base">Envolvido #{ev.id}</h3>
+              <h3 className="font-mono font-semibold uppercase tracking-tight text-pmrv text-sm sm:text-base">{ev.nome || `Envolvido #${ev.id}`}{ev.placa ? ` · ${ev.placa}` : ''}</h3>
               <button
-                onClick={() => { remover(ev.id); showToast('Envolvido removido', 'warning', 1500); }}
+                onClick={() => remover(ev.id)}
                 className="btn-ios text-xs bg-brick !border-brick active:scale-95"
                 aria-label={`Remover envolvido ${ev.id}`}
               >
@@ -401,10 +416,13 @@ export default function Envolvidos({ gpsInfo = null }) {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <details open={dadosAbertos[ev.id] === true} onToggle={(e) => { const aberto = e.currentTarget.open; setDadosAbertos((prev) => prev[ev.id] === aberto ? prev : { ...prev, [ev.id]: aberto }); }}>
+              <summary className="cursor-pointer text-sm font-semibold py-2">Dados pessoais e veículo</summary>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
               <div>
-                <label className="ds-label">Nome Completo</label>
+                <label htmlFor={`nome_${ev.id}`} className="ds-label">Nome Completo</label>
                 <input
+                  id={`nome_${ev.id}`}
                   value={ev.nome}
                   onChange={(e) => update(ev.id, { nome: e.target.value })}
                   className="ds-input text-sm"
@@ -644,9 +662,11 @@ export default function Envolvidos({ gpsInfo = null }) {
               </div>
             </div>
 
+            </details>
+
             <div>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1 gap-2">
-                <label className="ds-label mb-0">Relato Individual</label>
+                <label htmlFor={`envolvido-relato-${ev.id}`} className="ds-label mb-0">Relato Individual</label>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
@@ -684,6 +704,7 @@ export default function Envolvidos({ gpsInfo = null }) {
                 Ortografia corrige a escrita. Melhorar deixa o texto claro e objetivo sem alterar os fatos.
               </p>
               <MentionInput
+                id={`envolvido-relato-${ev.id}`}
                 value={ev.relato}
                 onChange={(value) => update(ev.id, { relato: value })}
                 envolvidos={envolvidos}
