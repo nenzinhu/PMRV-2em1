@@ -7,6 +7,7 @@ registerGsap();
 
 const ROTULOS = {
   envolvidos: 'Pessoas envolvidas',
+  individuais: 'Relatos individuais',
   danos: 'Danos da ocorrência',
   dinamica: 'Dinâmica da ocorrência',
   resumo: 'Resumo da ocorrência',

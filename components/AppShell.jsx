@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import RelatoPolicial from '@/components/RelatoPolicial';
+import RelatosIndividuais from '@/components/RelatosIndividuais';
 import Envolvidos from '@/components/Envolvidos';
 import ResumoDinamica from '@/components/ResumoDinamica';
 import DinamicaPresumida from '@/components/DinamicaPresumida';
@@ -26,13 +27,13 @@ function NovaOcorrenciaButton({ onDone }) {
   return (
     <button
       type="button"
-      onClick={() => {
+      onClick={async () => {
         if (
           window.confirm(
             'Começar uma NOVA ocorrência?\n\nA ocorrência atual será arquivada no histórico deste aparelho (aba Salvar → Histórico).'
           )
         ) {
-          novaOcorrencia();
+          if (!await novaOcorrencia()) return;
           showToast('Nova ocorrência iniciada', 'success', 2000);
           onDone?.();
         }
@@ -252,7 +253,9 @@ function AppShellInner({ aba, themeOpen, setThemeOpen, mounted, setMounted, fsAc
 
         <main className="relative z-10 w-full flex-1 pb-24 md:pb-0" role="main">
           <PageStage aba={aba}>
-            {aba === 'envolvidos' ? (
+            {aba === 'individuais' ? (
+              <RelatosIndividuais />
+            ) : aba === 'envolvidos' ? (
               <Envolvidos gpsInfo={gpsOn ? gpsInfo : null} />
             ) : aba === 'danos' ? (
               <DanosFotos />

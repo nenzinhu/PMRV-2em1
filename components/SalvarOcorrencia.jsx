@@ -97,14 +97,14 @@ export default function SalvarOcorrencia() {
     showToast('Backup JSON exportado', 'success', 2000);
   }
 
-  function restaurar(item) {
+  async function restaurar(item) {
     if (!item) return;
     if (
       window.confirm(
         `Restaurar a ocorrência arquivada (${resumoHistorico(item)})?\n\nA ocorrência atual será arquivada no histórico antes da troca.`
       )
     ) {
-      restaurarOcorrencia(item);
+      if (!await restaurarOcorrencia(item)) return;
       showToast('Ocorrência restaurada do histórico', 'success', 2500);
     }
   }

@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { OcorrenciaProvider, useOcorrencia } from './OcorrenciaProvider';
 import { listarHistoricoIDB } from '@/lib/idb';
 
@@ -12,8 +12,10 @@ function apagarBanco() {
 }
 
 // Ponte de teste para observar o contexto dentro do provider.
+let contexto;
 function Prova() {
-  const { doc, pronto, atualizar, novaOcorrencia, restaurarOcorrencia } = useOcorrencia();
+  contexto = useOcorrencia();
+  const { doc, pronto, atualizar, novaOcorrencia, restaurarOcorrencia } = contexto;
   return (
     <div>
       <span data-testid="pronto">{String(pronto)}</span>
@@ -34,7 +36,7 @@ beforeEach(async () => {
   await apagarBanco();
 });
 
-afterEach(() => cleanup());
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 describe('OcorrenciaProvider', () => {
   it('cria ocorrência nova quando não há nada salvo', async () => {
@@ -97,4 +99,42 @@ describe('OcorrenciaProvider', () => {
       expect(atual?.relato?.form?.sade).toBe('ALVO');
     });
   });
+});
+
+it('mantém a ocorrência e informa erro se o arquivamento falhar', async () => {
+  const idb = await import('@/lib/idb');
+  const spy = vi.spyOn(idb, 'arquivarOcorrenciaIDB').mockRejectedValue(new Error('Sem espaço'));
+  render(<OcorrenciaProvider><Prova /></OcorrenciaProvider>);
+  await waitFor(() => expect(screen.getByTestId('pronto').textContent).toBe('true'));
+  screen.getByText('editar').click();
+  await waitFor(() => expect(screen.getByTestId('sade').textContent).toBe('987'));
+  screen.getByText('nova').click();
+  await screen.findByRole('alert');
+  expect(screen.getByTestId('sade').textContent).toBe('987');
+  spy.mockRestore();
+});
+
+it('não perde edição enfileirada junto da conclusão do arquivo', async () => {
+  const idb = await import('@/lib/idb');
+  let resolver;
+  const spy = vi.spyOn(idb, 'arquivarOcorrenciaIDB').mockImplementation(() => new Promise(resolve => { resolver = resolve; }));
+  render(<OcorrenciaProvider><Prova /></OcorrenciaProvider>);
+  await waitFor(() => expect(screen.getByTestId('pronto').textContent).toBe('true'));
+  screen.getByText('nova').click();
+  await act(async () => {
+    contexto.atualizar(prev => ({ ...prev, relato: { ...prev.relato, form: { ...prev.relato.form, sade: '987' } } }));
+    resolver(true);
+  });
+  expect(screen.getByTestId('sade').textContent).toBe('987');
+  expect(screen.getByRole('alert').textContent).toContain('mudou');
+  spy.mockRestore();
+});
+it('grava cópia local mesmo enquanto o IndexedDB não responde', async () => {
+  const idb = await import('@/lib/idb');
+  const spy = vi.spyOn(idb, 'gravarOcorrenciaIDB').mockImplementation(() => new Promise(() => {}));
+  render(<OcorrenciaProvider><Prova /></OcorrenciaProvider>);
+  await waitFor(() => expect(screen.getByTestId('pronto').textContent).toBe('true'));
+  screen.getByText('editar').click();
+  await waitFor(() => expect(JSON.parse(localStorage.getItem('PMRV_OCORRENCIA')).relato.form.sade).toBe('987'));
+  spy.mockRestore();
 });

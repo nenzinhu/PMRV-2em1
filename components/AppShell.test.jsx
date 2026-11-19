@@ -1,7 +1,9 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import AppShell from './AppShell';
+
+const salvarFoto = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
 // Isola a hidratação de fotos (IndexedDB de blobs não faz parte do escopo
 // deste teste de componente — a lib tem testes próprios).
@@ -15,7 +17,7 @@ vi.mock('@/lib/foto-store', () => {
     precisaMigrarFotos: () => false,
     migrarFotosLegadas: hidratar,
     hidratarFotos: hidratar,
-    salvarFotoBlob: () => Promise.resolve(),
+    salvarFotoBlob: salvarFoto,
     lerFotoBlob: () => Promise.resolve(null),
     apagarFoto: () => Promise.resolve(),
   };
@@ -26,6 +28,7 @@ vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('offline de teste'))
 
 beforeEach(async () => {
   localStorage.clear();
+  salvarFoto.mockReset().mockResolvedValue();
   const req = indexedDB.deleteDatabase('pmrv-ocorrencias');
   await new Promise((resolve) => {
     req.onsuccess = req.onerror = req.onblocked = () => resolve();
@@ -78,8 +81,8 @@ describe('AppShell — migração legada, botão Nova e toasts', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Dossiê completo da ocorrência').value).toContain('123456');
     });
-    // Dados de envolvidos não são repetidos no dossiê completo.
-    expect(screen.getByLabelText('Dossiê completo da ocorrência').value).not.toContain('João da Silva');
+    // O dossiê completo preserva os envolvidos migrados.
+    expect(screen.getByLabelText('Dossiê completo da ocorrência').value).toContain('João da Silva');
     // O texto padrão não carrega mais rodapé de versão (pedido da unidade).
     expect(screen.getByLabelText('Dossiê completo da ocorrência').value).not.toContain('Gerado pelo PMRV-SC');
   });
@@ -111,4 +114,43 @@ describe('AppShell — migração legada, botão Nova e toasts', () => {
       expect(texto).not.toContain('João da Silva');
     });
   });
+});
+
+
+it('compartilha relato entre a aba individual, cadastro completo e resumo', async () => {
+  render(<AppShell initialAba="individuais" />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Adicionar envolvido' }));
+  fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Maria' } });
+  fireEvent.change(screen.getByLabelText('Relato individual'), { target: { value: 'Eu parei no sinal.' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Salvar relato' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Cadastro completo' }));
+  await screen.findByDisplayValue('Eu parei no sinal.');
+  fireEvent.click(screen.getByRole('button', { name: 'Relatos individuais' }));
+  expect(await screen.findByLabelText('Nome')).toHaveProperty('value', 'Maria');
+  fireEvent.click(screen.getAllByRole('tab', { name: 'Aba Ocorrência' })[0]);
+  fireEvent.click(screen.getByRole('tab', { name: 'Resumo' }));
+  expect(await screen.findByText('Eu parei no sinal.')).toBeTruthy();
+});
+
+it('preserva foto e edição ao trocar de aba durante o upload', async () => {
+  let terminar;
+  salvarFoto.mockImplementation(() => new Promise(resolve => { terminar = resolve; }));
+  URL.createObjectURL = vi.fn(() => 'blob:foto');
+  rascunhoLegado();
+  render(<AppShell initialAba="envolvidos" />);
+  await screen.findByPlaceholderText('Digite a placa');
+  fireEvent.change(document.getElementById('gal_1'), { target: { files: [new File(['foto'], 'foto.png', { type: 'image/png' })] } });
+  fireEvent.click(screen.getByRole('button', { name: 'Relatos individuais' }));
+  fireEvent.change(await screen.findByLabelText('Nome'), { target: { value: 'Maria' } });
+  await act(async () => terminar());
+  fireEvent.click(screen.getByRole('button', { name: 'Cadastro completo' }));
+  expect(await screen.findByAltText('Foto 1')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Relatos individuais' }));
+  expect((await screen.findByLabelText('Nome')).value).toBe('Maria');
+});
+it('respeita dez envolvidos também no cadastro completo', async () => {
+  localStorage.setItem('PMRV_ENVOLVIDOS', JSON.stringify({ lista: Array.from({ length: 10 }, (_, i) => ({ id: i + 1, nome: `Pessoa ${i}` })), seq: 10 }));
+  render(<AppShell initialAba="envolvidos" />);
+  await screen.findAllByPlaceholderText('Digite a placa');
+  expect(screen.getByRole('button', { name: 'Adicionar' }).disabled).toBe(true);
 });

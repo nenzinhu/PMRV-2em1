@@ -134,6 +134,7 @@ export default function Envolvidos({ gpsInfo = null }) {
 
   function adicionar() {
     setEnvolvidos((prev) => {
+      if (prev.length >= 10) return prev;
       const maxId = prev.reduce((m, e) => Math.max(m, Number(e.id) || 0), seq);
       const nextSeq = maxId + 1;
       setSeq(nextSeq);
@@ -223,8 +224,21 @@ export default function Envolvidos({ gpsInfo = null }) {
     }
   }
 
+  function anexarReferencias(id, origemId, fotos) {
+    atualizarDoc((prev) => prev.id !== origemId ? prev : ({
+      ...prev,
+      envolvidos: prev.envolvidos.map((ev) => ev.id === id
+        ? { ...ev, fotos: [...(ev.fotos || []), ...fotos.map(({ id }) => ({ id }))] } : ev),
+    }));
+    if (docIdAtual.current === origemId) {
+      setEnvolvidos((prev) => prev.map((ev) => ev.id === id
+        ? { ...ev, fotos: [...(ev.fotos || []), ...fotos] } : ev));
+    }
+  }
+
   async function anexarFoto(id, file) {
     if (!file) return;
+    const origemId = doc?.id;
     const fotoId = novoFotoId();
     try {
       await salvarFotoBlob(fotoId, file);
@@ -234,12 +248,7 @@ export default function Envolvidos({ gpsInfo = null }) {
       return;
     }
     const src = URL.createObjectURL(file);
-    setEnvolvidos((prev) =>
-      prev.map((e) => {
-        if (e.id !== id) return e;
-        return { ...e, fotos: [...(e.fotos || []), { id: fotoId, src }] };
-      })
-    );
+    anexarReferencias(id, origemId, [{ id: fotoId, src }]);
   }
 
   function removerFoto(id, index) {
@@ -259,6 +268,7 @@ export default function Envolvidos({ gpsInfo = null }) {
   }
 
   function adicionarDaGaleria(id, fileList) {
+    const origemId = doc?.id;
     const files = Array.from(fileList || []).filter((f) => f && f.type && f.type.startsWith('image/'));
     if (!files.length) return;
     Promise.all(
@@ -269,11 +279,7 @@ export default function Envolvidos({ gpsInfo = null }) {
       })
     )
       .then((novas) => {
-        const lista = envolvidos.map((e) => {
-          if (e.id !== id) return e;
-          return { ...e, fotos: [...(e.fotos || []), ...novas] };
-        });
-        setEnvolvidos(lista);
+        anexarReferencias(id, origemId, novas);
       })
       .catch((err) => {
         console.error('Erro ao gravar fotos da galeria:', err);
@@ -389,7 +395,7 @@ export default function Envolvidos({ gpsInfo = null }) {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
         <h2 className="text-base sm:text-lg font-mono font-semibold uppercase tracking-tight text-pmrv">Envolvidos</h2>
         <div className="flex gap-2">
-          <button onClick={adicionar} className="btn-ios text-xs active:scale-95">
+          <button onClick={adicionar} disabled={!docPronto || carregadoId !== doc?.id || envolvidos.length >= 10} className="btn-ios text-xs active:scale-95 disabled:opacity-50">
             <span className="inline-flex items-center gap-1.5"><PlusIcon className="w-4 h-4" /> Adicionar</span>
           </button>
         </div>

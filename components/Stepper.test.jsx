@@ -12,7 +12,7 @@ describe('Stepper — progresso anunciado', () => {
     expect(progresso.getAttribute('aria-valuemin')).toBe('1');
     expect(progresso.getAttribute('aria-valuemax')).toBe('4');
     expect(progresso.getAttribute('aria-valuenow')).toBe('2');
-    expect(progresso.getAttribute('aria-valuetext')).toBe('Etapa 2 de 4');
+    expect(progresso.getAttribute('aria-valuetext')).toBe('Etapa 2 de 4: Local e ocorrência');
   });
 
   it('conta cinco etapas quando ha vitima', () => {
@@ -20,7 +20,7 @@ describe('Stepper — progresso anunciado', () => {
 
     const progresso = screen.getByRole('progressbar', { name: 'Progresso do relato' });
     expect(progresso.getAttribute('aria-valuemax')).toBe('5');
-    expect(progresso.getAttribute('aria-valuetext')).toBe('Etapa 4 de 5');
+    expect(progresso.getAttribute('aria-valuetext')).toBe('Etapa 4 de 5: Vítimas');
   });
 
   it('mantem os pontos decorativos fora da arvore de acessibilidade', () => {

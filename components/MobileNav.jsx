@@ -105,6 +105,19 @@ export default function MobileNav({ active, onChange }) {
         </div>
       </nav>
 
+      {activeArea === 'pessoas' && (
+        <nav className="workflow-subnav" aria-label="Cadastro e relatos">
+          <div className="mx-auto max-w-xl grid grid-cols-2 gap-1 p-1">
+            {[['envolvidos', 'Cadastro completo'], ['individuais', 'Relatos individuais']].map(([key, label]) => (
+              <button key={key} type="button" aria-current={active === key ? 'page' : undefined}
+                onClick={() => onChange(key)} className={`workflow-subtab ${active === key ? 'workflow-subtab-active' : ''}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </nav>
+      )}
+
       {activeArea === 'ocorrencia' && (
         <nav
           className="workflow-subnav"
