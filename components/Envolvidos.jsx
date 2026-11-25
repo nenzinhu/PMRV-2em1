@@ -18,7 +18,7 @@ import {
 } from '@/lib/pmrv';
 import { MUNICIPIOS_POR_UF, garantirMunicipios } from '@/lib/municipios';
 import { CameraIcon, CheckIcon, ImageIcon, PlusIcon, SaveIcon, SearchIcon, SparkIcon, UsersIcon, WhatsAppIcon } from './icons';
-import MentionInput from './MentionInput';
+import EditorRelatoIndividual from './EditorRelatoIndividual';
 import Skeleton from './Skeleton';
 import { showToast } from '@/components/Toast';
 import {
@@ -709,15 +709,16 @@ export default function Envolvidos({ gpsInfo = null }) {
               <p className="text-xs font-mono text-charcoal mb-2">
                 Ortografia corrige a escrita. Melhorar deixa o texto claro e objetivo sem alterar os fatos.
               </p>
-              <MentionInput
+              <EditorRelatoIndividual
                 id={`envolvido-relato-${ev.id}`}
                 value={ev.relato}
                 onChange={(value) => update(ev.id, { relato: value })}
                 envolvidos={envolvidos}
                 rows={4}
-                placeholder="Descreva o que aconteceu... Use @ para mencionar pessoas, veículos ou localização GPS"
                 className="w-full p-2 bg-bone border-2 border-charcoal focus:ring-2 focus:ring-focus outline-none text-sm leading-relaxed"
-                gpsLocation={gpsInfo}
+                envolvido={ev}
+                form={doc?.relato?.form}
+                gpsInfo={gpsInfo}
               />
             </div>
 

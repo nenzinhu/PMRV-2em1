@@ -254,7 +254,7 @@ function AppShellInner({ aba, themeOpen, setThemeOpen, mounted, setMounted, fsAc
         <main className="relative z-10 w-full flex-1 pb-24 md:pb-0" role="main">
           <PageStage aba={aba}>
             {aba === 'individuais' ? (
-              <RelatosIndividuais />
+              <RelatosIndividuais gpsInfo={gpsOn ? gpsInfo : null} />
             ) : aba === 'envolvidos' ? (
               <Envolvidos gpsInfo={gpsOn ? gpsInfo : null} />
             ) : aba === 'danos' ? (

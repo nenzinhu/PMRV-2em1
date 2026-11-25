@@ -95,3 +95,35 @@ it('preserva a cor manual quando a consulta retorna apenas modelo', async () => 
   await waitFor(() => expect(screen.getByLabelText('Modelo').value).toBe('Argo'));
   expect(screen.getByLabelText('Cor').value).toBe('Azul');
 });
+
+it('insere frases no relato e busca nomes e veículos cadastrados com @', async () => {
+  await abrir([
+    { id: 1, nome: 'João', placa: 'ABC1D23', modelo: 'Fiat Argo', cor: 'prata', relato: 'Texto inicial.' },
+    { id: 2, nome: 'Ana', modelo: 'Honda Fit', cor: 'azul', relato: '' },
+  ]);
+  const editor = screen.getAllByLabelText('Relato individual')[0];
+  editor.setSelectionRange(editor.value.length, editor.value.length);
+  fireEvent.click(screen.getAllByRole('button', { name: 'Frase de rodovia' })[0]);
+  expect(editor.value).toMatch(/^Texto inicial\. O condutor João.*SC-\[número\].*\[km\].*Fiat Argo de cor prata, placa ABC1D23\./);
+
+  fireEvent.change(editor, { target: { value: 'Identificação: @joao' } });
+  fireEvent.keyDown(editor, { key: 'Enter' });
+  expect(editor.value).toBe('Identificação: João ');
+
+  fireEvent.change(editor, { target: { value: 'Outro veículo: @fit' } });
+  fireEvent.keyDown(editor, { key: 'Enter' });
+  expect(editor.value).toBe('Outro veículo: Honda Fit de cor azul ');
+  expect(documento().envolvidos[0].relato).toBe(editor.value);
+});
+
+it('preenche a ponte do cadastro e aceita km zero', async () => {
+  const doc = novaOcorrencia('teste');
+  await gravarOcorrenciaIDB(indexedDB, {
+    ...doc,
+    relato: { ...doc.relato, form: { rodovia: 'TIC01', km: 0 } },
+    envolvidos: [{ id: 1, nome: 'Ana', relato: '' }],
+  });
+  render(<OcorrenciaProvider><RelatosIndividuais /></OcorrenciaProvider>);
+  fireEvent.click(await screen.findByRole('button', { name: 'Frase de ponte' }));
+  expect(screen.getByLabelText('Relato individual').value).toContain('pela Ponte Hercílio Luz, próximo ao km 0.');
+});

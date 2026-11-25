@@ -6,16 +6,15 @@ import { apresentacaoEnvolvido } from '@/lib/dinamica-presumida';
 import { CarIcon, FileTextIcon, MapPinIcon, UserIcon } from '@/components/icons';
 
 function MentionTypeIcon({ type }) {
-  const Icon = type === 'pessoa' ? UserIcon : type === 'veiculo' ? CarIcon : type === 'apresentacao' ? FileTextIcon : MapPinIcon;
+  const Icon = type === 'pessoa' ? UserIcon : type === 'veiculo' ? CarIcon : ['apresentacao', 'frase'].includes(type) ? FileTextIcon : MapPinIcon;
   return <Icon className="w-4 h-4" />;
 }
 
 // `extras`: itens adicionais [{ type, id, label, sublabel, insert }] (ex.: rodovia e km).
-export default function MentionInput({ id, value, onChange, envolvidos, placeholder, rows = 4, className = '', gpsLocation = null, extras = [] }) {
+export default function MentionInput({ id, value, onChange, envolvidos, placeholder, rows = 4, className = '', gpsLocation = null, extras = [], atalhos = [] }) {
   const textareaRef = useRef(null);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
-  const [cursorPosition, setCursorPosition] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   // Build list of mentionable items from envolvidos + optional GPS
@@ -30,17 +29,19 @@ export default function MentionInput({ id, value, onChange, envolvidos, placehol
         insert: `${ev.nome.trim()}`,
       });
     }
-    if (ev.placa && ev.placa.trim()) {
+    if (ev.modelo?.trim() || ev.cor?.trim() || ev.placa?.trim()) {
       const marca = ev.modelo && ev.modelo.trim() ? ev.modelo.trim() : '';
       const cor = ev.cor && ev.cor.trim() ? ev.cor.trim() : '';
-      const insert = marca
-        ? `${marca}${cor ? ' ' + cor : ''} COM PLACA ${ev.placa.trim().toUpperCase()}`
-        : `${ev.placa.trim().toUpperCase()}`;
+      const placa = ev.placa?.trim().toUpperCase();
+      const insert = [
+        [marca, cor && `de cor ${cor}`].filter(Boolean).join(' '),
+        placa && `placa ${placa}`,
+      ].filter(Boolean).join(', ');
       items.push({
         type: 'veiculo',
         id: ev.id,
-        label: ev.placa.trim().toUpperCase(),
-        sublabel: marca ? `Veículo ${marca}${cor ? ' ' + cor : ''}` : 'Veículo',
+        label: placa || marca || cor,
+        sublabel: ['Veículo', marca, cor, ev.nome].filter(Boolean).join(' · '),
         insert,
       });
     }
@@ -78,40 +79,34 @@ export default function MentionInput({ id, value, onChange, envolvidos, placehol
     });
   }
 
+  const normalizar = (texto) => texto.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
   const filteredItems = mentionableItems.filter((item) =>
-    item.label.toLowerCase().includes(mentionFilter.toLowerCase())
+    normalizar([item.label, item.sublabel, item.insert].join(' ')).includes(normalizar(mentionFilter))
   );
 
   useEffect(() => {
     setSelectedIndex(0);
   }, [mentionFilter]);
 
+  function atualizarMencao(textarea) {
+    const trecho = textarea.value.slice(0, textarea.selectionStart);
+    const match = trecho.match(/(?:^|[\s(])@([^\s@]*)$/);
+    setShowMentions(!!match && textarea.selectionStart === textarea.selectionEnd);
+    if (match) setMentionFilter(match[1]);
+  }
+
   function handleInput(e) {
-    const newValue = e.target.value;
-    onChange(newValue);
-
-    const cursor = e.target.selectionStart;
-    setCursorPosition(cursor);
-
-    // Find @ before cursor
-    const textBeforeCursor = newValue.slice(0, cursor);
-    const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-
-    if (lastAtIndex !== -1) {
-      const textAfterAt = textBeforeCursor.slice(lastAtIndex + 1);
-      // Check if there's a space after @ (which would mean the mention is complete)
-      if (!textAfterAt.includes(' ')) {
-        setMentionFilter(textAfterAt);
-        setShowMentions(true);
-        setSelectedIndex(0);
-        return;
-      }
-    }
-    setShowMentions(false);
+    onChange(e.target.value);
+    atualizarMencao(e.target);
   }
 
   function handleKeyDown(e) {
-    if (!showMentions || filteredItems.length === 0) return;
+    if (!showMentions) return;
+    if (e.key === 'Escape') {
+      setShowMentions(false);
+      return;
+    }
+    if (!filteredItems.length) return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -121,9 +116,7 @@ export default function MentionInput({ id, value, onChange, envolvidos, placehol
       setSelectedIndex((prev) => (prev - 1 + filteredItems.length) % filteredItems.length);
     } else if (e.key === 'Enter' || e.key === 'Tab') {
       e.preventDefault();
-      insertMention(filteredItems[selectedIndex]);
-    } else if (e.key === 'Escape') {
-      setShowMentions(false);
+      insertMention(filteredItems[selectedIndex] || filteredItems[0]);
     }
   }
 
@@ -140,50 +133,38 @@ export default function MentionInput({ id, value, onChange, envolvidos, placehol
 
     if (lastAtIndex === -1) return;
 
-    const newText = text.slice(0, lastAtIndex) + item.insert + ' ' + text.slice(cursor);
-    onChange(newText);
+    inserirTexto(item.insert, lastAtIndex, cursor);
+  }
+
+  function inserirTexto(insert, inicio, fim) {
+    const textarea = textareaRef.current;
+    const antes = textarea.value.slice(0, inicio);
+    const depois = textarea.value.slice(fim);
+    const separador = antes && !/\s$/.test(antes) && inicio === fim ? ' ' : '';
+    const sufixo = /^[\s.,;:!?)]/.test(depois) ? '' : ' ';
+    onChange(antes + separador + insert + sufixo + depois);
     setShowMentions(false);
 
-    // Move cursor after the inserted mention
     setTimeout(() => {
-      const newCursorPos = lastAtIndex + item.insert.length + 1;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      const cursor = inicio + separador.length + insert.length + sufixo.length;
       textarea.focus();
+      textarea.setSelectionRange(cursor, cursor);
     }, 0);
   }
 
-  function handleMentionClick(item) {
-    insertMention(item);
-  }
-
-  // Calculate dropdown position
-  const [dropdownStyle, setDropdownStyle] = useState({});
-  useEffect(() => {
-    if (showMentions && textareaRef.current) {
-      const textarea = textareaRef.current;
-      const text = textarea.value;
-      const cursor = textarea.selectionStart;
-      const textBeforeCursor = text.slice(0, cursor);
-      const lastAtIndex = textBeforeCursor.lastIndexOf('@');
-
-      // Approximate cursor position for dropdown
-      // This is a rough estimate; for precise positioning we'd need a library
-      const lineHeight = 24; // approximate
-      const linesBefore = textBeforeCursor.slice(lastAtIndex).split('\n').length - 1;
-      const top = (linesBefore + 1) * lineHeight + 8;
-      const left = Math.min((lastAtIndex % 50) * 8, textarea.offsetWidth - 200);
-
-      setDropdownStyle({
-        position: 'absolute',
-        top: `${top}px`,
-        left: `${left}px`,
-        zIndex: 50,
-      });
-    }
-  }, [showMentions, mentionFilter, cursorPosition]);
-
   return (
     <div className="relative">
+      {atalhos.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {atalhos.map(item => (
+            <button key={item.id} type="button" className="btn-outline text-xs"
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => inserirTexto(item.insert, textareaRef.current.selectionStart, textareaRef.current.selectionEnd)}>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
       <textarea
         id={id}
         ref={textareaRef}
@@ -191,19 +172,23 @@ export default function MentionInput({ id, value, onChange, envolvidos, placehol
         value={value}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
+        onSelect={e => { if (showMentions) atualizarMencao(e.currentTarget); }}
+        onBlur={e => {
+          if (!e.currentTarget.parentElement.contains(e.relatedTarget)) setShowMentions(false);
+        }}
         placeholder={placeholder}
         className={className}
       />
       {showMentions && filteredItems.length > 0 && (
         <div
-          className="absolute bg-surface border-2 border-charcoal shadow-[4px_4px_0_#2B2B2B] rounded-xl overflow-hidden max-h-48 overflow-y-auto"
-          style={dropdownStyle}
+          className={`${atalhos.length ? 'mt-1' : 'absolute top-full inset-x-0 z-50'} bg-surface border-2 border-charcoal shadow-[4px_4px_0_#2B2B2B] rounded-xl max-h-48 overflow-y-auto`}
         >
           {filteredItems.map((item, index) => (
             <button
               key={`${item.type}-${item.id}`}
               type="button"
-              onClick={() => handleMentionClick(item)}
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => insertMention(item)}
               className={`w-full text-left px-3 py-2 flex items-center gap-2 transition-colors ${
                 index === selectedIndex ? 'bg-bone' : 'hover:bg-bone'
               }`}

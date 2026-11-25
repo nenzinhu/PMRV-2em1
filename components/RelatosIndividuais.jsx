@@ -6,11 +6,12 @@ import { consultarPlaca, normalizarPlaca, placaConsultavel } from '@/lib/placa';
 import { callGroq, cleanIAResponse, obterChaveIA, PMRV_AGENTE_PADRAO } from '@/lib/pmrv';
 import { ACOES_RELATO, promptRevisaoRelato } from '@/lib/revisao-relato';
 import { relatoFromEnvolvido, upsertRelatoNoResumo, removerRelatoDoEnvolvido } from '@/lib/resumo-relatos';
+import EditorRelatoIndividual from './EditorRelatoIndividual';
 import { showToast } from './Toast';
 
 const LIMITE = 10;
 
-export default function RelatosIndividuais() {
+export default function RelatosIndividuais({ gpsInfo = null }) {
   const { doc, pronto, atualizar } = useOcorrencia();
   const [ocupados, setOcupados] = useState({});
   const [erros, setErros] = useState({});
@@ -128,7 +129,9 @@ export default function RelatosIndividuais() {
             <button type="button" className="btn-outline text-sm" onClick={() => alterar(ev.id, { presumido: false })}>Confirmar declaração registrada</button>
           </div>}
           <label className="ds-label" htmlFor={`ri-relato-${ev.id}`}>Relato individual</label>
-          <textarea id={`ri-relato-${ev.id}`} rows={5} className="ds-input leading-relaxed" value={ev.relato || ''} placeholder="Registre o que esta pessoa declarou…" onChange={e => alterar(ev.id, { relato: e.target.value })} />
+          <EditorRelatoIndividual id={`ri-relato-${ev.id}`} rows={5} className="ds-input leading-relaxed"
+            value={ev.relato || ''} onChange={relato => alterar(ev.id, { relato })}
+            envolvido={ev} envolvidos={envolvidos} form={doc.relato?.form} gpsInfo={gpsInfo} />
           <p className="text-xs">A revisão utiliza apenas os fatos informados. Confira o texto antes de copiar.</p>
           <div className="flex flex-wrap gap-2">
             {Object.entries(ACOES_RELATO).map(([acao]) => <button key={acao} type="button" className="btn-outline text-sm disabled:opacity-50" disabled={!ev.relato?.trim() || !!ocupados[`${ev.id}-ia`]} onClick={() => executar(ev, acao)}>{acao === 'ortografia' ? 'Corrigir ortografia' : 'Melhorar relato'}</button>)}
